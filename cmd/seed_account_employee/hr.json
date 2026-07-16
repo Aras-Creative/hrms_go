@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1001HR01",
+    "password": "password123",
+    "role": "employee",
+    "full_name": "Santi Hopipah",
+    "employee_number": "1001HR01",
+    "phone": "085889681754",
+    "personal_email": "santykhlfa17@gmail.com",
+    "emergency_contact_name": null,
+    "emergency_contact_phone": "085749877204",
+    "place_of_birth": "Majalengka",
+    "date_of_birth": "2001-02-17",
+    "join_date": null,
+    "gender": "female",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Blok Bojong RT.003 RW.003 Desa Cidulang, Kec. Cikijing, Kab. Majalengka 45466",
+    "designation_id": null,
+    "national_id": "3210035104990001",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "BRI",
+    "bank_number": "110801003479536",
+    "is_active": false
+  }
+]

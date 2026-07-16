@@ -1,0 +1,3 @@
+ALTER TABLE contracts
+    ADD COLUMN data      JSONB NOT NULL DEFAULT '{}',
+    ADD COLUMN templates JSONB NOT NULL DEFAULT '{}';

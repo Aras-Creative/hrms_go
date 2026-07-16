@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1024TE01",
+    "password": "password123",
+    "role": "employee",
+    "full_name": "Enjen Zenal Fallah",
+    "employee_number": "1024TE01",
+    "phone": "085921372211",
+    "personal_email": "enjenfalah98@gmail.com",
+    "emergency_contact_name": null,
+    "emergency_contact_phone": "082318300152",
+    "place_of_birth": "Kuningan",
+    "date_of_birth": "1998-04-18",
+    "join_date": null,
+    "gender": "male",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Dusun Kliwon RT/RW 001/001 Desa Kalapagunung",
+    "designation_id": null,
+    "national_id": "3208161804980001",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "BCA",
+    "bank_number": "901588802155",
+    "is_active": false
+  }
+]

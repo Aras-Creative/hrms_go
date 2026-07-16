@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1004LE01",
+    "password": "password123",
+    "role": "employee",
+    "full_name": "Mohamad Fariz Hardiyansyah",
+    "employee_number": "1004LE01",
+    "phone": null,
+    "personal_email": null,
+    "emergency_contact_name": null,
+    "emergency_contact_phone": null,
+    "place_of_birth": "Kuningan",
+    "date_of_birth": "1998-06-25",
+    "join_date": null,
+    "gender": "male",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Dusun Cadasngampar RT/RW 020/010 Desa Wilanagara, Kec. Luragung, Kuningan",
+    "designation_id": null,
+    "national_id": "3208162506980005",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "BCA",
+    "bank_number": "2990693296",
+    "is_active": false
+  }
+]

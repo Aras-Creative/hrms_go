@@ -1,0 +1,868 @@
+# =============================================================================
+# Payroll module schemas
+# =============================================================================
+
+BaseSalaryResponse:
+  type: object
+  required:
+    - id
+    - employee_id
+    - amount
+    - currency
+    - effective_date
+    - notes
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    amount:
+      type: number
+      format: float
+      description: Base salary amount
+    currency:
+      type: string
+      description: ISO 4217 currency code
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+# ---------------------------------------------------------------------------
+# Setup (bulk upsert)
+# ---------------------------------------------------------------------------
+
+SetupEmployeePayrollBaseSalary:
+  type: object
+  properties:
+    amount:
+      type: number
+      minimum: 0
+    currency:
+      type: string
+      default: IDR
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    notes:
+      type: string
+
+SetupEmployeePayrollItem:
+  type: object
+  properties:
+    compensation_item_id:
+      type: string
+      format: uuid
+    benefit_type_id:
+      type: string
+      format: uuid
+    deduction_type_id:
+      type: string
+      format: uuid
+    participant_number:
+      type: string
+    amount:
+      type: number
+      minimum: 0
+    frequency:
+      type: string
+      enum: [monthly, yearly, one_time]
+    value:
+      type: number
+      nullable: true
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+SetupEmployeePayrollRequest:
+  type: object
+  required:
+    - employee_id
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    base_salary:
+      $ref: "#/SetupEmployeePayrollBaseSalary"
+    compensations:
+      type: array
+      items:
+        $ref: "#/SetupEmployeePayrollItem"
+    benefits:
+      type: array
+      items:
+        $ref: "#/SetupEmployeePayrollItem"
+    deductions:
+      type: array
+      items:
+        $ref: "#/SetupEmployeePayrollItem"
+      description: Null if currently active
+    notes:
+      type: string
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateBaseSalaryRequest:
+  type: object
+  required:
+    - employee_id
+    - amount
+    - effective_date
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    amount:
+      type: number
+      minimum: 0
+    currency:
+      type: string
+      default: IDR
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    notes:
+      type: string
+
+UpdateBaseSalaryRequest:
+  type: object
+  required:
+    - amount
+    - effective_date
+  properties:
+    amount:
+      type: number
+      minimum: 0
+    currency:
+      type: string
+      default: IDR
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    notes:
+      type: string
+
+# ---------------------------------------------------------------------------
+# Compensation Items
+# ---------------------------------------------------------------------------
+
+CompensationItemResponse:
+  type: object
+  required:
+    - id
+    - name
+    - item_type
+    - is_active
+    - is_taxable
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    item_type:
+      type: string
+      enum: [recurring, one_time]
+    description:
+      type: string
+    is_active:
+      type: boolean
+    is_taxable:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateCompensationItemRequest:
+  type: object
+  required:
+    - name
+    - item_type
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    item_type:
+      type: string
+      enum: [recurring, one_time]
+    description:
+      type: string
+    is_taxable:
+      type: boolean
+      default: true
+
+UpdateCompensationItemRequest:
+  type: object
+  required:
+    - name
+    - item_type
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    item_type:
+      type: string
+      enum: [recurring, one_time]
+    description:
+      type: string
+    is_active:
+      type: boolean
+    is_taxable:
+      type: boolean
+
+# ---------------------------------------------------------------------------
+# Employee Compensations
+# ---------------------------------------------------------------------------
+
+EmployeeCompensationResponse:
+  type: object
+  required:
+    - id
+    - employee_id
+    - compensation_item_id
+    - amount
+    - frequency
+    - effective_date
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    compensation_item_id:
+      type: string
+      format: uuid
+    amount:
+      type: number
+      format: float
+    frequency:
+      type: string
+      enum: [monthly, yearly, one_time]
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateEmployeeCompensationRequest:
+  type: object
+  required:
+    - employee_id
+    - compensation_item_id
+    - amount
+    - frequency
+    - effective_date
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    compensation_item_id:
+      type: string
+      format: uuid
+    amount:
+      type: number
+      minimum: 0
+    frequency:
+      type: string
+      enum: [monthly, yearly, one_time]
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+UpdateEmployeeCompensationRequest:
+  type: object
+  required:
+    - compensation_item_id
+    - amount
+    - frequency
+    - effective_date
+  properties:
+    compensation_item_id:
+      type: string
+      format: uuid
+    amount:
+      type: number
+      minimum: 0
+    frequency:
+      type: string
+      enum: [monthly, yearly, one_time]
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+# ---------------------------------------------------------------------------
+# Benefit Types
+# ---------------------------------------------------------------------------
+
+BenefitTypeResponse:
+  type: object
+  required:
+    - id
+    - name
+    - employer_contribution_type
+    - employer_contribution_value
+    - employee_contribution_type
+    - employee_contribution_value
+    - is_active
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    description:
+      type: string
+    employer_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employer_contribution_value:
+      type: number
+      format: float
+    employee_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employee_contribution_value:
+      type: number
+      format: float
+    is_active:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateBenefitTypeRequest:
+  type: object
+  required:
+    - name
+    - employer_contribution_type
+    - employer_contribution_value
+    - employee_contribution_type
+    - employee_contribution_value
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    description:
+      type: string
+    employer_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employer_contribution_value:
+      type: number
+      minimum: 0
+    employee_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employee_contribution_value:
+      type: number
+      minimum: 0
+
+UpdateBenefitTypeRequest:
+  type: object
+  required:
+    - name
+    - employer_contribution_type
+    - employer_contribution_value
+    - employee_contribution_type
+    - employee_contribution_value
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    description:
+      type: string
+    employer_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employer_contribution_value:
+      type: number
+      minimum: 0
+    employee_contribution_type:
+      type: string
+      enum: [percentage, fixed]
+    employee_contribution_value:
+      type: number
+      minimum: 0
+    is_active:
+      type: boolean
+
+# ---------------------------------------------------------------------------
+# Employee Benefits
+# ---------------------------------------------------------------------------
+
+EmployeeBenefitResponse:
+  type: object
+  required:
+    - id
+    - employee_id
+    - benefit_type_id
+    - participant_number
+    - effective_date
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    benefit_type_id:
+      type: string
+      format: uuid
+    participant_number:
+      type: string
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateEmployeeBenefitRequest:
+  type: object
+  required:
+    - employee_id
+    - benefit_type_id
+    - effective_date
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    benefit_type_id:
+      type: string
+      format: uuid
+    participant_number:
+      type: string
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+UpdateEmployeeBenefitRequest:
+  type: object
+  required:
+    - benefit_type_id
+    - effective_date
+  properties:
+    benefit_type_id:
+      type: string
+      format: uuid
+    participant_number:
+      type: string
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+
+# ---------------------------------------------------------------------------
+# Deduction Types
+# ---------------------------------------------------------------------------
+
+DeductionTypeResponse:
+  type: object
+  required:
+    - id
+    - name
+    - slug
+    - deduction_type
+    - default_value
+    - is_active
+    - is_mandatory
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    slug:
+      type: string
+    description:
+      type: string
+    deduction_type:
+      type: string
+      enum: [percentage, fixed]
+    default_value:
+      type: number
+      format: float
+    is_active:
+      type: boolean
+    is_mandatory:
+      type: boolean
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreateDeductionTypeRequest:
+  type: object
+  required:
+    - name
+    - deduction_type
+    - default_value
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    description:
+      type: string
+    deduction_type:
+      type: string
+      enum: [percentage, fixed]
+    default_value:
+      type: number
+      minimum: 0
+    is_mandatory:
+      type: boolean
+      default: false
+
+UpdateDeductionTypeRequest:
+  type: object
+  required:
+    - name
+    - deduction_type
+    - default_value
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    description:
+      type: string
+    deduction_type:
+      type: string
+      enum: [percentage, fixed]
+    default_value:
+      type: number
+      minimum: 0
+    is_active:
+      type: boolean
+    is_mandatory:
+      type: boolean
+
+# ---------------------------------------------------------------------------
+# Employee Deductions
+# ---------------------------------------------------------------------------
+
+EmployeeDeductionResponse:
+  type: object
+  required:
+    - id
+    - employee_id
+    - deduction_type_id
+    - effective_date
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    deduction_type_id:
+      type: string
+      format: uuid
+    value:
+      type: number
+      format: float
+      nullable: true
+      description: Null if using default from deduction_type
+    effective_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+      nullable: true
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+# ---------------------------------------------------------------------------
+# Payroll Periods
+# ---------------------------------------------------------------------------
+
+PayrollPeriodResponse:
+  type: object
+  required:
+    - id
+    - name
+    - start_date
+    - end_date
+    - status
+    - working_days
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    start_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+    status:
+      type: string
+      enum: [draft, closed]
+    working_days:
+      type: integer
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+CreatePeriodRequest:
+  type: object
+  required:
+    - name
+    - start_date
+    - end_date
+    - working_days
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    start_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+    working_days:
+      type: integer
+      minimum: 1
+
+UpdatePeriodRequest:
+  type: object
+  required:
+    - name
+    - start_date
+    - end_date
+    - working_days
+  properties:
+    name:
+      type: string
+      maxLength: 255
+    start_date:
+      type: string
+      format: date
+    end_date:
+      type: string
+      format: date
+    working_days:
+      type: integer
+      minimum: 1
+
+# ---------------------------------------------------------------------------
+# Pay Slips
+# ---------------------------------------------------------------------------
+
+PaySlipResponse:
+  type: object
+  required:
+    - id
+    - period_id
+    - employee_id
+    - base_salary
+    - total_compensations
+    - total_deductions
+    - absent_deduction
+    - absent_days
+    - net_salary
+    - currency
+    - compensations_breakdown
+    - deductions_breakdown
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+    period_id:
+      type: string
+      format: uuid
+    employee_id:
+      type: string
+      format: uuid
+    base_salary:
+      type: number
+      format: float
+    total_compensations:
+      type: number
+      format: float
+    total_deductions:
+      type: number
+      format: float
+    absent_deduction:
+      type: number
+      format: float
+    absent_days:
+      type: integer
+    net_salary:
+      type: number
+      format: float
+    currency:
+      type: string
+    compensations_breakdown:
+      type: array
+      items:
+        $ref: "#/BreakdownItem"
+    deductions_breakdown:
+      type: array
+      items:
+        $ref: "#/BreakdownItem"
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+BreakdownItem:
+  type: object
+  properties:
+    compensation_item_id:
+      type: string
+      format: uuid
+    deduction_type_id:
+      type: string
+      format: uuid
+    name:
+      type: string
+    amount:
+      type: number
+      format: float
+
+# (end of schemas)
+
+# ---------------------------------------------------------------------------
+# Period Overview
+# ---------------------------------------------------------------------------
+
+PeriodOverviewEmployee:
+  type: object
+  required:
+    - employee_id
+    - employee_name
+    - employee_number
+    - absent_days
+    - late_minutes
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    employee_name:
+      type: string
+    employee_number:
+      type: string
+    designation_name:
+      type: string
+      nullable: true
+    profile_photo_id:
+      type: string
+      format: uuid
+      nullable: true
+    base_salary:
+      $ref: "#/BaseSalaryResponse"
+    compensations:
+      type: array
+      items:
+        $ref: "#/EmployeeCompensationResponse"
+    benefits:
+      type: array
+      items:
+        $ref: "#/EmployeeBenefitResponse"
+    deductions:
+      type: array
+      items:
+        $ref: "#/EmployeeDeductionResponse"
+    absent_days:
+      type: integer
+    late_minutes:
+      type: integer
+      items:
+        $ref: "#/EmployeeDeductionResponse"
+    absent_days:
+      type: integer

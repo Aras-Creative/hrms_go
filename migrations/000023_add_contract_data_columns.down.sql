@@ -1,0 +1,3 @@
+ALTER TABLE contracts
+    DROP COLUMN IF EXISTS data,
+    DROP COLUMN IF EXISTS templates;

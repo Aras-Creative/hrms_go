@@ -1,0 +1,1 @@
+ALTER TABLE pay_slips ADD COLUMN source VARCHAR(20) NOT NULL DEFAULT 'auto';

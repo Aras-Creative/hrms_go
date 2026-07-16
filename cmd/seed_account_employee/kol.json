@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1031AD01",
+    "password": "password123",
+    "role": "user",
+    "full_name": "Syalma Andina",
+    "employee_number": "1031AD01",
+    "phone": "085787148589",
+    "personal_email": "syalmaandina@gmail.com",
+    "emergency_contact_name": null,
+    "emergency_contact_phone": "082128670379",
+    "place_of_birth": "Kuningan",
+    "date_of_birth": "2001-09-15",
+    "join_date": null,
+    "gender": "female",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Jl Anggrek VIII No. 50 Perumnas Ciporang Kuningan",
+    "designation_id": null,
+    "national_id": "3208095509010003",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "Mandiri",
+    "bank_number": "1340033641720",
+    "is_active": false
+  }
+]

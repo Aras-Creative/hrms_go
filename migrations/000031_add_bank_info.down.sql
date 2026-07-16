@@ -1,0 +1,4 @@
+ALTER TABLE employees
+DROP COLUMN IF EXISTS bank_holder,
+DROP COLUMN IF EXISTS bank_name,
+DROP COLUMN IF EXISTS bank_number;

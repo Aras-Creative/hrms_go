@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1002IT01",
+    "password": "password123",
+    "role": "employee",
+    "full_name": "Mochamad Rifki Maulana",
+    "employee_number": "1002IT01",
+    "phone": "089660219639",
+    "personal_email": "rifki.coding@gmail.com",
+    "emergency_contact_name": null,
+    "emergency_contact_phone": "0895331432845",
+    "place_of_birth": "Kuningan",
+    "date_of_birth": "2007-12-11",
+    "join_date": null,
+    "gender": "male",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Dusun Puhun RT06/Rw03 Desa Kalapagunung, Kec. Kramatmulya, Kab. Kuningan",
+    "designation_id": null,
+    "national_id": "3208161112070002",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "Mandiri",
+    "bank_number": "1340029694873",
+    "is_active": false
+  }
+]

@@ -1,0 +1,1935 @@
+openapi: "3.0.3"
+info:
+  title: HRMS API
+  version: "1.0.0"
+  description: Human Resource Management System API
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /api/v1/auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/auth/register.yaml#/RegisterRequest"
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/register.yaml#/RegisterCreatedResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "409":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/admin/login:
+    post:
+      tags: [Auth]
+      summary: Admin / Super login
+      description: Authenticate as an admin or super user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/auth/login.yaml#/LoginAdminRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/login.yaml#/LoginAdminResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "403":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      description: Exchange a valid refresh token for a new token pair (rotation).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Tokens rotated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/refresh.yaml#/RefreshTokenResponse"
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/user/challenge:
+    post:
+      tags: [Auth]
+      summary: Request login challenge
+      description: Request a cryptographic challenge for device-bound login.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/auth/user.yaml#/RequestChallengeRequest"
+      responses:
+        "200":
+          description: Challenge generated
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/user.yaml#/RequestChallengeResponse"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/user/login:
+    post:
+      tags: [Auth]
+      summary: Login with signed challenge
+      description: Authenticate by signing the challenge with ECDSA P-256.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/auth/user.yaml#/UserLoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/user.yaml#/UserLoginResponse"
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "403":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/auth/register.yaml#/RegisterCreatedResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/common.yaml#/SuccessResponse"
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/designations/options:
+    get:
+      tags: [Designation]
+      summary: List designations as autofill options
+      responses:
+        "200":
+          description: Options list
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/designation/main.yaml#/OptionsResponse"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/designations:
+    get:
+      tags: [Designation]
+      summary: List all designations
+      responses:
+        "200":
+          description: Designation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: array
+                    items:
+                      $ref: "schemas/designation/main.yaml#/DesignationResponse"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Designation]
+      summary: Create a designation
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/designation/main.yaml#/DesignationCreateRequest"
+      responses:
+        "201":
+          description: Designation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/designation/main.yaml#/DesignationResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/designations/{id}:
+    get:
+      tags: [Designation]
+      summary: Get a designation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Designation found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/designation/main.yaml#/DesignationResponse"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Designation]
+      summary: Update a designation
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/designation/main.yaml#/DesignationUpdateRequest"
+      responses:
+        "200":
+          description: Designation updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/designation/main.yaml#/DesignationResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Designation]
+      summary: Delete a designation
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Designation deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees:
+    get:
+      tags: [Employee]
+      summary: List employees
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by full name (case-insensitive partial match)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, expired_contract, pending_contract]
+          description: Filter by employment status
+        - name: designation_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by designation
+      responses:
+        "200":
+          description: Paginated employee list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/EmployeePaginatedList"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Employee]
+      summary: Create an employee
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/employee/main.yaml#/CreateRequest"
+      responses:
+        "201":
+          description: Employee created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/me:
+    get:
+      tags: [Employee]
+      summary: Get my employee profile
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        "200":
+          description: Employee profile linked to authenticated user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/peek-next-number:
+    get:
+      tags: [Employee]
+      summary: Peek next available employee number for a designation
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: designation_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Next employee number
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: object
+                    properties:
+                      employee_number:
+                        type: string
+                        example: "1001SWE02"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/{id}:
+    get:
+      tags: [Employee]
+      summary: Get an employee by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Employee found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/{id}/identity:
+    put:
+      tags: [Employee]
+      summary: Update employee identity info
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/employee/main.yaml#/UpdateIdentityRequest"
+      responses:
+        "200":
+          description: Identity updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/{id}/contact:
+    put:
+      tags: [Employee]
+      summary: Update employee contact info
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/employee/main.yaml#/UpdateContactRequest"
+      responses:
+        "200":
+          description: Contact updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/employees/{id}/profile-photo:
+    put:
+      tags: [Employee]
+      summary: Update employee profile photo
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/employee/main.yaml#/UpdateProfilePhotoRequest"
+      responses:
+        "200":
+          description: Profile photo updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/employee/main.yaml#/EmployeeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/setup:
+    post:
+      tags: [Payroll]
+      summary: Setup full employee payroll package (upsert)
+      description: Atomically replaces salary, compensations, benefits, and deductions for an employee. Existing assignments are replaced entirely.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/SetupEmployeePayrollRequest"
+      responses:
+        "200":
+          description: Payroll setup complete
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/common.yaml#/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/salary:
+    get:
+      tags: [Payroll]
+      summary: List base salaries by employee
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: employee_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Base salary list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: array
+                    items:
+                      $ref: "schemas/payroll/main.yaml#/BaseSalaryResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Payroll]
+      summary: Create a base salary
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreateBaseSalaryRequest"
+      responses:
+        "201":
+          description: Base salary created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BaseSalaryResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/salary/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a base salary by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Base salary found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BaseSalaryResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Payroll]
+      summary: Update a base salary
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdateBaseSalaryRequest"
+      responses:
+        "200":
+          description: Base salary updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BaseSalaryResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Payroll]
+      summary: Delete a base salary
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Base salary deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/compensation:
+    get:
+      tags: [Payroll]
+      summary: List compensation items
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated compensation item list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Payroll]
+      summary: Create a compensation item
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreateCompensationItemRequest"
+      responses:
+        "201":
+          description: Compensation item created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/CompensationItemResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/compensation/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a compensation item by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Compensation item found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/CompensationItemResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Payroll]
+      summary: Update a compensation item
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdateCompensationItemRequest"
+      responses:
+        "200":
+          description: Compensation item updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/CompensationItemResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Payroll]
+      summary: Delete a compensation item
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Compensation item deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/compensation/assignments:
+    get:
+      tags: [Payroll]
+      summary: List compensation assignments
+      description: Read-only. Use POST /payroll/setup to manage assignments.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: employee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated compensation assignment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/compensation/assignments/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a compensation assignment by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Compensation assignment found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/EmployeeCompensationResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/benefit:
+    get:
+      tags: [Payroll]
+      summary: List benefit types
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated benefit type list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Payroll]
+      summary: Create a benefit type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreateBenefitTypeRequest"
+      responses:
+        "201":
+          description: Benefit type created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BenefitTypeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/benefit/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a benefit type by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Benefit type found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BenefitTypeResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Payroll]
+      summary: Update a benefit type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdateBenefitTypeRequest"
+      responses:
+        "200":
+          description: Benefit type updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/BenefitTypeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Payroll]
+      summary: Delete a benefit type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Benefit type deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/benefit/assignments:
+    get:
+      tags: [Payroll]
+      summary: List benefit assignments
+      description: Read-only. Use POST /payroll/setup to manage assignments.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: employee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated benefit assignment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/benefit/assignments/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a benefit assignment by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Benefit assignment found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/EmployeeBenefitResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/deduction:
+    get:
+      tags: [Payroll]
+      summary: List deduction types
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+        - name: is_mandatory
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated deduction type list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Payroll]
+      summary: Create a deduction type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreateDeductionTypeRequest"
+      responses:
+        "201":
+          description: Deduction type created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/DeductionTypeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/deduction/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a deduction type by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deduction type found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/DeductionTypeResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Payroll]
+      summary: Update a deduction type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdateDeductionTypeRequest"
+      responses:
+        "200":
+          description: Deduction type updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/DeductionTypeResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Payroll]
+      summary: Delete a deduction type
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deduction type deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/deduction/assignments:
+    get:
+      tags: [Payroll]
+      summary: List deduction assignments
+      description: Read-only. Use POST /payroll/setup to manage assignments.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: employee_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated deduction assignment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/responses/PayrollPaginatedList"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/deduction/assignments/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a deduction assignment by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deduction assignment found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/EmployeeDeductionResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/periods:
+    get:
+      tags: [Payroll]
+      summary: List payroll periods
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      responses:
+        "200":
+          description: Period list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: array
+                    items:
+                      $ref: "schemas/payroll/main.yaml#/PayrollPeriodResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    post:
+      tags: [Payroll]
+      summary: Create a payroll period
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreatePeriodRequest"
+      responses:
+        "201":
+          description: Period created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PayrollPeriodResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/periods/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a payroll period
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Period found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PayrollPeriodResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    put:
+      tags: [Payroll]
+      summary: Update a payroll period (draft only)
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdatePeriodRequest"
+      responses:
+        "200":
+          description: Period updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PayrollPeriodResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "422":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+    delete:
+      tags: [Payroll]
+      summary: Delete a payroll period (draft only)
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Period deleted
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/periods/{id}/process:
+    post:
+      tags: [Payroll]
+      summary: Run payroll processor for period
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Processing complete
+          content:
+            application/json:
+              schema:
+                $ref: "schemas/common.yaml#/SuccessResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/periods/{id}/close:
+    post:
+      tags: [Payroll]
+      summary: Close a payroll period (lock from further changes)
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Period closed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PayrollPeriodResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/periods/{id}/pay-slips:
+    get:
+      tags: [Payroll]
+      summary: List pay slips for a period
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Pay slip list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    type: array
+                    items:
+                      $ref: "schemas/payroll/main.yaml#/PaySlipResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+  /api/v1/payroll/pay-slips/{id}:
+    get:
+      tags: [Payroll]
+      summary: Get a pay slip by ID
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Pay slip found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PaySlipResponse"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
+components:
+  responses:
+    PayrollPaginatedList:
+      description: Paginated payroll list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [success, data, pagination]
+            properties:
+              success:
+                type: boolean
+                enum: [true]
+              data:
+                type: array
+                items:
+                  type: object
+              pagination:
+                $ref: "schemas/common.yaml#/PageInfo"
+
+    EmployeePaginatedList:
+      description: Paginated employee list
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [success, data, pagination]
+            properties:
+              success:
+                type: boolean
+                enum: [true]
+              data:
+                type: array
+                items:
+                  $ref: "schemas/employee/main.yaml#/EmployeeListItem"
+              pagination:
+                $ref: "schemas/common.yaml#/PageInfo"
+
+    CommonError:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: "schemas/common.yaml#/ErrorResponse"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: access_token

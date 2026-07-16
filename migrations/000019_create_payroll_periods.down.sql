@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS pay_slips CASCADE;
+DROP TABLE IF EXISTS payroll_periods CASCADE;
+ALTER TABLE deduction_types DROP COLUMN IF EXISTS slug;

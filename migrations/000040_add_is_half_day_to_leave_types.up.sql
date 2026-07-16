@@ -1,0 +1,1 @@
+ALTER TABLE leave_types ADD COLUMN is_half_day BOOLEAN NOT NULL DEFAULT false;

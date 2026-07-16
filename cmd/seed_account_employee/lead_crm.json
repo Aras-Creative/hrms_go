@@ -1,0 +1,27 @@
+[
+  {
+    "username": "1018LE01",
+    "password": "password123",
+    "role": "employee",
+    "full_name": "Rezky Ifan Stefano",
+    "employee_number": "1018LE01",
+    "phone": "087744292060",
+    "personal_email": "rezkyifan21@gmail.com",
+    "emergency_contact_name": null,
+    "emergency_contact_phone": "081818894042",
+    "place_of_birth": "Kuningan",
+    "date_of_birth": "1994-09-29",
+    "join_date": null,
+    "gender": "male",
+    "education": null,
+    "status": "pending_contract",
+    "address": "Lingkar Buana RT/RW 015/003 Desa Cijoho, Kec. Kuningan, Kab. Kuningan",
+    "designation_id": null,
+    "national_id": "3208092909940010",
+    "religion": "islam",
+    "bank_holder": null,
+    "bank_name": "BCA",
+    "bank_number": "2990478794",
+    "is_active": false
+  }
+]

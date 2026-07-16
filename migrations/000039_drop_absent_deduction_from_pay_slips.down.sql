@@ -1,0 +1,1 @@
+ALTER TABLE pay_slips ADD COLUMN absent_deduction BIGINT NOT NULL DEFAULT 0;

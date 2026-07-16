@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <title>PKWT - CV. ARAS CREATIVE</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      @page {
+        size: A4;
+        margin: 20mm 30mm 20mm 30mm;
+      }
+      body {
+        font-family: "Times New Roman", Times, serif;
+        font-size: 12px;
+        margin: 0;
+        color: #000;
+      }
+
+      table.doc-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      table.doc-table thead {
+        display: table-header-group;
+      }
+      table.doc-table tfoot {
+        display: table-footer-group;
+      }
+      .doc-header-cell {
+        padding: 0 0 14px 0;
+      }
+      .doc-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        border-bottom: 3px double #000;
+        padding-bottom: 8px;
+      }
+      .doc-header .company-info {
+        line-height: 1.4;
+        font-size: 14px;
+        max-width: 480px;
+      }
+      .doc-header .company-info p {
+        margin: 0;
+        font-size: 14px;
+      }
+      .doc-header .company-info a {
+        color: #000;
+        text-decoration: none;
+      }
+      .spacer-row td {
+        height: 6mm;
+      }
+
+      .doc-body {
+        font-size: 12px;
+        line-height: 1.6;
+        text-align: justify;
+      }
+      .doc-body p {
+        margin: 0 0 10px;
+      }
+
+      .doc-title {
+        text-align: center;
+        margin-bottom: 18px;
+      }
+      .doc-title h1 {
+        font-size: 13px;
+        text-decoration: underline;
+        margin: 0 0 2px;
+      }
+      .doc-title p {
+        margin: 0;
+        font-size: 12px;
+      }
+
+      .party-list {
+        margin: 0 0 14px 0;
+      }
+      .party-row {
+        display: flex;
+        margin-bottom: 2px;
+      }
+      .party-label {
+        width: 100px;
+        flex: 0 0 100px;
+      }
+      .party-colon {
+        width: 12px;
+        flex: 0 0 12px;
+      }
+      .party-value {
+        flex: 1;
+      }
+      .dotted {
+        border-bottom: 1px dotted #000;
+        display: inline-block;
+        width: 100%;
+      }
+      .fill-line {
+        border-bottom: 1px dotted #000;
+        display: inline-block;
+        min-width: 260px;
+      }
+
+      .pasal-title {
+        text-align: center;
+        font-weight: bold;
+        margin: 20px 0 2px;
+      }
+      .pasal-sub {
+        text-align: center;
+        font-weight: bold;
+        margin: 0 0 14px;
+      }
+      .ayat-title {
+        text-align: center;
+        font-weight: bold;
+        margin: 14px 0 4px;
+      }
+
+      .doc-body ol,
+      .doc-body ul {
+        margin: 0 0 10px 0;
+        padding-left: 22px;
+      }
+      .doc-body ol li,
+      .doc-body ul li {
+        margin-bottom: 4px;
+      }
+
+      .signature-section {
+        margin-top: 26px;
+      }
+      .signature-meta {
+        margin-bottom: 20px;
+      }
+      .signature-meta .row {
+        display: flex;
+      }
+      .signature-meta .label {
+        width: 70px;
+        flex: 0 0 70px;
+      }
+      .signature-meta .colon {
+        width: 12px;
+        flex: 0 0 12px;
+      }
+
+      .signature-table {
+        width: 100%;
+        margin-top: 6px;
+      }
+      .signature-table td {
+        width: 50%;
+        vertical-align: top;
+        font-weight: bold;
+        text-align: center;
+        padding-bottom: 2px;
+      }
+      .sig-space {
+        min-height: 90px;
+        vertical-align: middle;
+      }
+      .sig-name {
+        font-weight: bold;
+      }
+      .sig-role {
+        font-weight: bold;
+      }
+      .sig-blank {
+        display: block;
+        width: 45%;
+        margin: 0 auto;
+        border-bottom: 1px solid #000;
+      }
+      .sig-img {
+        max-width: 180px;
+        max-height: 90px;
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <td class="doc-header-cell">
+            <header class="doc-header">
+              <img
+                src="data:image/jpeg;base64,{{$.CompanyLogo}}"
+                alt="Logo"
+                style="width: 70px; height: 70px; object-fit: contain"
+              />
+              <div class="company-info">
+                <p><strong>CV. ARAS CREATIVE</strong></p>
+                <p>
+                  Dusun Manis RT/RW 010/002 Desa Kalapagunung, Kec. Kramatmulya,
+                  Kab. Kuningan 45553
+                </p>
+                <p>
+                  Email :
+                  <a href="mailto:hrd.aras@gmail.com">hrd.aras@gmail.com</a>
+                </p>
+              </div>
+            </header>
+          </td>
+        </tr>
+        <tr class="spacer-row">
+          <td></td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <main class="doc-body">
+              <div class="doc-title">
+                <h1>SURAT PERJANJIAN KERJA WAKTU TERTENTU</h1>
+                <p>Nomor : {{.Contract.Number}}</p>
+              </div>
+
+              {{range .Blocks}} {{if eq .Type "preamble"}}
+              <p>{{.Resolved}}</p>
+
+              {{else if eq .Type "first_party"}}
+              <div class="party-list">
+                <div class="party-row">
+                  <div class="party-label">Nama</div>
+                  <div class="party-colon">:</div>
+                  <div class="party-value">{{$.Signatory.Name}}</div>
+                </div>
+                <div class="party-row">
+                  <div class="party-label">Jabatan</div>
+                  <div class="party-colon">:</div>
+                  <div class="party-value">{{$.Signatory.Designation}}</div>
+                </div>
+              </div>
+              <p>
+                Dalam hal ini bertindak atas nama Manajemen CV. ARAS CREATIVE
+                yang berkedudukan di Desa Kalapagunung RT.10/02 Kramatmulya
+                Kabupaten Kuningan dan selanjutnya disebut
+                <strong>PIHAK PERTAMA.</strong>
+              </p>
+
+              {{else if eq .Type "second_party"}}
+              <div class="party-list">
+                {{range .Fields}}
+                <div class="party-row">
+                  <div class="party-label">{{.Label}}</div>
+                  <div class="party-colon">:</div>
+                  <div class="party-value">{{.Value}}</div>
+                </div>
+                {{end}}
+              </div>
+              <p>
+                Dalam hal ini bertindak untuk dan atas nama diri pribadi dan
+                selanjutnya disebut <strong>PIHAK KEDUA.</strong>
+              </p>
+
+              {{else if eq .Type "pasal"}}
+              <div class="pasal-title">{{.Label}}</div>
+              {{if .Title}}
+              <div class="pasal-sub">{{.Title}}</div>
+              {{end}} {{else if eq .Type "ayat"}}
+              <div class="ayat-title">{{.Label}}</div>
+              <div class="content">{{.Resolved}}</div>
+
+              {{else if eq .Type "paragraph"}}
+              <p>{{.Resolved}}</p>
+
+              {{else if eq .Type "ordered_list"}}
+              <ol>
+                {{.Resolved}}
+              </ol>
+
+              {{else if eq .Type "text"}}
+              <p>{{.Resolved}}</p>
+
+              {{end}} {{end}}
+
+              <div class="signature-section">
+                <table class="signature-table">
+                  <tr>
+                    <td>PIHAK PERTAMA</td>
+                    <td>PIHAK KEDUA</td>
+                  </tr>
+                  <tr>
+                    <td class="sig-space">
+                      {{with $.FirstSig}}{{if .SignatureBase64}}<img
+                        src="{{.SignatureBase64 | safeURL}}"
+                        class="sig-img"
+                      />{{end}}{{end}}
+                    </td>
+                    <td class="sig-space">
+                      {{with $.SecondSig}}{{if .SignatureBase64}}<img
+                        src="{{.SignatureBase64 | safeURL}}"
+                        class="sig-img"
+                      />{{end}}{{end}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="sig-name">
+                      <br />{{with $.FirstSig}}{{.SignedByName}}{{else}}<span
+                        class="sig-blank"
+                        >&nbsp;</span
+                      >{{end}}
+                    </td>
+                    <td class="sig-name">
+                      <br />{{with $.SecondSig}}{{.SignedByName}}{{else}}<span
+                        class="sig-blank"
+                        >&nbsp;</span
+                      >{{end}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="sig-role">
+                      {{with $.FirstSig}}{{.SignedByTitle}}{{end}}
+                    </td>
+                    <td class="sig-role">
+                      {{with $.SecondSig}}{{.SignedByTitle}}{{end}}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="sig-role">
+                      {{with $.FirstSig}}{{if .Place}}Dibuat di {{.Place}}{{if .SignedAt}}, {{.SignedAt}}{{end}}{{end}}{{end}}
+                    </td>
+                    <td class="sig-role">
+                      {{with $.SecondSig}}{{if .Place}}Dibuat di {{.Place}}{{if .SignedAt}}, {{.SignedAt}}{{end}}{{end}}{{end}}
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </main>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </body>
+</html>

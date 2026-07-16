@@ -1,0 +1,247 @@
+# =============================================================================
+# Employee module schemas
+# =============================================================================
+
+EmployeeResponse:
+  type: object
+  required:
+    - id
+    - full_name
+    - employee_number
+    - phone
+    - gender
+    - status
+    - is_active
+    - created_at
+    - updated_at
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique employee identifier
+    user_id:
+      type: string
+      format: uuid
+      nullable: true
+      description: Linked user account ID
+    full_name:
+      type: string
+      description: Employee full name
+    employee_number:
+      type: string
+      description: Generated employee number (e.g. 1001SWE01)
+    phone:
+      type: string
+      description: Primary phone number
+    personal_email:
+      type: string
+      nullable: true
+      description: Personal email address
+    emergency_contact_name:
+      type: string
+      description: Emergency contact person name
+    emergency_contact_phone:
+      type: string
+      description: Emergency contact phone number
+    place_of_birth:
+      type: string
+      description: Place of birth
+    date_of_birth:
+      type: string
+      format: date
+      nullable: true
+      description: Date of birth
+    join_date:
+      type: string
+      format: date
+      nullable: true
+      description: Employment join date
+    gender:
+      type: string
+      enum: [female, male, other]
+      description: Gender
+    education:
+      type: string
+      description: Educational background
+    status:
+      type: string
+      enum: [active, inactive, expired_contract, pending_contract]
+      description: Employment status
+    address:
+      type: string
+      description: Residential address
+    designation_id:
+      type: string
+      format: uuid
+      nullable: true
+      description: Current designation
+    national_id:
+      type: string
+      description: National ID number
+    religion:
+      type: string
+      enum: [islam, christian, catholic, hindu, buddhist, confucian, other]
+      description: Religion
+    profile_photo_id:
+      type: string
+      format: uuid
+      nullable: true
+      description: Profile photo file ID
+    is_active:
+      type: boolean
+      description: Whether the employee record is active
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+EmployeeListItem:
+  type: object
+  required:
+    - id
+    - full_name
+    - employee_number
+    - phone
+    - gender
+    - status
+    - is_active
+  properties:
+    id:
+      type: string
+      format: uuid
+    full_name:
+      type: string
+    employee_number:
+      type: string
+    phone:
+      type: string
+    gender:
+      type: string
+      enum: [female, male, other]
+    status:
+      type: string
+      enum: [active, inactive, expired_contract, pending_contract]
+    designation_id:
+      type: string
+      format: uuid
+      nullable: true
+    designation_name:
+      type: string
+      nullable: true
+    is_active:
+      type: boolean
+
+CreateRequest:
+  type: object
+  required:
+    - full_name
+    - employee_number
+    - phone
+    - emergency_contact_name
+    - emergency_contact_phone
+    - place_of_birth
+    - gender
+    - education
+    - address
+    - national_id
+    - religion
+  properties:
+    full_name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    employee_number:
+      type: string
+      description: Format must be 4 digits + 2-10 uppercase letters + 2 digits (e.g. 1001SWE01)
+    phone:
+      type: string
+    personal_email:
+      type: string
+      format: email
+    emergency_contact_name:
+      type: string
+    emergency_contact_phone:
+      type: string
+    place_of_birth:
+      type: string
+    date_of_birth:
+      type: string
+      format: date
+    join_date:
+      type: string
+      format: date
+    gender:
+      type: string
+      enum: [female, male, other]
+    education:
+      type: string
+    address:
+      type: string
+    designation_id:
+      type: string
+      format: uuid
+    national_id:
+      type: string
+    religion:
+      type: string
+      enum: [islam, christian, catholic, hindu, buddhist, confucian, other]
+
+UpdateIdentityRequest:
+  type: object
+  required:
+    - full_name
+    - place_of_birth
+    - gender
+    - education
+    - address
+    - national_id
+    - religion
+  properties:
+    full_name:
+      type: string
+      minLength: 1
+      maxLength: 255
+    place_of_birth:
+      type: string
+    date_of_birth:
+      type: string
+      format: date
+    gender:
+      type: string
+      enum: [female, male, other]
+    education:
+      type: string
+    address:
+      type: string
+    national_id:
+      type: string
+    religion:
+      type: string
+      enum: [islam, christian, catholic, hindu, buddhist, confucian, other]
+
+UpdateContactRequest:
+  type: object
+  required:
+    - phone
+    - emergency_contact_name
+    - emergency_contact_phone
+  properties:
+    phone:
+      type: string
+    personal_email:
+      type: string
+      format: email
+    emergency_contact_name:
+      type: string
+    emergency_contact_phone:
+      type: string
+
+UpdateProfilePhotoRequest:
+  type: object
+  properties:
+    profile_photo_id:
+      type: string
+      format: uuid
+      nullable: true

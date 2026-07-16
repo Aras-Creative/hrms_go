@@ -1,0 +1,59 @@
+# =============================================================================
+# Designation module schemas
+# =============================================================================
+
+DesignationResponse:
+  type: object
+  required: [id, code, name, created_at, updated_at]
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique designation identifier
+      example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    code:
+      type: string
+      description: Stable immutable code used in employee numbers (never changes)
+      example: SWE
+    name:
+      type: string
+      description: Designation name
+      example: Software Engineer
+    created_at:
+      type: string
+      format: date-time
+    updated_at:
+      type: string
+      format: date-time
+
+DesignationCreateRequest:
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: Designation name
+      example: Software Engineer
+
+DesignationUpdateRequest:
+  type: object
+  required: [name]
+  properties:
+    name:
+      type: string
+      minLength: 1
+      maxLength: 255
+      description: New designation name
+      example: Senior Software Engineer
+
+OptionsResponse:
+  type: object
+  required: [success, data]
+  properties:
+    success:
+      type: boolean
+      enum: [true]
+    data:
+      $ref: "../common.yaml#/OptionsData"

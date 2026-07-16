@@ -1,0 +1,2 @@
+UPDATE documents SET uploaded_by = '00000000-0000-0000-0000-000000000000' WHERE uploaded_by IS NULL;
+ALTER TABLE documents ALTER COLUMN uploaded_by SET NOT NULL;

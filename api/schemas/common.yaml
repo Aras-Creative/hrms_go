@@ -1,0 +1,96 @@
+# =============================================================================
+# Common schemas shared across all modules
+# =============================================================================
+
+ErrorResponse:
+  type: object
+  required: [success, error]
+  properties:
+    success:
+      type: boolean
+      enum: [false]
+      description: Always false for error responses
+    error:
+      $ref: "#/ErrorInfo"
+  example:
+    success: false
+    error:
+      code: INVALID_INPUT
+      message: invalid input
+
+ErrorInfo:
+  type: object
+  required: [code, message]
+  properties:
+    code:
+      type: string
+      description: Machine-readable error code
+      example: INVALID_INPUT
+    message:
+      type: string
+      description: Human-readable error description
+      example: invalid input
+
+SuccessResponse:
+  type: object
+  required: [success]
+  properties:
+    success:
+      type: boolean
+      enum: [true]
+    data:
+      description: Response payload (type varies per endpoint)
+    message:
+      type: string
+      description: Optional success message
+
+PaginatedResponse:
+  type: object
+  required: [success, data, pagination]
+  properties:
+    success:
+      type: boolean
+      enum: [true]
+    data:
+      description: Array of items
+    pagination:
+      $ref: "#/PageInfo"
+
+PageInfo:
+  type: object
+  required: [page, per_page, total, total_pages]
+  properties:
+    page:
+      type: integer
+      example: 1
+    per_page:
+      type: integer
+      example: 20
+    total:
+      type: integer
+      example: 100
+    total_pages:
+      type: integer
+      example: 5
+
+Option:
+  type: object
+  required: [value, label]
+  properties:
+    value:
+      type: string
+      description: Stable option value
+      example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    label:
+      type: string
+      description: Display label
+      example: Software Engineer
+
+OptionsData:
+  type: object
+  required: [options]
+  properties:
+    options:
+      type: array
+      items:
+        $ref: "#/Option"

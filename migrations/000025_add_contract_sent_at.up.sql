@@ -1,0 +1,1 @@
+ALTER TABLE contracts ADD COLUMN sent_at TIMESTAMPTZ;
