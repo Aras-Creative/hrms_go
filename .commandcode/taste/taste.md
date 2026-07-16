@@ -69,7 +69,7 @@
 # api-design
 - Make API request fields optional/omitempty at the transport layer; push business-rule validation to the entity layer instead of forcing all fields required at the API boundary. Confidence: 0.65
 - Split module code by aggregate (submission.go, type.go, balance.go) across service and repository layers (usecase, postgres) instead of keeping monolithic files per layer. Confidence: 0.70
-- Keep delivery/handler layer in a single handler file; do not split handlers by aggregate. Confidence: 0.70
+- Keep delivery/handler layer in a single handler file; do not split handlers by aggregate. Confidence: 0.75
 - Name Go files with just the aggregate name (e.g., submission.go, type.go, balance.go) since the module/package name already provides context; avoid redundant prefix/suffix. Confidence: 0.70
 - Name adapter/interface files as port.go instead of fetcher.go to follow ports-and-adapters naming convention. Confidence: 0.65
 

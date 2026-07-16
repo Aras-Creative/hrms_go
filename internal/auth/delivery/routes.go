@@ -13,4 +13,5 @@ func (h *AuthHandler) RegisterRoutes(r fiber.Router) {
 	auth.Post("/user/login", h.LoginUser)
 	auth.Delete("/devices/:userID", h.authMw, h.RevokeDevice)
 	auth.Patch("/me/name", h.authMw, h.ChangeName)
+	auth.Put("/admin/password", h.authMw, h.ChangePassword)
 }

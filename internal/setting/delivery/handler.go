@@ -1,11 +1,12 @@
 package delivery
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/gofiber/fiber/v3"
 
 	response "hrms/internal/pkg/api"
+	"hrms/internal/setting/entity"
 	"hrms/internal/setting/models"
 	"hrms/internal/setting/usecase"
 )
@@ -24,16 +25,23 @@ func (h *SettingHandler) Get(c fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
-	var logoURL *string
-	if s.CompanyLogoID != nil && *s.CompanyLogoID != "" {
-		url, err := h.uc.LogoResolver().ResolveURL(c.RequestCtx(), *s.CompanyLogoID)
-		if err != nil {
-			return response.Error(c, fmt.Errorf("resolve logo: %w", err))
-		}
-		logoURL = &url
+	logoURL, err := h.resolveLogoURL(c.RequestCtx(), s)
+	if err != nil {
+		return response.Error(c, err)
 	}
 
 	return response.OK(c, toResponse(s, logoURL))
+}
+
+func (h *SettingHandler) resolveLogoURL(ctx context.Context, s *entity.Setting) (*string, error) {
+	if s.CompanyLogoID != nil && *s.CompanyLogoID != "" {
+		url, err := h.uc.LogoResolver().ResolveURL(ctx, *s.CompanyLogoID)
+		if err != nil {
+			return nil, err
+		}
+		return &url, nil
+	}
+	return nil, nil
 }
 
 func (h *SettingHandler) Update(c fiber.Ctx) error {
@@ -57,13 +65,9 @@ func (h *SettingHandler) Update(c fiber.Ctx) error {
 
 	h.uc.ApplyTimezone(s)
 
-	var logoURL *string
-	if s.CompanyLogoID != nil && *s.CompanyLogoID != "" {
-		url, err := h.uc.LogoResolver().ResolveURL(c.RequestCtx(), *s.CompanyLogoID)
-		if err != nil {
-			return response.Error(c, fmt.Errorf("resolve logo: %w", err))
-		}
-		logoURL = &url
+	logoURL, err := h.resolveLogoURL(c.RequestCtx(), s)
+	if err != nil {
+		return response.Error(c, err)
 	}
 
 	return response.OK(c, toResponse(s, logoURL))

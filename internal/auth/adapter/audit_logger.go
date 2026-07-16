@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	ActionRegister     = "auth.register"
-	ActionDeviceRevoke = "auth.device.revoke"
-	ActionLogout       = "auth.logout"
+	ActionRegister        = "auth.register"
+	ActionDeviceRevoke    = "auth.device.revoke"
+	ActionLogout          = "auth.logout"
+	ActionPasswordChange  = "auth.password.change"
 )
 
 type AuditLogger struct {

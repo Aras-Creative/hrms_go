@@ -53,7 +53,7 @@ const querySelectAdminAttendance = `
 `
 
 func (r *PostgresDailyAttendanceRepo) FindAllPaginated(ctx context.Context, searchName, status, designationID, isLate, isEarlyLeave string, from, to time.Time, page, perPage int) ([]*AdminAttendanceRow, int64, error) {
-	where := " WHERE e.is_active = true"
+	where := " WHERE 1=1"
 	args := []interface{}{from, to}
 	argIdx := 3
 

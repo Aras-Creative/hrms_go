@@ -35,6 +35,12 @@ type ChangeNameRequest struct {
 	Username string `json:"username" validate:"required,max=255"`
 }
 
+type ChangePasswordRequest struct {
+	UserID         string `json:"user_id" validate:"required,uuid"`
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword    string `json:"new_password" validate:"required,min=8,max=72"`
+}
+
 type RequestChallengeRequest struct {
 	Username string `json:"username" validate:"required,max=255"`
 }

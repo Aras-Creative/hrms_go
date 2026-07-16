@@ -411,3 +411,30 @@ func (uc *AuthUsecase) LoginUser(ctx context.Context, input models.UserLoginInpu
 		Session:      session,
 	}, nil
 }
+
+func (uc *AuthUsecase) ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error {
+	user, err := uc.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("find user: %w", err)
+	}
+	if user == nil {
+		return errors.NewNotFound("user not found")
+	}
+
+	if err := uc.hasher.Compare(user.PasswordHash, currentPassword); err != nil {
+		return errors.NewInvalidInput("current password is incorrect")
+	}
+
+	hash, err := uc.hasher.Hash(newPassword)
+	if err != nil {
+		return fmt.Errorf("hash password: %w", err)
+	}
+
+	user.SetPasswordHash(hash)
+
+	if err := uc.userRepo.Update(ctx, user); err != nil {
+		return fmt.Errorf("update user: %w", err)
+	}
+
+	return nil
+}

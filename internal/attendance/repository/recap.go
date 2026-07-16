@@ -106,7 +106,7 @@ const queryWorkingDaysBase = `
 	FROM employees e
 	LEFT JOIN pattern_days pd ON pd.employee_id = e.id
 	LEFT JOIN override_adj oa ON oa.employee_id = e.id
-	WHERE e.is_active = true
+	WHERE 1=1
 `
 
 const queryAttendanceMetricsBase = `
@@ -116,12 +116,12 @@ const queryAttendanceMetricsBase = `
 		e.full_name,
 		e.profile_photo_id,
 		des.name AS designation_name,
-		COUNT(*) FILTER (WHERE da.status = 'present') AS present,
+		COUNT(da.id) FILTER (WHERE da.status = 'present') AS present,
 		lt.name AS leave_type_name,
-		COUNT(*) FILTER (WHERE da.status = 'absent') AS absent,
-		COUNT(*) FILTER (WHERE da.first_punch_in IS NOT NULL AND da.last_punch_out IS NULL) AS missing_clock_out,
-		COUNT(*) FILTER (WHERE da.is_late = true) AS late,
-		COUNT(*) FILTER (WHERE da.is_early_leave = true) AS early_leave,
+		COUNT(da.id) FILTER (WHERE da.status = 'absent') AS absent,
+		COUNT(da.id) FILTER (WHERE da.first_punch_in IS NOT NULL AND da.last_punch_out IS NULL) AS missing_clock_out,
+		COUNT(da.id) FILTER (WHERE da.is_late = true) AS late,
+		COUNT(da.id) FILTER (WHERE da.is_early_leave = true) AS early_leave,
 		COALESCE(SUM(
 			CASE WHEN da.is_late = true AND da.first_punch_in IS NOT NULL AND da.expected_start_time IS NOT NULL THEN
 				GREATEST(0, EXTRACT(EPOCH FROM (
@@ -129,12 +129,12 @@ const queryAttendanceMetricsBase = `
 				))::int / 60)
 			ELSE 0 END
 		), 0) AS late_minutes
-	FROM daily_attendances da
-	JOIN employees e ON e.id = da.employee_id AND e.is_active = true
+	FROM employees e
+	LEFT JOIN daily_attendances da ON da.employee_id = e.id AND da.date >= $1 AND da.date <= $2
 	LEFT JOIN designations des ON des.id = e.designation_id
 	LEFT JOIN leave_submissions ls ON ls.id = da.leave_submission_id
 	LEFT JOIN leave_types lt ON lt.id = ls.leave_type_id
-	WHERE da.date >= $1 AND da.date <= $2
+	WHERE 1=1
 `
 
 func (r *PostgresDailyAttendanceRepo) Recap(ctx context.Context, from, to time.Time, designationID string) ([]*RecapRow, error) {

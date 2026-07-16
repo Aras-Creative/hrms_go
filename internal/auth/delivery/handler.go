@@ -238,6 +238,40 @@ func (h *AuthHandler) ChangeName(c fiber.Ctx) error {
 	return response.OK(c, nil)
 }
 
+func (h *AuthHandler) ChangePassword(c fiber.Ctx) error {
+	role, ok := c.Locals("role").(string)
+	if !ok || (role != "super" && role != "admin") {
+		return response.Error(c, errors.NewForbidden("admin access required"))
+	}
+
+	var req ChangePasswordRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return err
+	}
+
+	if err := h.uc.ChangePassword(c.RequestCtx(), req.UserID, req.CurrentPassword, req.NewPassword); err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		actorID, _ := c.Locals("user_id").(string)
+		h.auditLogger.Log(c.RequestCtx(), actorID, "user", req.UserID, "",
+			authAdapter.ActionPasswordChange, c.IP(), string(c.RequestCtx().UserAgent()),
+			map[string]any{"target_user_id": req.UserID},
+		)
+	}
+
+	if h.notifUC != nil {
+		h.notifUC.Notify(c.RequestCtx(), req.UserID, notifTypeSecurity,
+			"Kata Sandi Diubah",
+			"Kata sandi akun Anda telah diubah oleh admin",
+			"user", req.UserID,
+		)
+	}
+
+	return response.OK(c, fiber.Map{"message": "password changed successfully"})
+}
+
 func (h *AuthHandler) setTokenCookies(c fiber.Ctx, accessToken, refreshToken string) {
 	accessMaxAge := int(h.accessTokenTTL.Seconds())
 	refreshMaxAge := int(h.refreshTokenTTL.Seconds())

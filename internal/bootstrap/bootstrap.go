@@ -175,16 +175,24 @@ func Run(cfgPath string) {
 
 	adminmw := middleware.NewAdminMiddleware()
 
-	// Apply timezone from settings (fallback to Asia/Jakarta)
+	// Storage infra (early for settings logo resolver and below)
+	docRepo := storageRepo.NewDocumentRepo(db)
+	r2Storage := storageRepo.NewR2Storage(&cfg.Storage.S3)
+	urlResolver := storageRepo.NewCDNURLResolver(&cfg.Storage.S3)
+
+	// Settings — seed cache and apply timezone before any scheduler starts
 	settingRepo := settingRepo.NewPostgresSettingRepo(db)
+	settingUC := settingUc.NewSettingUsecase(settingRepo, settingAdapter.NewLogoResolverAdapter(docRepo, urlResolver))
 	{
-		s, err := settingRepo.Find(context.Background())
+		s, err := settingUC.Get(context.Background())
 		if err == nil && s != nil && s.Timezone != "" {
 			timeutil.SetDefaultTimezone(s.Timezone)
 		} else {
 			timeutil.SetDefaultTimezone("Asia/Jakarta")
 		}
 	}
+	settingHandler := settingDelivery.NewSettingHandler(settingUC)
+	settingHandler.RegisterRoutes(api, authmw, adminmw)
 
 	// Attendance
 	punchRepo := attendanceRepo.NewPostgresPunchRepo(db)
@@ -216,10 +224,7 @@ func Run(cfgPath string) {
 	accountCreator := emplAdapter.NewAccountCreatorAdapter(authuc)
 	emplNumberGen := numbergen.New(emplRepo, "1001")
 
-	// Storage (early for employee profile photos, leave attachments, and contract PDFs)
-	docRepo := storageRepo.NewDocumentRepo(db)
-	r2Storage := storageRepo.NewR2Storage(&cfg.Storage.S3)
-	urlResolver := storageRepo.NewCDNURLResolver(&cfg.Storage.S3)
+	// Storage — photo resolver (docRepo, r2Storage, urlResolver already initialized above)
 	photoResolver := emplAdapter.NewProfilePhotoResolverAdapter(docRepo, urlResolver)
 
 	designationHandler := designationDelivery.NewDesignationHandler(designationUc, photoResolver, designationAuditLog)
@@ -269,7 +274,8 @@ func Run(cfgPath string) {
 	manualPayslipUc := payrollUc.NewManualPaySlipUsecase(payrollPeriodRepo, payrollPaySlipRepo, payrollCompItemRepo, payrollDeductionTypeRepo)
 	payslipEmpFetcher := payrollAdapter.NewPayslipEmployeeFetcherAdapter(emplRepo, designationRepo)
 	pdfRenderer := payrollAdapter.NewChromedpRenderer()
-	renderUc := payrollUc.NewRenderUsecase(payrollPeriodRepo, payrollPaySlipRepo, payslipEmpFetcher, pdfRenderer)
+	companySettings := payrollAdapter.NewCompanySettingsProviderAdapter(settingUC)
+	renderUc := payrollUc.NewRenderUsecase(payrollPeriodRepo, payrollPaySlipRepo, payslipEmpFetcher, pdfRenderer, companySettings)
 
 	payrollHandler := payrollDelivery.NewPayrollHandler(
 		salaryUc, compUc, benefitUc, deductionUc,
@@ -324,12 +330,6 @@ func Run(cfgPath string) {
 	storageUC := storageUc.NewStorageUsecase(docRepo, r2Storage, log, cfg.Storage.S3.MaxUploadSize)
 	storageHandler := storageDelivery.New(storageUC, urlResolver, storageAuditLog)
 	storageHandler.RegisterRoutes(api, authmw)
-
-	// Settings (full wiring with adapter)
-	logoResolver := settingAdapter.NewLogoResolverAdapter(docRepo, urlResolver)
-	settingUC := settingUc.NewSettingUsecase(settingRepo, logoResolver)
-	settingHandler := settingDelivery.NewSettingHandler(settingUC)
-	settingHandler.RegisterRoutes(api, authmw, adminmw)
 
 	// Dashboard
 	dashboardRepo := dashboardRepo.NewPostgresDashboardRepo(db)

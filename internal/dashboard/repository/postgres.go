@@ -46,7 +46,7 @@ const queryResolvedStatus = `
 		LEFT JOIN work_pattern_details wpd ON wpd.work_pattern_id = wp.id
 			AND wpd.day_of_week = EXTRACT(DOW FROM d::date)
 		LEFT JOIN employee_schedule_overrides eso ON eso.employee_id = e.id AND eso.date = d::date
-		WHERE e.is_active = true
+		WHERE 1=1
 	)
 `
 
@@ -54,7 +54,7 @@ func (r *PostgresDashboardRepo) CountMetrics(ctx context.Context, from, to time.
 	var m MetricsCounts
 
 	if err := r.db.GetContext(ctx, &m.TotalEmployees,
-		`SELECT COUNT(*) FROM employees WHERE is_active = true`,
+		`SELECT COUNT(*) FROM employees`,
 	); err != nil {
 		return nil, fmt.Errorf("count employees: %w", err)
 	}

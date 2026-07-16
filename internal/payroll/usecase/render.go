@@ -26,11 +26,16 @@ type PayslipEmployeeFetcher interface {
 	FindByID(ctx context.Context, id string) (models.PayslipEmployeeData, error)
 }
 
+type CompanySettingsProvider interface {
+	GetCompanySettings(ctx context.Context) (companyName, companyAddress, logoURL string, err error)
+}
+
 type RenderUsecase struct {
 	periodRepo  repository.PayrollPeriodRepository
 	paySlipRepo repository.PaySlipRepository
 	empFetcher  PayslipEmployeeFetcher
 	pdf         PDFRenderer
+	settings    CompanySettingsProvider
 }
 
 func NewRenderUsecase(
@@ -38,12 +43,14 @@ func NewRenderUsecase(
 	paySlipRepo repository.PaySlipRepository,
 	empFetcher PayslipEmployeeFetcher,
 	pdf PDFRenderer,
+	settings CompanySettingsProvider,
 ) *RenderUsecase {
 	return &RenderUsecase{
 		periodRepo:  periodRepo,
 		paySlipRepo: paySlipRepo,
 		empFetcher:  empFetcher,
 		pdf:         pdf,
+		settings:    settings,
 	}
 }
 
@@ -66,7 +73,12 @@ func (uc *RenderUsecase) PrintPayslip(ctx context.Context, payslipID string) ([]
 		return nil, fmt.Errorf("find employee: %w", err)
 	}
 
-	data := uc.buildRenderData(ps, p, empData)
+	companyName, companyAddress, logoURL, err := uc.settings.GetCompanySettings(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get company settings: %w", err)
+	}
+
+	data := uc.buildRenderData(ps, p, empData, companyName, companyAddress, logoURL)
 
 	tmpl, err := template.New("payslip").Parse(payslipTemplate)
 	if err != nil {
@@ -96,13 +108,13 @@ func normalizeStatus(status string) string {
 	}
 }
 
-func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPeriod, emp models.PayslipEmployeeData) *models.PayslipRenderData {
+func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPeriod, emp models.PayslipEmployeeData, companyName, companyAddress, logoURL string) *models.PayslipRenderData {
 	currency := ps.Currency.String()
 
 	data := &models.PayslipRenderData{
-		LogoURL:         "",
-		CompanyName:    "PT Nama Perusahaan Anda",
-		CompanyAddress: "Jl. Contoh Alamat No. 123, Jakarta Selatan, Indonesia 12345",
+		LogoURL:         logoURL,
+		CompanyName:    companyName,
+		CompanyAddress: companyAddress,
 		DocNumber:      fmt.Sprintf("SG/%s/%s", p.Name, ps.ID[:8]),
 		PeriodName:     p.Name,
 		PeriodRange:    fmt.Sprintf("%s – %s", p.StartDate.Format("02 Jan 2006"), p.EndDate.Format("02 Jan 2006")),
