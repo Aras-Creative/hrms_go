@@ -56,11 +56,6 @@ type TemplateListItemResponse struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-type ListTemplateResponse struct {
-	Items []*TemplateListItemResponse `json:"items"`
-	Total int64                       `json:"total"`
-}
-
 type TemplatePrefillResponse struct {
 	ID           string               `json:"id"`
 	Name         string               `json:"name"`
@@ -179,6 +174,43 @@ type SignContractsResponse struct {
 	Contracts []*ContractResponse `json:"contracts"`
 }
 
+type ContractCreatedItem struct {
+	ID               string     `json:"id"`
+	TemplateID       string     `json:"template_id"`
+	EmployeeID       string     `json:"employee_id"`
+	Number           string     `json:"number"`
+	StartDate        *time.Time `json:"start_date"`
+	EndDate          *time.Time `json:"end_date,omitempty"`
+	Salary           string     `json:"salary"`
+	DesignationTitle string     `json:"designation_title"`
+	Status           string     `json:"status"`
+	SentAt           *time.Time `json:"sent_at,omitempty"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type ContractCreatedResponse struct {
+	Signed    int                    `json:"signed"`
+	Contracts []*ContractCreatedItem `json:"contracts"`
+}
+
+func toContractCreatedItem(e *entity.Contract) *ContractCreatedItem {
+	return &ContractCreatedItem{
+		ID:               e.ID,
+		TemplateID:       e.TemplateID,
+		EmployeeID:       e.EmployeeID,
+		Number:           e.Number,
+		StartDate:        e.StartDate,
+		EndDate:          e.EndDate,
+		Salary:           e.Salary,
+		DesignationTitle: e.DesignationTitle,
+		Status:           string(e.Status),
+		SentAt:           e.SentAt,
+		CreatedAt:        e.CreatedAt,
+		UpdatedAt:        e.UpdatedAt,
+	}
+}
+
 type GeneratePDFResponse struct {
 	DocumentID  string `json:"document_id"`
 	ContentHash string `json:"content_hash"`
@@ -242,12 +274,12 @@ func toListItemResponse(e *entity.ContractTemplate) *TemplateListItemResponse {
 	}
 }
 
-func toListResponse(entities []*entity.ContractTemplate, total int64) *ListTemplateResponse {
+func toListItemResponses(entities []*entity.ContractTemplate) []*TemplateListItemResponse {
 	items := make([]*TemplateListItemResponse, len(entities))
 	for i, e := range entities {
 		items[i] = toListItemResponse(e)
 	}
-	return &ListTemplateResponse{Items: items, Total: total}
+	return items
 }
 
 func toContractResponse(e *entity.Contract) *ContractResponse {

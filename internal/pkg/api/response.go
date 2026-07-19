@@ -7,6 +7,7 @@ import (
 	apperrors "hrms/internal/pkg/apperror"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/google/uuid"
 )
 
 type Single struct {
@@ -107,4 +108,12 @@ func Error(c fiber.Ctx, err error) error {
 			Message: apperrors.ErrInternal.Message,
 		},
 	})
+}
+
+func ParseParamID(c fiber.Ctx, name string) (string, error) {
+	id := c.Params(name)
+	if _, err := uuid.Parse(id); err != nil {
+		return "", apperrors.NewInvalidInput("invalid " + name + " format")
+	}
+	return id, nil
 }

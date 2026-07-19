@@ -20,7 +20,11 @@ func NewDesignationUsecase(repo repository.DesignationRepository) *DesignationUs
 }
 
 func (uc *DesignationUsecase) Create(ctx context.Context, name string) (*entity.Designation, error) {
-	code := uc.AcronymFromName(name)
+	code, err := uc.GenerateUniqueCode(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate code: %w", err)
+	}
+
 	d := entity.NewDesignation(name, code)
 	if err := uc.repo.Create(ctx, d); err != nil {
 		return nil, fmt.Errorf("failed to create designation: %w", err)

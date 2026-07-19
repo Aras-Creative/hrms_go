@@ -8,3 +8,4 @@
 - Use "present" status (not "pending") when employee has clocked in but not yet clocked out and isn't late. Confidence: 0.70
 - Use "day_off" instead of "non_working" for days when employee is not scheduled to work (weekends, holidays, day off overrides). Confidence: 0.70
 - Separate lateness into two independent dimensions: attendance status (present/absent) and punctuality (is_late: true/false), instead of conflating them into a single "late" status. Confidence: 0.70
+- For 'dynamic' working type: intentionally skip late/early leave checks because flexible schedules don't have fixed start/end times to measure punctuality against; only apply lateness checks for 'fixed' working type. Confidence: 0.75

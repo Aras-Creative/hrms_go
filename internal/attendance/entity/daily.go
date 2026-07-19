@@ -237,23 +237,26 @@ func (d *DailyAttendance) EvaluateAndDetermineStatus(
 }
 
 // evaluateLeaveCase handles leave (full-day or half-day) scenarios.
-// Returns true if leave logic was applied.
+// Returns true if the day is fully resolved (full-day leave or half-day leave with punch-in).
+// Returns false for half-day leave without punch-in so absent logic evaluates the working half.
 func (d *DailyAttendance) evaluateLeaveCase(leaveSubmissionID, leaveTypeName *string, leaveIsHalfDay *bool) bool {
 	if leaveSubmissionID == nil {
 		return false
 	}
-	if leaveIsHalfDay != nil && *leaveIsHalfDay && d.FirstPunchIn != nil {
-		// Half-day leave but employee still clocked in
+	if leaveIsHalfDay != nil && *leaveIsHalfDay {
 		d.LeaveSubmissionID = leaveSubmissionID
 		d.LeaveTypeName = leaveTypeName
-		d.MarkPresent()
-		if d.LateMinutes() > 0 {
-			d.IsLate = true
+		if d.FirstPunchIn != nil {
+			d.MarkPresent()
+			if d.LateMinutes() > 0 {
+				d.IsLate = true
+			}
+			if d.LastPunchOut != nil && d.EarlyLeaveMinutes() > 0 {
+				d.IsEarlyLeave = true
+			}
+			return true
 		}
-		if d.LastPunchOut != nil && d.EarlyLeaveMinutes() > 0 {
-			d.IsEarlyLeave = true
-		}
-		return true
+		return false
 	}
 	// Full-day leave
 	d.MarkOnLeave(*leaveSubmissionID, *leaveTypeName)
@@ -289,11 +292,37 @@ func (d *DailyAttendance) evaluateWorkCase(workingType string) bool {
 	return true
 }
 
+// ResolveCutoff returns the instant after which a no_punch for this day
+// should be finalised as absent.
+//
+// Priority:
+//  1. ExpectedEndTime (from override end_time or pattern end_time — set by schedule resolver)
+//  2. Absolute fallback: 00:30 local time next day (company timezone)
+//
+// Only meaningful when Status == no_punch and the row is eligible for
+// absence finalisation (not on leave, not override day-off, not correction).
+func (d *DailyAttendance) ResolveCutoff() time.Time {
+	loc := timeutil.LoadDefaultLocation()
+	fallback := time.Date(d.Date.Year(), d.Date.Month(), d.Date.Day()+1, 0, 30, 0, 0, loc)
+
+	if d.ExpectedEndTime == nil || *d.ExpectedEndTime == "" {
+		return fallback
+	}
+	endParsed, err := time.Parse("15:04", *d.ExpectedEndTime)
+	if err != nil {
+		return fallback
+	}
+	return time.Date(d.Date.Year(), d.Date.Month(), d.Date.Day(), endParsed.Hour(), endParsed.Minute(), 0, 0, loc)
+}
+
 // evaluateAbsentCase handles scenarios where the employee is expected to work
-// but did not clock in. For "dynamic" type without expected times, mark as no_punch
-// (flexible hours, no shift end to compare against).
-// For "fixed" type, if the shift has not ended yet, mark as no_punch;
-// otherwise mark as absent.
+// but did not clock in. Uses ResolveCutoff() to determine whether the
+// no_punch should be finalised as absent or remain pending.
+//
+// Rows with leave_submission_id, override day-off, or correction are
+// excluded upstream (EvaluateAndDetermineStatus short-circuits before
+// reaching this method).
+//
 // Returns true if absent/no_punch logic was applied.
 func (d *DailyAttendance) evaluateAbsentCase(workingType string) bool {
 	if d.Source != "working_pattern" && d.Source != "override" {
@@ -301,25 +330,17 @@ func (d *DailyAttendance) evaluateAbsentCase(workingType string) bool {
 	}
 
 	if d.ExpectedStartTime == nil || *d.ExpectedStartTime == "" {
-		if workingType == "dynamic" {
-			d.MarkNoPunch()
+		if workingType != "dynamic" {
+			d.MarkDayOff()
 			return true
 		}
-		d.MarkDayOff()
-		return true
 	}
 
-	if d.ExpectedEndTime != nil && *d.ExpectedEndTime != "" {
-		loc := timeutil.LoadDefaultLocation()
-		now := time.Now().In(loc)
-		endParsed, err := time.Parse("15:04", *d.ExpectedEndTime)
-		if err == nil {
-			ref := time.Date(d.Date.Year(), d.Date.Month(), d.Date.Day(), endParsed.Hour(), endParsed.Minute(), 0, 0, loc)
-			if now.Before(ref) {
-				d.MarkNoPunch()
-				return true
-			}
-		}
+	cutoff := d.ResolveCutoff()
+	now := time.Now().In(cutoff.Location())
+	if now.Before(cutoff) {
+		d.MarkNoPunch()
+		return true
 	}
 
 	d.MarkAbsent()
@@ -386,24 +407,48 @@ func ResolveAdminAttendance(f *AdminScheduleFields) {
 	case f.OverrideIsWorking != nil && !*f.OverrideIsWorking:
 		f.Status = string(AttendanceDayOff)
 	case isPatternDynamic && !isPatternOff:
-		f.Status = string(AttendanceNoPunch)
-	case f.ExpectedStartTime != nil && *f.ExpectedStartTime != "" && !isPatternOff:
-		if f.ExpectedEndTime != nil && *f.ExpectedEndTime != "" {
-			loc := timeutil.LoadDefaultLocation()
-			now := time.Now().In(loc)
-			endParsed, err := time.Parse("15:04", *f.ExpectedEndTime)
+		cutoffEnd := f.ExpectedEndTime
+		loc := timeutil.LoadDefaultLocation()
+		var cutoffTime time.Time
+		if cutoffEnd != nil && *cutoffEnd != "" {
+			endParsed, err := time.Parse("15:04", *cutoffEnd)
 			if err == nil {
-				ref := time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day(), endParsed.Hour(), endParsed.Minute(), 0, 0, loc)
-				if now.After(ref) {
-					f.Status = string(AttendanceAbsent)
-				} else {
-					f.Status = string(AttendanceNoPunch)
-				}
+				cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day(), endParsed.Hour(), endParsed.Minute(), 0, 0, loc)
 			} else {
-				f.Status = string(AttendanceNoPunch)
+				cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day()+1, 0, 30, 0, 0, loc)
 			}
 		} else {
+			cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day()+1, 0, 30, 0, 0, loc)
+		}
+		now := time.Now().In(loc)
+		if now.Before(cutoffTime) {
 			f.Status = string(AttendanceNoPunch)
+		} else {
+			f.Status = string(AttendanceAbsent)
+		}
+	case f.ExpectedStartTime != nil && *f.ExpectedStartTime != "" && !isPatternOff:
+		// Resolve cutoff: override end_time > pattern end_time > 00:30 next day fallback
+		cutoffEnd := f.ExpectedEndTime
+		if cutoffEnd == nil || *cutoffEnd == "" {
+			cutoffEnd = nil // will fall through to fallback
+		}
+		loc := timeutil.LoadDefaultLocation()
+		var cutoffTime time.Time
+		if cutoffEnd != nil {
+			endParsed, err := time.Parse("15:04", *cutoffEnd)
+			if err == nil {
+				cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day(), endParsed.Hour(), endParsed.Minute(), 0, 0, loc)
+			} else {
+				cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day()+1, 0, 30, 0, 0, loc)
+			}
+		} else {
+			cutoffTime = time.Date(f.Date.Year(), f.Date.Month(), f.Date.Day()+1, 0, 30, 0, 0, loc)
+		}
+		now := time.Now().In(loc)
+		if now.Before(cutoffTime) {
+			f.Status = string(AttendanceNoPunch)
+		} else {
+			f.Status = string(AttendanceAbsent)
 		}
 	case f.OverrideIsWorking != nil && *f.OverrideIsWorking:
 		f.Status = string(AttendanceNoPunch)

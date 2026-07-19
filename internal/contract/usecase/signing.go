@@ -48,7 +48,7 @@ func NewSigningUsecase(db *sqlx.DB, contractRepo repository.ContractRepository, 
 func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignContractInput) ([]*entity.Contract, error) {
 	tx, err := uc.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to begin transaction: %v", err))
+		return nil, errors.WrapInternal("failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -60,7 +60,7 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 	for _, contractID := range input.ContractIDs {
 		e, err := contractRepo.FindContractByID(ctx, contractID)
 		if err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to find contract %s: %v", contractID, err))
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to find contract %s", contractID), err)
 		}
 		if e == nil {
 			return nil, errors.NewNotFound("contract not found: " + contractID)
@@ -78,13 +78,13 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 		)
 
 		if err := signingRepo.CreateContractSigning(ctx, signing); err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to create signing for contract %s: %v", contractID, err))
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to create signing for contract %s", contractID), err)
 		}
 
 		// Stage 2: Check signings and determine next status
 		signings, err := signingRepo.FindSigningsByContractID(ctx, contractID)
 		if err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to find signings for contract %s: %v", contractID, err))
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to find signings for contract %s", contractID), err)
 		}
 
 		shouldGeneratePDF, err := e.EvaluateSigningState(signings)
@@ -94,7 +94,7 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 
 		// Stage 3: Save contract updates
 		if err := contractRepo.UpdateContract(ctx, e); err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to update contract %s: %v", contractID, err))
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to update contract %s", contractID), err)
 		}
 
 		// Stage 3b: When first-party signs (contract goes to "sent"),
@@ -108,30 +108,30 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 		// Stage 4: When new contract becomes active, expire any previous active contract
 		if shouldGeneratePDF {
 			if err := uc.expireOldActiveContractWithRepo(ctx, contractRepo, e); err != nil {
-				return nil, errors.NewInternal(fmt.Sprintf("expire old active contract for %s: %v", contractID, err))
+				return nil, errors.WrapInternal(fmt.Sprintf("expire old active contract for %s", contractID), err)
 			}
 		}
 
 		// Stage 5: When new contract becomes active, activate the employee and assign default work pattern
 		if shouldGeneratePDF && uc.empActivator != nil {
 			if err := uc.empActivator.ActivateEmployee(ctx, e.EmployeeID); err != nil {
-				return nil, errors.NewInternal(fmt.Sprintf("activate employee for contract %s: %v", contractID, err))
+				return nil, errors.WrapInternal(fmt.Sprintf("activate employee for contract %s", contractID), err)
 			}
 		}
 		if shouldGeneratePDF && uc.wpAssigner != nil && e.StartDate != nil {
 			if err := uc.wpAssigner.AssignDefaultWorkPattern(ctx, e.EmployeeID, *e.StartDate); err != nil {
-				return nil, errors.NewInternal(fmt.Sprintf("assign work pattern for contract %s: %v", contractID, err))
+				return nil, errors.WrapInternal(fmt.Sprintf("assign work pattern for contract %s", contractID), err)
 			}
 		}
 
 		// Stage 6: Generate and store the final PDF after both parties have signed
 		if shouldGeneratePDF {
 			if _, _, err := uc.docUC.StorePDFWithSignings(ctx, e.ID, e.Number, input.SignedByName, input.SignedByTitle, signings); err != nil {
-				return nil, errors.NewInternal(fmt.Sprintf("failed to store signed PDF for contract %s: %v", contractID, err))
+				return nil, errors.WrapInternal(fmt.Sprintf("failed to store signed PDF for contract %s", contractID), err)
 			}
 			e.AttachDocument()
 			if err := contractRepo.UpdateContract(ctx, e); err != nil {
-				return nil, errors.NewInternal(fmt.Sprintf("failed to update contract %s after attaching doc: %v", contractID, err))
+				return nil, errors.WrapInternal(fmt.Sprintf("failed to update contract %s after attaching doc", contractID), err)
 			}
 		}
 
@@ -139,7 +139,7 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to commit transaction: %v", err))
+		return nil, errors.WrapInternal("failed to commit transaction", err)
 	}
 
 	return results, nil
@@ -187,7 +187,7 @@ func (uc *SigningUsecase) BulkSignAsSecondParty(ctx context.Context, input model
 	for _, contractID := range input.ContractIDs {
 		e, err := uc.contractRepo.FindContractByID(ctx, contractID)
 		if err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to find contract %s: %v", contractID, err))
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to find contract %s", contractID), err)
 		}
 		if e == nil {
 			return nil, errors.NewNotFound("contract not found: " + contractID)

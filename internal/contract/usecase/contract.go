@@ -13,7 +13,7 @@ import (
 func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.CreateContractInput) (*models.BulkCreateContractResult, error) {
 	tmpl, err := uc.tmplRepo.FindByID(ctx, input.TemplateID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find template: %v", err))
+		return nil, fmt.Errorf("find template: %w", err)
 	}
 	if tmpl == nil {
 		return nil, errors.NewNotFound("contract template not found")
@@ -26,7 +26,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 
 	empDesIDs, err := uc.empFetcher.FindDesignationIDs(ctx, employeeIDs)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee designations: %v", err))
+		return nil, fmt.Errorf("find employee designations: %w", err)
 	}
 
 	desIDSet := make(map[string]struct{})
@@ -44,7 +44,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 	if len(desIDs) > 0 {
 		names, err := uc.desFetcher.FindNamesByIDs(ctx, desIDs)
 		if err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to find designation names: %v", err))
+			return nil, fmt.Errorf("find designation names: %w", err)
 		}
 		desNames = names
 	}
@@ -63,7 +63,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 
 	salaries, err := uc.salFetcher.FindCurrentByEmployeeIDs(ctx, employeeIDs)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to fetch salaries: %v", err))
+		return nil, fmt.Errorf("fetch salaries: %w", err)
 	}
 
 	contracts := make([]*entity.Contract, 0, len(employeeIDs))
@@ -81,7 +81,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 
 		number, err := uc.numGen.Generate(ctx, "CTR")
 		if err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to generate contract number: %v", err))
+			return nil, fmt.Errorf("generate contract number: %w", err)
 		}
 
 		e := entity.NewContract(
@@ -101,7 +101,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 	}
 
 	if err := uc.contractRepo.BulkCreateContracts(ctx, contracts); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to bulk create contracts: %v", err))
+		return nil, fmt.Errorf("bulk create contracts: %w", err)
 	}
 
 	return &models.BulkCreateContractResult{Contracts: contracts}, nil
@@ -110,7 +110,7 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 func (uc *ContractUsecase) CheckActiveContracts(ctx context.Context, input models.CheckActiveContractInput) (*models.CheckActiveContractResult, error) {
 	activeMap, err := uc.contractRepo.FindActiveContractEmployeeIDs(ctx, input.EmployeeIDs)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to check active contracts: %v", err))
+		return nil, fmt.Errorf("check active contracts: %w", err)
 	}
 
 	items := make([]models.CheckActiveContractItem, 0, len(activeMap))
@@ -136,7 +136,7 @@ type ListContractDetailResult struct {
 func (uc *ContractUsecase) ListContracts(ctx context.Context, input models.ListContractInput) (*models.ListContractResult, error) {
 	items, total, err := uc.contractRepo.FindAllContracts(ctx, input)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to list contracts: %v", err))
+		return nil, fmt.Errorf("list contracts: %w", err)
 	}
 	return &models.ListContractResult{Items: items, Total: total}, nil
 }
@@ -156,7 +156,7 @@ func (uc *ContractUsecase) ListContractsWithDetail(ctx context.Context, input mo
 
 	signings, err := uc.signingRepo.FindSigningsByContractIDs(ctx, ids)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find signings: %v", err))
+		return nil, fmt.Errorf("find signings: %w", err)
 	}
 	briefs, err := uc.empFetcher.FindBriefByIDs(ctx, empIDs)
 	if err != nil {
@@ -174,7 +174,7 @@ func (uc *ContractUsecase) ListContractsWithDetail(ctx context.Context, input mo
 func (uc *ContractUsecase) ListMyContractsWithDetail(ctx context.Context, input models.ListContractInput, userID string) (*ListContractDetailResult, error) {
 	employeeID, err := uc.empFetcher.FindEmployeeIDByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to resolve user: %v", err))
+		return nil, fmt.Errorf("resolve user: %w", err)
 	}
 	if employeeID == "" {
 		return nil, errors.NewNotFound("employee not found for authenticated user")
@@ -190,7 +190,7 @@ func (uc *ContractUsecase) FindSigningsByContractIDs(ctx context.Context, contra
 func (uc *ContractUsecase) ListMyContracts(ctx context.Context, input models.ListContractInput, userID string) (*models.ListContractResult, error) {
 	employeeID, err := uc.empFetcher.FindEmployeeIDByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to resolve user: %v", err))
+		return nil, fmt.Errorf("resolve user: %w", err)
 	}
 	if employeeID == "" {
 		return nil, errors.NewNotFound("employee not found for authenticated user")
@@ -207,7 +207,7 @@ func (uc *ContractUsecase) CountSoonExpired(ctx context.Context, withinDays int)
 func (uc *ContractUsecase) CountPendingContracts(ctx context.Context, userID string) (int64, error) {
 	employeeID, err := uc.empFetcher.FindEmployeeIDByUserID(ctx, userID)
 	if err != nil {
-		return 0, errors.NewInternal(fmt.Sprintf("failed to resolve user: %v", err))
+		return 0, fmt.Errorf("resolve user: %w", err)
 	}
 	if employeeID == "" {
 		return 0, nil
@@ -218,7 +218,7 @@ func (uc *ContractUsecase) CountPendingContracts(ctx context.Context, userID str
 func (uc *ContractUsecase) GetMyActiveContract(ctx context.Context, userID string) (*entity.Contract, error) {
 	employeeID, err := uc.empFetcher.FindEmployeeIDByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to resolve user: %v", err))
+		return nil, fmt.Errorf("resolve user: %w", err)
 	}
 	if employeeID == "" {
 		return nil, nil
@@ -230,7 +230,7 @@ func (uc *ContractUsecase) GetMyActiveContract(ctx context.Context, userID strin
 		PerPage:    1,
 	})
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find active contract: %v", err))
+		return nil, fmt.Errorf("find active contract: %w", err)
 	}
 	if len(items) == 0 {
 		return nil, nil
@@ -254,7 +254,7 @@ func (uc *ContractUsecase) FindEmployeeBriefs(ctx context.Context, employeeIDs [
 func (uc *ContractUsecase) GetContractDetail(ctx context.Context, contractID string) (*entity.Contract, string, string, []*entity.ContractSigning, error) {
 	e, err := uc.contractRepo.FindContractByID(ctx, contractID)
 	if err != nil {
-		return nil, "", "", nil, errors.NewInternal(fmt.Sprintf("failed to find contract: %v", err))
+		return nil, "", "", nil, fmt.Errorf("find contract: %w", err)
 	}
 	if e == nil {
 		return nil, "", "", nil, errors.NewNotFound("contract not found")
@@ -270,7 +270,7 @@ func (uc *ContractUsecase) GetContractDetail(ctx context.Context, contractID str
 
 	signings, err := uc.signingRepo.FindSigningsByContractID(ctx, contractID)
 	if err != nil {
-		return nil, "", "", nil, errors.NewInternal(fmt.Sprintf("failed to find signings: %v", err))
+		return nil, "", "", nil, fmt.Errorf("find signings: %w", err)
 	}
 
 	return e, templateName, contractType, signings, nil
@@ -279,7 +279,7 @@ func (uc *ContractUsecase) GetContractDetail(ctx context.Context, contractID str
 func (uc *ContractUsecase) DeleteContract(ctx context.Context, contractID string) error {
 	e, err := uc.contractRepo.FindContractByID(ctx, contractID)
 	if err != nil {
-		return errors.NewInternal(fmt.Sprintf("failed to find contract: %v", err))
+		return fmt.Errorf("find contract: %w", err)
 	}
 	if e == nil {
 		return errors.NewNotFound("contract not found")
@@ -290,7 +290,7 @@ func (uc *ContractUsecase) DeleteContract(ctx context.Context, contractID string
 	}
 
 	if err := uc.contractRepo.DeleteContract(ctx, contractID); err != nil {
-		return errors.NewInternal(fmt.Sprintf("failed to delete contract: %v", err))
+		return fmt.Errorf("delete contract: %w", err)
 	}
 	return nil
 }

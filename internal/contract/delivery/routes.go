@@ -4,9 +4,9 @@ import "github.com/gofiber/fiber/v3"
 
 func (h *ContractHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber.Handler) {
 	ct := r.Group("/contracts/templates")
-	ct.Get("/", h.ListTemplates)
-	ct.Get("/:id", h.GetTemplate)
-	ct.Get("/:id/prefill", h.GetTemplatePrefill)
+	ct.Get("/", authMw, h.ListTemplates)
+	ct.Get("/:id", authMw, h.GetTemplate)
+	ct.Get("/:id/prefill", authMw, h.GetTemplatePrefill)
 	ct.Post("/", authMw, adminMw, h.CreateTemplate)
 	ct.Put("/:id", authMw, adminMw, h.UpdateTemplate)
 	ct.Delete("/:id", authMw, adminMw, h.DeleteTemplate)

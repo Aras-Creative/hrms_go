@@ -122,9 +122,15 @@ func (r *PostgresContractRepo) WithTx(tx *sqlx.Tx) ContractRepository {
 }
 
 func (r *PostgresContractRepo) CreateContract(ctx context.Context, e *entity.Contract) error {
-	dataJSON, _ := json.Marshal(e.Data)
-	templatesJSON, _ := json.Marshal(e.Templates)
-	_, err := r.db.ExecContext(ctx, queryInsertContract,
+	dataJSON, err := json.Marshal(e.Data)
+	if err != nil {
+		return fmt.Errorf("marshal contract data: %w", err)
+	}
+	templatesJSON, err := json.Marshal(e.Templates)
+	if err != nil {
+		return fmt.Errorf("marshal contract templates: %w", err)
+	}
+	_, err = r.db.ExecContext(ctx, queryInsertContract,
 		e.ID, e.TemplateID, e.EmployeeID, e.Number,
 		e.StartDate, e.EndDate,
 		e.Salary, e.DesignationID, e.DesignationTitle,
@@ -154,8 +160,14 @@ func (r *PostgresContractRepo) BulkCreateContracts(ctx context.Context, contract
 			paramIdx+9, paramIdx+10, paramIdx+11, paramIdx+12, paramIdx+13, paramIdx+14)
 		paramIdx += 15
 
-		dataJSON, _ := json.Marshal(e.Data)
-		templatesJSON, _ := json.Marshal(e.Templates)
+		dataJSON, err := json.Marshal(e.Data)
+		if err != nil {
+			return fmt.Errorf("marshal contract data: %w", err)
+		}
+		templatesJSON, err := json.Marshal(e.Templates)
+		if err != nil {
+			return fmt.Errorf("marshal contract templates: %w", err)
+		}
 		args = append(args, e.ID, e.TemplateID, e.EmployeeID, e.Number,
 			e.StartDate, e.EndDate,
 			e.Salary, e.DesignationID, e.DesignationTitle,
@@ -292,9 +304,12 @@ func (r *PostgresContractRepo) UpdateContract(ctx context.Context, e *entity.Con
 	if err != nil {
 		return fmt.Errorf("update contract: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("contract not found")
+		return nil
 	}
 	return nil
 }
@@ -311,11 +326,11 @@ func (r *PostgresContractRepo) CountByEmployeeIDAndStatus(ctx context.Context, e
 func modelToContract(m *ContractModel) *entity.Contract {
 	var data entity.ContractTemplateData
 	if len(m.Data) > 0 {
-		json.Unmarshal(m.Data, &data)
+		_ = json.Unmarshal(m.Data, &data)
 	}
 	var templates entity.ContractTemplatePartials
 	if len(m.Templates) > 0 {
-		json.Unmarshal(m.Templates, &templates)
+		_ = json.Unmarshal(m.Templates, &templates)
 	}
 	c := entity.ReconstituteContract(m.ID, m.TemplateID, m.EmployeeID, m.Number,
 		m.StartDate, m.EndDate, m.Salary,
@@ -380,7 +395,10 @@ func (r *PostgresContractRepo) Increment(ctx context.Context, designationCode st
 	if err != nil {
 		return fmt.Errorf("increment sequence: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return fmt.Errorf("sequence not found for %s", designationCode)
 	}

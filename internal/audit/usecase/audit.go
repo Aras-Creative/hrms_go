@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"hrms/internal/audit/entity"
 	"hrms/internal/audit/models"
@@ -56,4 +57,8 @@ func (uc *AuditUsecase) List(ctx context.Context, filter models.AuditFilter) ([]
 		return nil, 0, fmt.Errorf("audit list: %w", err)
 	}
 	return items, total, nil
+}
+
+func (uc *AuditUsecase) ListByResourceActionsAndDateRange(ctx context.Context, resource, resourceID string, actions []string, from, to time.Time) ([]*models.AuditEntryWithActor, error) {
+	return uc.repo.ListByResourceActionsAndDateRange(ctx, resource, resourceID, actions, from, to)
 }

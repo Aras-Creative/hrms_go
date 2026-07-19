@@ -2,15 +2,54 @@ package timeutil
 
 import (
 	"fmt"
+	"sync"
 	"time"
 )
 
 var DefaultTimezone = "Asia/Jakarta"
 
+var (
+	defaultLoc     *time.Location
+	defaultLocMu   sync.RWMutex
+)
+
 func SetDefaultTimezone(tz string) {
-	if tz != "" {
-		DefaultTimezone = tz
+	if tz == "" {
+		return
 	}
+	DefaultTimezone = tz
+
+	loc, err := time.LoadLocation(tz)
+	if err != nil {
+		// Don't silently swallow — store UTC so it's obvious, but the
+		// bootstrap caller should validate and log this failure.
+		loc = time.UTC
+	}
+	defaultLocMu.Lock()
+	defaultLoc = loc
+	defaultLocMu.Unlock()
+}
+
+// LoadDefaultLocation returns the cached timezone location set by
+// SetDefaultTimezone. If SetDefaultTimezone has not been called yet, it
+// loads from DefaultTimezone on first call and caches the result.
+func LoadDefaultLocation() *time.Location {
+	defaultLocMu.RLock()
+	loc := defaultLoc
+	defaultLocMu.RUnlock()
+	if loc != nil {
+		return loc
+	}
+
+	// First call — load from the package-level default.
+	loc, err := time.LoadLocation(DefaultTimezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	defaultLocMu.Lock()
+	defaultLoc = loc
+	defaultLocMu.Unlock()
+	return loc
 }
 
 func ToUTC(timeStr *string) *string {
@@ -42,13 +81,6 @@ func ParseDateRange(fromStr, toStr string) (time.Time, time.Time, error) {
 	}
 	to = to.Add(24*time.Hour - time.Nanosecond)
 	return from, to, nil
-}
-
-func LoadDefaultLocation() *time.Location {
-	if l, err := time.LoadLocation(DefaultTimezone); err == nil {
-		return l
-	}
-	return time.UTC
 }
 
 func FormatDate(t *time.Time) *string {

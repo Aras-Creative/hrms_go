@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -83,7 +82,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	exists, err := uc.empChecker.ExistsByID(ctx, input.EmployeeID)
 	if err != nil {
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to check employee: %v", err))
+		return nil, false, errors.WrapInternal("failed to check employee", err)
 	}
 	if !exists {
 		return nil, false, errors.NewNotFound("employee not found")
@@ -91,12 +90,12 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	existing, err := uc.correctionRepo.FindByEmployeeAndDate(ctx, input.EmployeeID, date)
 	if err != nil {
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to check existing correction: %v", err))
+		return nil, false, errors.WrapInternal("failed to check existing correction", err)
 	}
 
 	tx, err := uc.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to begin transaction: %v", err))
+		return nil, false, errors.WrapInternal("failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -106,14 +105,14 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	da, err := processor.ComputeDaily(ctx, input.EmployeeID, date)
 	if err != nil {
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to compute base attendance: %v", err))
+		return nil, false, errors.WrapInternal("failed to compute base attendance", err)
 	}
 
 	created := existing == nil
 
 	if created {
 		if err := correctionRepo.Create(ctx, correction); err != nil {
-			return nil, false, errors.NewInternal(fmt.Sprintf("failed to save correction: %v", err))
+			return nil, false, errors.WrapInternal("failed to save correction", err)
 		}
 	} else {
 		existing.ClockIn = input.ClockIn
@@ -122,7 +121,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 		existing.Reason = input.Reason
 		existing.CorrectedBy = input.CorrectedBy
 		if err := correctionRepo.Update(ctx, existing); err != nil {
-			return nil, false, errors.NewInternal(fmt.Sprintf("failed to update correction: %v", err))
+			return nil, false, errors.WrapInternal("failed to update correction", err)
 		}
 		correction = existing
 	}
@@ -135,11 +134,11 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 			"date", input.Date,
 			"error", err,
 		)
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to update daily attendance: %v", err))
+		return nil, false, errors.WrapInternal("failed to update daily attendance", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, false, errors.NewInternal(fmt.Sprintf("failed to commit transaction: %v", err))
+		return nil, false, errors.WrapInternal("failed to commit transaction", err)
 	}
 
 	return correction, created, nil
@@ -159,7 +158,7 @@ func (uc *CorrectionUsecase) List(ctx context.Context, input ListCorrectionsInpu
 	}
 	rows, total, err := uc.correctionRepo.FindAllPaginated(ctx, input.SearchName, startDate, endDate, input.Page, input.PerPage)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to list corrections: %v", err))
+		return nil, errors.WrapInternal("failed to list corrections", err)
 	}
 	items := make([]*models.CorrectionViewItem, len(rows))
 	for i, r := range rows {
@@ -171,7 +170,7 @@ func (uc *CorrectionUsecase) List(ctx context.Context, input ListCorrectionsInpu
 func (uc *CorrectionUsecase) Delete(ctx context.Context, id string) (*entity.AttendanceCorrection, error) {
 	c, err := uc.correctionRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find correction: %v", err))
+		return nil, errors.WrapInternal("failed to find correction", err)
 	}
 	if c == nil {
 		return nil, errors.NewNotFound("correction not found")
@@ -179,7 +178,7 @@ func (uc *CorrectionUsecase) Delete(ctx context.Context, id string) (*entity.Att
 
 	tx, err := uc.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to begin transaction: %v", err))
+		return nil, errors.WrapInternal("failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -188,15 +187,15 @@ func (uc *CorrectionUsecase) Delete(ctx context.Context, id string) (*entity.Att
 	processor := NewDailyProcessor(dailyRepo, uc.resolver)
 
 	if err := correctionRepo.Delete(ctx, id); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to delete correction: %v", err))
+		return nil, errors.WrapInternal("failed to delete correction", err)
 	}
 
 	if _, err := processor.ProcessDaily(ctx, c.EmployeeID, c.Date); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to restore attendance: %v", err))
+		return nil, errors.WrapInternal("failed to restore attendance", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to commit transaction: %v", err))
+		return nil, errors.WrapInternal("failed to commit transaction", err)
 	}
 
 	return c, nil

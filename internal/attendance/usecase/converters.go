@@ -8,7 +8,7 @@ import (
 	"hrms/internal/pkg/timeutil"
 )
 
-func toHistoryItem(da *entity.DailyAttendance) models.MyAttendanceHistoryItem {
+func toHistoryItem(da *entity.DailyAttendance, correction *CorrectionAuditInfo) models.MyAttendanceHistoryItem {
 	day := fmt.Sprintf("%d", da.Date.Day())
 	month := da.Date.Format("Jan")
 
@@ -42,7 +42,7 @@ func toHistoryItem(da *entity.DailyAttendance) models.MyAttendanceHistoryItem {
 		reason = da.LeaveTypeName
 	}
 
-	return models.MyAttendanceHistoryItem{
+	item := models.MyAttendanceHistoryItem{
 		Day:          day,
 		Month:        month,
 		Type:         attType,
@@ -51,7 +51,18 @@ func toHistoryItem(da *entity.DailyAttendance) models.MyAttendanceHistoryItem {
 		WorkingHours: workingHours,
 		Reason:       reason,
 		LateMinutes:  da.LateMinutes(),
+		IsCorrected:  da.Source == "correction",
 	}
+
+	if correction != nil {
+		item.IsCorrected = true
+		if correction.ActorName != "" {
+			item.CorrectedBy = &correction.ActorName
+		}
+		item.CorrectedAt = &correction.CreatedAt
+	}
+
+	return item
 }
 
 func toMyAttendance(da *entity.DailyAttendance, employeeName string) *models.MyAttendance {

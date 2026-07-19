@@ -85,7 +85,10 @@ func (r *PostgresNotificationRepo) MarkRead(ctx context.Context, id, userID stri
 	if err != nil {
 		return fmt.Errorf("mark read: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("mark read rows affected: %w", err)
+	}
 	if rows == 0 {
 		return sql.ErrNoRows
 	}

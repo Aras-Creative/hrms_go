@@ -127,9 +127,12 @@ func (r *PostgresWorkPatternRepo) Update(ctx context.Context, wp *entity.Working
 	if err != nil {
 		return fmt.Errorf("failed to update work pattern: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("work pattern not found")
+		return nil
 	}
 
 	if _, err := tx.ExecContext(ctx, queryDeleteDetailsByPatternID, wp.ID); err != nil {

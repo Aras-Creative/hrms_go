@@ -6,11 +6,11 @@ type DashboardMetrics struct {
 	TotalEmployees  int        `json:"total_employees"`
 	ActiveContracts int        `json:"active_contracts"`
 	Present         int        `json:"present"`
+	Absent          int        `json:"absent"`
 	PresentPct      float64    `json:"present_pct"`
 	Late            int        `json:"late"`
 	LatePct         float64    `json:"late_pct"`
 	OnLeave         int        `json:"on_leave"`
-	PendingLeave    int        `json:"pending_leave"`
 	From            time.Time  `json:"from"`
 	To              time.Time  `json:"to"`
 }

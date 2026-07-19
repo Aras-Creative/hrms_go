@@ -146,9 +146,12 @@ func (r *PostgresDeductionTypeRepo) Update(ctx context.Context, dt *entity.Deduc
 	if err != nil {
 		return fmt.Errorf("update deduction type: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("deduction type not found")
+		return nil
 	}
 	return nil
 }
@@ -158,9 +161,12 @@ func (r *PostgresDeductionTypeRepo) Delete(ctx context.Context, id string) error
 	if err != nil {
 		return fmt.Errorf("delete deduction type: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("deduction type not found")
+		return nil
 	}
 	return nil
 }
@@ -302,9 +308,12 @@ func (r *PostgresEmployeeDeductionRepo) Update(ctx context.Context, ed *entity.E
 	if err != nil {
 		return fmt.Errorf("update employee deduction: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee deduction not found")
+		return nil
 	}
 	return nil
 }
@@ -314,9 +323,12 @@ func (r *PostgresEmployeeDeductionRepo) Delete(ctx context.Context, id string) e
 	if err != nil {
 		return fmt.Errorf("delete employee deduction: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee deduction not found")
+		return nil
 	}
 	return nil
 }

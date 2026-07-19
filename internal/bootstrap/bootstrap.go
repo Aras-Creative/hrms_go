@@ -194,12 +194,17 @@ func Run(cfgPath string) {
 	settingHandler := settingDelivery.NewSettingHandler(settingUC)
 	settingHandler.RegisterRoutes(api, authmw, adminmw)
 
+	loc, err := time.LoadLocation(timeutil.DefaultTimezone)
+	if err != nil {
+		loc = time.UTC
+	}
+
 	// Attendance
 	punchRepo := attendanceRepo.NewPostgresPunchRepo(db)
 	dailyRepo := attendanceRepo.NewPostgresDailyAttendanceRepo(db)
 	scheduleResolver := attendanceAdapter.NewScheduleResolverAdapter(overrideRepo)
 	dailyProcessor := attendanceUc.NewDailyProcessor(dailyRepo, scheduleResolver)
-	scheduler := attendanceUc.NewScheduler(db, dailyProcessor, timeutil.DefaultTimezone)
+	scheduler := attendanceUc.NewScheduler(db, dailyProcessor, loc)
 	scheduler.Start(context.Background())
 	defer scheduler.Stop()
 	attendanceLeaveFetcher := attendanceAdapter.NewLeaveFetcherAdapter(leaveSubmissionRepo)
@@ -208,8 +213,9 @@ func Run(cfgPath string) {
 	attendanceEmpFetcher := attendanceAdapter.NewEmployeeFetcherAdapter(emplRepo)
 	correctionRepo := attendanceRepo.NewPostgresCorrectionRepo(db)
 	dailyUc := attendanceUc.NewDailyAttendanceUsecase(dailyRepo, correctionRepo, punchRepo, dailyProcessor)
-	attendanceMeUc := attendanceUc.NewMeUsecase(attendanceEmpFetcher, dailyProcessor, dailyRepo)
 	correctionUc := attendanceUc.NewCorrectionUsecase(db, correctionRepo, dailyRepo, attendanceEmpFetcher, scheduleResolver)
+	correctionAuditFetcher := attendanceAdapter.NewCorrectionAuditFetcherAdapter(auditUC)
+	attendanceMeUc := attendanceUc.NewMeUsecase(attendanceEmpFetcher, dailyProcessor, dailyRepo, correctionAuditFetcher)
 
 	notificationHandler := notificationDelivery.NewNotificationHandler(notificationUC)
 	sseAuthMw := middleware.NewSSEAuthMiddleware(jwtSvc)
@@ -322,7 +328,7 @@ func Run(cfgPath string) {
 
 	// Contract expiry scheduler
 	contractExpiryProcessor := contractProcessor.NewExpiryProcessor(contractDbRepo, emplRepo)
-	contractExpiryScheduler := contractProcessor.NewScheduler(db, contractExpiryProcessor, timeutil.DefaultTimezone)
+	contractExpiryScheduler := contractProcessor.NewScheduler(db, contractExpiryProcessor, loc)
 	contractExpiryScheduler.Start(context.Background())
 	defer contractExpiryScheduler.Stop()
 

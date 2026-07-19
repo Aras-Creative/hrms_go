@@ -14,19 +14,20 @@ import (
 )
 
 type MeUsecase struct {
-	fetcher   EmployeeFetcher
-	processor *DailyProcessor
-	dailyRepo repository.DailyAttendanceRepository
+	fetcher          EmployeeFetcher
+	processor        *DailyProcessor
+	dailyRepo        repository.DailyAttendanceRepository
+	correctionFetcher CorrectionAuditFetcher
 }
 
-func NewMeUsecase(fetcher EmployeeFetcher, processor *DailyProcessor, dailyRepo repository.DailyAttendanceRepository) *MeUsecase {
-	return &MeUsecase{fetcher: fetcher, processor: processor, dailyRepo: dailyRepo}
+func NewMeUsecase(fetcher EmployeeFetcher, processor *DailyProcessor, dailyRepo repository.DailyAttendanceRepository, correctionFetcher CorrectionAuditFetcher) *MeUsecase {
+	return &MeUsecase{fetcher: fetcher, processor: processor, dailyRepo: dailyRepo, correctionFetcher: correctionFetcher}
 }
 
 func (uc *MeUsecase) GetMyAttendance(ctx context.Context, userID string) (*models.MyAttendance, error) {
 	employeeID, employeeName, err := uc.fetcher.FindByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee: %v", err))
+		return nil, errors.WrapInternal("failed to find employee", err)
 	}
 	if employeeID == "" {
 		return nil, errors.NewNotFound("employee not found for user")
@@ -37,7 +38,7 @@ func (uc *MeUsecase) GetMyAttendance(ctx context.Context, userID string) (*model
 
 	da, err := uc.processor.ComputeDaily(ctx, employeeID, today)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to get attendance: %v", err))
+		return nil, errors.WrapInternal("failed to get attendance", err)
 	}
 
 	return toMyAttendance(da, employeeName), nil
@@ -46,7 +47,7 @@ func (uc *MeUsecase) GetMyAttendance(ctx context.Context, userID string) (*model
 func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.MonthlyStats, error) {
 	employeeID, _, err := uc.fetcher.FindByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee: %v", err))
+		return nil, errors.WrapInternal("failed to find employee", err)
 	}
 	if employeeID == "" {
 		return nil, errors.NewNotFound("employee not found for user")
@@ -58,7 +59,7 @@ func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.Mo
 
 	records, err := uc.dailyRepo.FindByEmployeeAndDateRange(ctx, employeeID, from, to)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find records: %v", err))
+		return nil, errors.WrapInternal("failed to find records", err)
 	}
 
 	monthMap := make(map[string]*models.MonthlyStats)
@@ -100,7 +101,7 @@ func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.Mo
 func (uc *MeUsecase) GetMyAttendanceHistory(ctx context.Context, userID, fromStr, toStr string) ([]models.MyAttendanceHistoryItem, error) {
 	employeeID, _, err := uc.fetcher.FindByUserID(ctx, userID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee: %v", err))
+		return nil, errors.WrapInternal("failed to find employee", err)
 	}
 	if employeeID == "" {
 		return nil, errors.NewNotFound("employee not found for user")
@@ -116,9 +117,22 @@ func (uc *MeUsecase) GetMyAttendanceHistory(ctx context.Context, userID, fromStr
 		return nil, err
 	}
 
+	var correctionMap map[string]*CorrectionAuditInfo
+	if uc.correctionFetcher != nil {
+		correctionMap, err = uc.correctionFetcher.FetchCorrectionLogs(ctx, employeeID, from, to)
+		if err != nil {
+			return nil, fmt.Errorf("fetch correction logs: %w", err)
+		}
+	}
+
 	items := make([]models.MyAttendanceHistoryItem, len(records))
 	for i, da := range records {
-		items[i] = toHistoryItem(da)
+		var correction *CorrectionAuditInfo
+		if correctionMap != nil {
+			dateKey := da.Date.Format("2006-01-02")
+			correction = correctionMap[dateKey]
+		}
+		items[i] = toHistoryItem(da, correction)
 	}
 	return items, nil
 }

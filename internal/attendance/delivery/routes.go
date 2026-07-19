@@ -9,7 +9,6 @@ func (h *AttendanceHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber
 	p.Get("/today", h.PunchToday)
 	p.Get("/history", h.PunchHistory)
 
-	r.Get("/attendance/daily", authMw, h.DailyQuery)
 	r.Get("/attendance/list", authMw, adminMw, h.DailyList)
 	r.Get("/attendance/recap", authMw, adminMw, h.Recap)
 	r.Get("/attendance/mine", authMw, h.MyAttendance)

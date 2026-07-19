@@ -127,9 +127,12 @@ func (r *PostgresCompensationItemRepo) Update(ctx context.Context, ci *entity.Co
 	if err != nil {
 		return fmt.Errorf("update compensation item: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("compensation item not found")
+		return nil
 	}
 	return nil
 }
@@ -139,9 +142,12 @@ func (r *PostgresCompensationItemRepo) Delete(ctx context.Context, id string) er
 	if err != nil {
 		return fmt.Errorf("delete compensation item: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("compensation item not found")
+		return nil
 	}
 	return nil
 }
@@ -282,9 +288,12 @@ func (r *PostgresEmployeeCompensationRepo) Update(ctx context.Context, ec *entit
 	if err != nil {
 		return fmt.Errorf("update employee compensation: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee compensation not found")
+		return nil
 	}
 	return nil
 }
@@ -294,9 +303,12 @@ func (r *PostgresEmployeeCompensationRepo) Delete(ctx context.Context, id string
 	if err != nil {
 		return fmt.Errorf("delete employee compensation: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee compensation not found")
+		return nil
 	}
 	return nil
 }

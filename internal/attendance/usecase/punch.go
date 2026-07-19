@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -40,7 +39,7 @@ func (uc *PunchUsecase) punch(ctx context.Context, punchType entity.PunchType, i
 
 	onLeave, _, err := uc.leaveFetcher.HasApprovedLeave(ctx, input.EmployeeID, today)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to check leave status: %v", err))
+		return nil, errors.WrapInternal("failed to check leave status", err)
 	}
 	if onLeave {
 		return nil, errors.NewForbidden("cannot punch while on approved leave")
@@ -48,7 +47,7 @@ func (uc *PunchUsecase) punch(ctx context.Context, punchType entity.PunchType, i
 
 	p := entity.NewPunch(input.EmployeeID, punchType, now)
 	if err := uc.repo.Create(ctx, p); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to create punch: %v", err))
+		return nil, errors.WrapInternal("failed to create punch", err)
 	}
 
 	da, err := uc.processor.ProcessDaily(ctx, input.EmployeeID, p.Date)

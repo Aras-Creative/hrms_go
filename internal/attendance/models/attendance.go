@@ -41,14 +41,17 @@ type MyAttendance struct {
 }
 
 type MyAttendanceHistoryItem struct {
-	Day          string  `json:"day"`
-	Month        string  `json:"month"`
-	Type         string  `json:"type"`
-	CheckIn      *string `json:"check_in"`
-	CheckOut     *string `json:"check_out"`
-	WorkingHours *string `json:"working_hours"`
-	Reason       *string `json:"reason"`
-	LateMinutes  int     `json:"late_minutes"`
+	Day          string     `json:"day"`
+	Month        string     `json:"month"`
+	Type         string     `json:"type"`
+	CheckIn      *string    `json:"check_in"`
+	CheckOut     *string    `json:"check_out"`
+	WorkingHours *string    `json:"working_hours"`
+	Reason       *string    `json:"reason"`
+	LateMinutes  int        `json:"late_minutes"`
+	IsCorrected  bool       `json:"is_corrected"`
+	CorrectedBy  *string    `json:"corrected_by,omitempty"`
+	CorrectedAt  *time.Time `json:"corrected_at,omitempty"`
 }
 
 type MonthlyStats struct {
@@ -58,12 +61,6 @@ type MonthlyStats struct {
 	OnLeave     int    `json:"on_leave"`
 	Absent      int    `json:"absent"`
 	LateMinutes int    `json:"late_minutes"`
-}
-
-type DailyQueryInput struct {
-	EmployeeID string
-	From       string
-	To         string
 }
 
 type ListInput struct {

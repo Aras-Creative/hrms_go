@@ -22,13 +22,13 @@ type BlockRequest struct {
 	Position *string `json:"position,omitempty"`
 }
 
-type CreateTemplateDataRequest struct {
-	DesignationID    *string               `json:"designation_id"`
-	WorkingPatternID *string               `json:"working_pattern_id"`
-	JobDuties        []string              `json:"job_duties"`
-	InventoryItems   []string              `json:"inventory_items"`
+type TemplateDataRequest struct {
+	DesignationID    *string              `json:"designation_id" validate:"omitempty,uuid"`
+	WorkingPatternID *string              `json:"working_pattern_id" validate:"omitempty,uuid"`
+	JobDuties        []string             `json:"job_duties"`
+	InventoryItems   []string             `json:"inventory_items"`
 	SpecialClauses   []SpecialClauseRequest `json:"special_clauses"`
-	EmployeeFields   []string              `json:"employee_fields"`
+	EmployeeFields   []string             `json:"employee_fields"`
 }
 
 type TemplatePartialsRequest struct {
@@ -36,27 +36,27 @@ type TemplatePartialsRequest struct {
 }
 
 type CreateTemplateRequest struct {
-	Name         string                    `json:"name" validate:"required,min=1,max=255"`
-	ContractType string                    `json:"contract_type" validate:"required,oneof=PKWT PKWTT"`
-	Description  string                    `json:"description"`
-	Data         CreateTemplateDataRequest `json:"data"`
-	Templates    TemplatePartialsRequest   `json:"templates"`
+	Name         string                 `json:"name" validate:"required,min=1,max=255"`
+	ContractType string                 `json:"contract_type" validate:"required,oneof=PKWT PKWTT"`
+	Description  string                 `json:"description"`
+	Data         TemplateDataRequest    `json:"data"`
+	Templates    TemplatePartialsRequest `json:"templates"`
 }
 
 type UpdateTemplateRequest struct {
-	Name         string                    `json:"name" validate:"required,min=1,max=255"`
-	ContractType string                    `json:"contract_type" validate:"required,oneof=PKWT PKWTT"`
-	Description  string                    `json:"description"`
-	IsActive     *bool                     `json:"is_active"`
-	Data         CreateTemplateDataRequest `json:"data"`
-	Templates    TemplatePartialsRequest   `json:"templates"`
+	Name         string                 `json:"name" validate:"required,min=1,max=255"`
+	ContractType string                 `json:"contract_type" validate:"required,oneof=PKWT PKWTT"`
+	Description  string                 `json:"description"`
+	IsActive     *bool                  `json:"is_active"`
+	Data         TemplateDataRequest    `json:"data"`
+	Templates    TemplatePartialsRequest `json:"templates"`
 }
 
 // ---- Contract Requests ----
 
 type CreateContractRequest struct {
-	TemplateID  string   `json:"template_id" validate:"required"`
-	EmployeeIDs []string `json:"employee_ids" validate:"required,min=1"`
+	TemplateID  string   `json:"template_id" validate:"required,uuid"`
+	EmployeeIDs []string `json:"employee_ids" validate:"required,min=1,dive,uuid"`
 	StartDate   string   `json:"start_date" validate:"required"`
 	EndDate     *string  `json:"end_date,omitempty"`
 }
@@ -72,7 +72,7 @@ type SignContractRequest struct {
 }
 
 type CheckActiveContractRequest struct {
-	EmployeeIDs []string `json:"employee_ids" validate:"required,min=1"`
+	EmployeeIDs []string `json:"employee_ids" validate:"required,min=1,dive,uuid"`
 }
 
 type TerminateContractRequest struct {
@@ -113,7 +113,7 @@ func (r *TerminateContractRequest) GetTerminationDate() (time.Time, error) {
 	return parsed, nil
 }
 
-func toEntityData(d CreateTemplateDataRequest) entity.ContractTemplateData {
+func toEntityData(d TemplateDataRequest) entity.ContractTemplateData {
 	clauses := make([]entity.SpecialClause, len(d.SpecialClauses))
 	for i, c := range d.SpecialClauses {
 		clauses[i] = entity.SpecialClause{Title: c.Title, Description: c.Description}

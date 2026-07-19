@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"hrms/internal/dashboard/entity"
@@ -27,19 +28,19 @@ func (uc *DashboardUsecase) GetMetrics(ctx context.Context, from, to time.Time) 
 
 	var presentPct, latePct float64
 	if capacity > 0 {
-		presentPct = float64(mc.Present) * 100 / float64(capacity)
-		latePct = float64(mc.Late) * 100 / float64(capacity)
+		presentPct = math.Round(float64(mc.Present)*1000/float64(capacity)) / 10
+		latePct = math.Round(float64(mc.Late)*1000/float64(capacity)) / 10
 	}
 
 	return &entity.DashboardMetrics{
 		TotalEmployees:  mc.TotalEmployees,
 		ActiveContracts: mc.ActiveContracts,
 		Present:         mc.Present,
+		Absent:          mc.Absent,
 		PresentPct:      presentPct,
 		Late:            mc.Late,
 		LatePct:         latePct,
 		OnLeave:         mc.OnLeave,
-		PendingLeave:    mc.PendingLeave,
 		From:            from,
 		To:              to,
 	}, nil

@@ -326,6 +326,32 @@ func (uc *EmployeeUsecase) GetMe(ctx context.Context, userID string) (*models.Me
 	return result, nil
 }
 
+func (uc *EmployeeUsecase) ChangeDesignation(ctx context.Context, input models.ChangeDesignationInput) ([]*entity.Employee, error) {
+	if input.DesignationID != nil {
+		if _, err := uc.fetcher.FindCodeByID(ctx, *input.DesignationID); err != nil {
+			return nil, errors.NewInvalidInput("invalid designation_id")
+		}
+	}
+
+	employees := make([]*entity.Employee, 0, len(input.EmployeeIDs))
+	for _, empID := range input.EmployeeIDs {
+		e, err := uc.repo.FindByID(ctx, empID)
+		if err != nil {
+			return nil, fmt.Errorf("find employee %s: %w", empID, err)
+		}
+		if e == nil {
+			return nil, errors.NewNotFound("employee not found: " + empID)
+		}
+		e.DesignationID = input.DesignationID
+		e.UpdatedAt = time.Now()
+		if err := uc.repo.Update(ctx, e); err != nil {
+			return nil, fmt.Errorf("update employee %s: %w", empID, err)
+		}
+		employees = append(employees, e)
+	}
+	return employees, nil
+}
+
 func (uc *EmployeeUsecase) GetProfileCompletion(ctx context.Context, userID string) (*models.ProfileCompletionResult, error) {
 	e, err := uc.GetMe(ctx, userID)
 	if err != nil {

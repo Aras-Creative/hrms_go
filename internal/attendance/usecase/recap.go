@@ -68,12 +68,12 @@ func (uc *DailyAttendanceUsecase) Recap(ctx context.Context, fromStr, toStr, des
 
 	leaveTypes, err := uc.dailyRepo.FindActiveLeaveTypes(ctx)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to fetch leave types: %v", err))
+		return nil, errors.WrapInternal("failed to fetch leave types", err)
 	}
 
 	rows, err := uc.dailyRepo.Recap(ctx, from, to, designationID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to fetch recap data: %v", err))
+		return nil, errors.WrapInternal("failed to fetch recap data", err)
 	}
 
 	result := &RecapResult{LeaveTypes: leaveTypes, Rows: rows}

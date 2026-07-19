@@ -136,9 +136,12 @@ func (r *PostgresBenefitTypeRepo) Update(ctx context.Context, bt *entity.Benefit
 	if err != nil {
 		return fmt.Errorf("update benefit type: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("benefit type not found")
+		return nil
 	}
 	return nil
 }
@@ -148,9 +151,12 @@ func (r *PostgresBenefitTypeRepo) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("delete benefit type: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("benefit type not found")
+		return nil
 	}
 	return nil
 }
@@ -292,9 +298,12 @@ func (r *PostgresEmployeeBenefitRepo) Update(ctx context.Context, eb *entity.Emp
 	if err != nil {
 		return fmt.Errorf("update employee benefit: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee benefit not found")
+		return nil
 	}
 	return nil
 }
@@ -304,9 +313,12 @@ func (r *PostgresEmployeeBenefitRepo) Delete(ctx context.Context, id string) err
 	if err != nil {
 		return fmt.Errorf("delete employee benefit: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("employee benefit not found")
+		return nil
 	}
 	return nil
 }

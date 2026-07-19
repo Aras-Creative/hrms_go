@@ -93,7 +93,10 @@ func (r *PostgresScheduleOverrideRepo) Delete(ctx context.Context, id string) er
 	if err != nil {
 		return fmt.Errorf("failed to delete schedule override: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
 		return ErrOverrideNotFound
 	}

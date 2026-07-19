@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"hrms/internal/attendance/entity"
@@ -51,7 +50,7 @@ func (uc *DailyAttendanceUsecase) List(ctx context.Context, input models.ListInp
 		from, to, input.Page, input.PerPage,
 	)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to list attendance: %v", err))
+		return nil, errors.WrapInternal("failed to list attendance", err)
 	}
 
 	items := make([]*models.AdminAttendanceItem, len(rows))
@@ -108,14 +107,6 @@ func correctionRowToItem(r *repository.CorrectionViewRow) *models.CorrectionView
 	}
 }
 
-func (uc *DailyAttendanceUsecase) Query(ctx context.Context, input models.DailyQueryInput) ([]*entity.DailyAttendance, error) {
-	from, to, err := timeutil.ParseDateRange(input.From, input.To)
-	if err != nil {
-		return nil, errors.NewInvalidInput(err.Error())
-	}
-	return uc.processor.ProcessDailyRange(ctx, input.EmployeeID, from, to)
-}
-
 type AttendanceDetail struct {
 	Attendance  *entity.DailyAttendance       `json:"attendance"`
 	Corrections []*entity.AttendanceCorrection `json:"corrections"`
@@ -125,7 +116,7 @@ type AttendanceDetail struct {
 func (uc *DailyAttendanceUsecase) GetDetail(ctx context.Context, id string) (*AttendanceDetail, error) {
 	da, err := uc.dailyRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find daily attendance: %v", err))
+		return nil, errors.WrapInternal("failed to find daily attendance", err)
 	}
 	if da == nil {
 		return nil, errors.NewNotFound("daily attendance not found")
@@ -133,7 +124,7 @@ func (uc *DailyAttendanceUsecase) GetDetail(ctx context.Context, id string) (*At
 
 	correction, err := uc.correctionRepo.FindByEmployeeAndDate(ctx, da.EmployeeID, da.Date)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find corrections: %v", err))
+		return nil, errors.WrapInternal("failed to find corrections", err)
 	}
 	var corrections []*entity.AttendanceCorrection
 	if correction != nil {
@@ -144,7 +135,7 @@ func (uc *DailyAttendanceUsecase) GetDetail(ctx context.Context, id string) (*At
 	endOfDay := startOfDay.AddDate(0, 0, 1).Add(-time.Second)
 	punches, err := uc.punchRepo.FindByEmployeeAndDateRange(ctx, da.EmployeeID, startOfDay, endOfDay)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find punches: %v", err))
+		return nil, errors.WrapInternal("failed to find punches", err)
 	}
 
 	return &AttendanceDetail{
@@ -167,7 +158,7 @@ func (uc *DailyAttendanceUsecase) GetAttendanceHistoryByEmployeeID(ctx context.C
 
 	items := make([]models.MyAttendanceHistoryItem, len(records))
 	for i, da := range records {
-		items[i] = toHistoryItem(da)
+		items[i] = toHistoryItem(da, nil)
 	}
 	return items, nil
 }

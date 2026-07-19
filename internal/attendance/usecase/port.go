@@ -30,3 +30,15 @@ type ResolvedSchedule struct {
 type ScheduleResolver interface {
 	ResolveRange(ctx context.Context, employeeID string, from, to time.Time) (map[string]map[string]*ResolvedSchedule, error)
 }
+
+type CorrectionAuditInfo struct {
+	ActorID    string
+	ActorName  string
+	Action     string
+	Payload    map[string]any
+	CreatedAt  time.Time
+}
+
+type CorrectionAuditFetcher interface {
+	FetchCorrectionLogs(ctx context.Context, employeeID string, from, to time.Time) (map[string]*CorrectionAuditInfo, error)
+}

@@ -6,7 +6,7 @@ import (
 
 type CreateTemplateInput struct {
 	Name         string
-	ContractType string
+	ContractType entity.ContractType
 	Description  string
 	Data         entity.ContractTemplateData
 	Templates    entity.ContractTemplatePartials
@@ -15,7 +15,7 @@ type CreateTemplateInput struct {
 type UpdateTemplateInput struct {
 	ID           string
 	Name         string
-	ContractType string
+	ContractType entity.ContractType
 	Description  string
 	IsActive     bool
 	Data         entity.ContractTemplateData

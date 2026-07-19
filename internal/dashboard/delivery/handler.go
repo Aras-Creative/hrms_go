@@ -22,29 +22,16 @@ func (h *DashboardHandler) GetMetrics(c fiber.Ctx) error {
 	now := time.Now()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
-	from := today
-	if s := c.Query("from"); s != "" {
+	date := today
+	if s := c.Query("date"); s != "" {
 		d, err := time.Parse("2006-01-02", s)
 		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid from date, expected YYYY-MM-DD"))
+			return response.Error(c, errors.NewInvalidInput("invalid date, expected YYYY-MM-DD"))
 		}
-		from = d
+		date = d
 	}
 
-	to := today
-	if s := c.Query("to"); s != "" {
-		d, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid to date, expected YYYY-MM-DD"))
-		}
-		to = d
-	}
-
-	if from.After(to) {
-		return response.Error(c, errors.NewInvalidInput("from cannot be after to"))
-	}
-
-	m, err := h.uc.GetMetrics(c.RequestCtx(), from, to)
+	m, err := h.uc.GetMetrics(c.RequestCtx(), date, date)
 	if err != nil {
 		return response.Error(c, err)
 	}
@@ -52,29 +39,19 @@ func (h *DashboardHandler) GetMetrics(c fiber.Ctx) error {
 }
 
 func (h *DashboardHandler) GetAttendanceTrends(c fiber.Ctx) error {
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-
-	from := today
-	if s := c.Query("from"); s != "" {
-		d, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid from date, expected YYYY-MM-DD"))
-		}
-		from = d
+	fromStr := c.Query("from")
+	toStr := c.Query("to")
+	if fromStr == "" || toStr == "" {
+		return response.Error(c, errors.NewInvalidInput("from and to are required, expected YYYY-MM-DD"))
 	}
 
-	to := today
-	if s := c.Query("to"); s != "" {
-		d, err := time.Parse("2006-01-02", s)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid to date, expected YYYY-MM-DD"))
-		}
-		to = d
+	from, err := time.Parse("2006-01-02", fromStr)
+	if err != nil {
+		return response.Error(c, errors.NewInvalidInput("invalid from, expected YYYY-MM-DD"))
 	}
-
-	if from.After(to) {
-		return response.Error(c, errors.NewInvalidInput("from cannot be after to"))
+	to, err := time.Parse("2006-01-02", toStr)
+	if err != nil {
+		return response.Error(c, errors.NewInvalidInput("invalid to, expected YYYY-MM-DD"))
 	}
 
 	trends, err := h.uc.GetAttendanceTrends(c.RequestCtx(), from, to)

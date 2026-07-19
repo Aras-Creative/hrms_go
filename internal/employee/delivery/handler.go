@@ -261,6 +261,41 @@ func (h *EmployeeHandler) UpdateBank(c fiber.Ctx) error {
 	return response.OK(c, toResponse(e))
 }
 
+func (h *EmployeeHandler) ChangeDesignation(c fiber.Ctx) error {
+	var req ChangeDesignationRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return err
+	}
+
+	input := models.ChangeDesignationInput{
+		EmployeeIDs:   req.EmployeeIDs,
+		DesignationID: req.DesignationID,
+	}
+
+	employees, err := h.uc.ChangeDesignation(c.RequestCtx(), input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		actorID := userIDFromCtx(c)
+		if actorID != nil {
+			for _, e := range employees {
+				h.auditLogger.Log(c.RequestCtx(), *actorID, e.ID, "", emplAdapter.ActionUpdate,
+					c.IP(), string(c.RequestCtx().UserAgent()),
+					map[string]any{"section": "designation", "designation_id": req.DesignationID},
+				)
+			}
+		}
+	}
+
+	items := make([]EmployeeResponse, 0, len(employees))
+	for _, e := range employees {
+		items = append(items, toResponse(e))
+	}
+	return response.OK(c, items)
+}
+
 func (h *EmployeeHandler) MyProfileCompletion(c fiber.Ctx) error {
 	userID := userIDFromCtx(c)
 	if userID == nil {

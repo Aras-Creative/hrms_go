@@ -6,10 +6,15 @@ type DomainError struct {
 	Code       string
 	Message    string
 	HTTPStatus int
+	UnwrapErr  error
 }
 
 func (e *DomainError) Error() string {
 	return e.Message
+}
+
+func (e *DomainError) Unwrap() error {
+	return e.UnwrapErr
 }
 
 var (
@@ -45,4 +50,20 @@ func NewUnauthorized(msg string) *DomainError {
 
 func NewForbidden(msg string) *DomainError {
 	return &DomainError{Code: "FORBIDDEN", Message: msg, HTTPStatus: http.StatusForbidden}
+}
+
+func WrapNotFound(msg string, err error) *DomainError {
+	return &DomainError{Code: "NOT_FOUND", Message: msg, HTTPStatus: http.StatusNotFound, UnwrapErr: err}
+}
+
+func WrapInvalidInput(msg string, err error) *DomainError {
+	return &DomainError{Code: "INVALID_INPUT", Message: msg, HTTPStatus: http.StatusBadRequest, UnwrapErr: err}
+}
+
+func WrapInternal(msg string, err error) *DomainError {
+	return &DomainError{Code: "INTERNAL", Message: msg, HTTPStatus: http.StatusInternalServerError, UnwrapErr: err}
+}
+
+func WrapUnauthorized(msg string, err error) *DomainError {
+	return &DomainError{Code: "UNAUTHORIZED", Message: msg, HTTPStatus: http.StatusUnauthorized, UnwrapErr: err}
 }

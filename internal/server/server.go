@@ -22,7 +22,11 @@ func (sv *structValidator) Validate(out any) error {
 }
 
 func New(cfg *config.ServerConfig, log *logrus.Logger) *fiber.App {
-	readTimeout, _ := time.ParseDuration(cfg.ReadTimeout)
+	readTimeout, err := time.ParseDuration(cfg.ReadTimeout)
+	if err != nil {
+		log.Warnf("invalid read_timeout %q, defaulting to 0: %v", cfg.ReadTimeout, err)
+		readTimeout = 0
+	}
 
 	app := fiber.New(fiber.Config{
 		ReadTimeout:     readTimeout,

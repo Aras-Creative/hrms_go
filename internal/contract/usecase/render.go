@@ -82,7 +82,7 @@ func NewRenderUsecase(contractRepo repository.ContractRepository, signingRepo re
 func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signatoryName, signatoryTitle string) ([]byte, error) {
 	c, err := uc.contractRepo.FindContractByID(ctx, contractID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find contract: %v", err))
+		return nil, errors.WrapInternal("failed to find contract", err)
 	}
 	if c == nil {
 		return nil, errors.NewNotFound("contract not found")
@@ -90,7 +90,7 @@ func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signato
 
 	emp, err := uc.empFetcher.FindEmployeeRenderData(ctx, c.EmployeeID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee: %v", err))
+		return nil, errors.WrapInternal("failed to find employee", err)
 	}
 	if emp == nil {
 		return nil, errors.NewNotFound("employee not found")
@@ -104,7 +104,7 @@ func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signato
 func (uc *RenderUsecase) PreviewWithSignings(ctx context.Context, contractID string, signatoryName, signatoryTitle string, signings []*entity.ContractSigning) ([]byte, error) {
 	c, err := uc.contractRepo.FindContractByID(ctx, contractID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find contract: %v", err))
+		return nil, errors.WrapInternal("failed to find contract", err)
 	}
 	if c == nil {
 		return nil, errors.NewNotFound("contract not found")
@@ -112,7 +112,7 @@ func (uc *RenderUsecase) PreviewWithSignings(ctx context.Context, contractID str
 
 	emp, err := uc.empFetcher.FindEmployeeRenderData(ctx, c.EmployeeID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find employee: %v", err))
+		return nil, errors.WrapInternal("failed to find employee", err)
 	}
 	if emp == nil {
 		return nil, errors.NewNotFound("employee not found")
@@ -138,12 +138,12 @@ func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRend
 
 	tmpl, err := template.New("contract").Funcs(tmplFuncs).Parse(contractTemplate)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to parse template: %v", err))
+		return nil, errors.WrapInternal("failed to parse template", err)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, renderCtx); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to execute template: %v", err))
+		return nil, errors.WrapInternal("failed to execute template", err)
 	}
 
 	return buf.Bytes(), nil

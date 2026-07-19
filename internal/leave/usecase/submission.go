@@ -82,7 +82,7 @@ func (uc *LeaveUsecase) SubmitLeave(ctx context.Context, input models.CreateLeav
 func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, approvedBy string) (*entity.LeaveSubmission, error) {
 	s, err := uc.submissionRepo.FindByID(ctx, submissionID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find submission: %v", err))
+		return nil, errors.WrapInternal("failed to find submission", err)
 	}
 	if s == nil {
 		return nil, errors.NewNotFound("submission not found")
@@ -94,7 +94,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 
 	lt, err := uc.leaveTypeRepo.FindByID(ctx, s.LeaveTypeID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find leave type: %v", err))
+		return nil, errors.WrapInternal("failed to find leave type", err)
 	}
 	if lt == nil {
 		return nil, errors.NewNotFound("leave type not found")
@@ -102,7 +102,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 
 	tx, err := uc.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to begin transaction: %v", err))
+		return nil, errors.WrapInternal("failed to begin transaction", err)
 	}
 	defer tx.Rollback()
 
@@ -110,7 +110,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 	balanceRepo := uc.leaveBalanceRepo.WithTx(tx)
 
 	if err := submissionRepo.Update(ctx, s); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to update submission: %v", err))
+		return nil, errors.WrapInternal("failed to update submission", err)
 	}
 
 	if lt.IsHalfDay {
@@ -120,7 +120,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 	if lt.IsUnlimited {
 		uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
 		if err := tx.Commit(); err != nil {
-			return nil, errors.NewInternal(fmt.Sprintf("failed to commit transaction: %v", err))
+			return nil, errors.WrapInternal("failed to commit transaction", err)
 		}
 		return s, nil
 	}
@@ -128,7 +128,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 	year := s.StartDate.Year()
 	balance, err := balanceRepo.FindByEmployeeAndTypeYear(ctx, s.EmployeeID, s.LeaveTypeID, year)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find balance: %v", err))
+		return nil, errors.WrapInternal("failed to find balance", err)
 	}
 	if balance == nil {
 		return nil, errors.NewInvalidInput("no leave balance found for this year")
@@ -140,7 +140,7 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to commit transaction: %v", err))
+		return nil, errors.WrapInternal("failed to commit transaction", err)
 	}
 
 	uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)

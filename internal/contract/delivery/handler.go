@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	contractAdapter "hrms/internal/contract/adapter"
+	"hrms/internal/contract/entity"
 	"hrms/internal/contract/models"
 	"hrms/internal/contract/usecase"
 	response "hrms/internal/pkg/api"
@@ -36,6 +37,10 @@ func NewContractHandler(uc *usecase.ContractUsecase, signUC *usecase.SigningUsec
 	return &ContractHandler{uc: uc, signUC: signUC, renderUC: renderUC, docUC: docUC, terminateUC: terminateUC, auditLogger: auditLogger, notifUC: notifUC}
 }
 
+func parseID(c fiber.Ctx) (string, error) {
+	return response.ParseParamID(c, "id")
+}
+
 func (h *ContractHandler) CreateTemplate(c fiber.Ctx) error {
 	var req CreateTemplateRequest
 	if err := c.Bind().Body(&req); err != nil {
@@ -44,7 +49,7 @@ func (h *ContractHandler) CreateTemplate(c fiber.Ctx) error {
 
 	input := models.CreateTemplateInput{
 		Name:         req.Name,
-		ContractType: req.ContractType,
+		ContractType: entity.ContractType(req.ContractType),
 		Description:  req.Description,
 		Data:         toEntityData(req.Data),
 		Templates:    toEntityPartials(req.Templates),
@@ -65,7 +70,10 @@ func (h *ContractHandler) CreateTemplate(c fiber.Ctx) error {
 }
 
 func (h *ContractHandler) GetTemplate(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := parseID(c)
+	if err != nil {
+		return response.Error(c, err)
+	}
 	e, err := h.uc.GetTemplate(c.RequestCtx(), id)
 	if err != nil {
 		return response.Error(c, err)
@@ -74,7 +82,10 @@ func (h *ContractHandler) GetTemplate(c fiber.Ctx) error {
 }
 
 func (h *ContractHandler) GetTemplatePrefill(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := parseID(c)
+	if err != nil {
+		return response.Error(c, err)
+	}
 	e, err := h.uc.GetTemplate(c.RequestCtx(), id)
 	if err != nil {
 		return response.Error(c, err)
@@ -83,8 +94,17 @@ func (h *ContractHandler) GetTemplatePrefill(c fiber.Ctx) error {
 }
 
 func (h *ContractHandler) ListTemplates(c fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	perPage, err := strconv.Atoi(c.Query("per_page", "20"))
+	if err != nil || perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
 
 	var isActive *bool
 	if v := c.Query("is_active"); v != "" {
@@ -104,11 +124,14 @@ func (h *ContractHandler) ListTemplates(c fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
-	return response.OK(c, toListResponse(result.Entities, result.Total))
+	return response.Paginate(c, toListItemResponses(result.Entities), page, perPage, result.Total)
 }
 
 func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := parseID(c)
+	if err != nil {
+		return response.Error(c, err)
+	}
 	var req UpdateTemplateRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return err
@@ -122,7 +145,7 @@ func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
 	input := models.UpdateTemplateInput{
 		ID:           id,
 		Name:         req.Name,
-		ContractType: req.ContractType,
+		ContractType: entity.ContractType(req.ContractType),
 		Description:  req.Description,
 		IsActive:     isActive,
 		Data:         toEntityData(req.Data),
@@ -137,14 +160,17 @@ func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
 		userID, _ := c.Locals("user_id").(string)
 		h.auditLogger.Log(c.RequestCtx(), userID, "contract_template", id, "",
 			contractAdapter.ActionTemplateUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
-			map[string]any{"name": req.Name, "contract_type": req.ContractType},
+			map[string]any{"name": req.Name, "contract_type": req.ContractType, "is_active": isActive},
 		)
 	}
 	return response.OK(c, toTemplateResponse(e))
 }
 
 func (h *ContractHandler) DeleteTemplate(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := parseID(c)
+	if err != nil {
+		return response.Error(c, err)
+	}
 	if err := h.uc.DeleteTemplate(c.RequestCtx(), id); err != nil {
 		return response.Error(c, err)
 	}
@@ -155,7 +181,7 @@ func (h *ContractHandler) DeleteTemplate(c fiber.Ctx) error {
 			nil,
 		)
 	}
-	return response.OK(c, nil)
+	return response.NoContent(c)
 }
 
 func (h *ContractHandler) CreateContract(c fiber.Ctx) error {
@@ -174,9 +200,9 @@ func (h *ContractHandler) CreateContract(c fiber.Ctx) error {
 		return response.Error(c, err)
 	}
 
-	items := make([]*ContractResponse, len(result.Contracts))
+	items := make([]*ContractCreatedItem, len(result.Contracts))
 	for i, e := range result.Contracts {
-		items[i] = toContractResponse(e)
+		items[i] = toContractCreatedItem(e)
 
 		if h.auditLogger != nil {
 			userID, _ := c.Locals("user_id").(string)
@@ -202,7 +228,7 @@ func (h *ContractHandler) CreateContract(c fiber.Ctx) error {
 			}
 		}
 	}
-	return response.Created(c, SignContractsResponse{Signed: len(items), Contracts: items})
+	return response.Created(c, ContractCreatedResponse{Signed: len(items), Contracts: items})
 }
 
 func (h *ContractHandler) DeleteContract(c fiber.Ctx) error {

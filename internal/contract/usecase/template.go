@@ -63,20 +63,26 @@ func NewContractUsecase(
 }
 
 func (uc *ContractUsecase) CreateTemplate(ctx context.Context, input models.CreateTemplateInput) (*entity.ContractTemplate, error) {
-	contractType, err := entity.ParseContractType(input.ContractType)
+	existing, err := uc.tmplRepo.FindByName(ctx, input.Name)
 	if err != nil {
-		return nil, errors.NewInvalidInput(err.Error())
+		return nil, fmt.Errorf("find template by name: %w", err)
+	}
+	if existing != nil {
+		return nil, errors.NewAlreadyExists("template with this name already exists")
 	}
 
-	e := entity.NewContractTemplate(
+	e, err := entity.NewContractTemplate(
 		input.Name,
-		contractType,
+		input.ContractType,
 		input.Description,
 		input.Data,
 		input.Templates,
 	)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
 	if err := uc.tmplRepo.Create(ctx, e); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to create template: %v", err))
+		return nil, fmt.Errorf("create template: %w", err)
 	}
 	return e, nil
 }
@@ -84,7 +90,7 @@ func (uc *ContractUsecase) CreateTemplate(ctx context.Context, input models.Crea
 func (uc *ContractUsecase) GetTemplate(ctx context.Context, id string) (*entity.ContractTemplate, error) {
 	e, err := uc.tmplRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find template: %v", err))
+		return nil, fmt.Errorf("find template: %w", err)
 	}
 	if e == nil {
 		return nil, errors.NewNotFound("contract template not found")
@@ -95,7 +101,7 @@ func (uc *ContractUsecase) GetTemplate(ctx context.Context, id string) (*entity.
 func (uc *ContractUsecase) ListTemplates(ctx context.Context, input models.ListTemplateInput) (*models.ListTemplateResult, error) {
 	entities, total, err := uc.tmplRepo.FindAll(ctx, input)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to list templates: %v", err))
+		return nil, fmt.Errorf("list templates: %w", err)
 	}
 
 	return &models.ListTemplateResult{Entities: entities, Total: total}, nil
@@ -104,35 +110,54 @@ func (uc *ContractUsecase) ListTemplates(ctx context.Context, input models.ListT
 func (uc *ContractUsecase) UpdateTemplate(ctx context.Context, input models.UpdateTemplateInput) (*entity.ContractTemplate, error) {
 	e, err := uc.tmplRepo.FindByID(ctx, input.ID)
 	if err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to find template for update: %v", err))
+		return nil, fmt.Errorf("find template for update: %w", err)
 	}
 	if e == nil {
 		return nil, errors.NewNotFound("contract template not found")
 	}
 
-	contractType, err := entity.ParseContractType(input.ContractType)
-	if err != nil {
-		return nil, errors.NewInvalidInput(err.Error())
-	}
+	expectedUpdatedAt := e.UpdatedAt
 
-	e.Update(
+	if err := e.Update(
 		input.Name,
-		contractType,
+		input.ContractType,
 		input.Description,
 		input.IsActive,
 		input.Data,
 		input.Templates,
-	)
+	); err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
 
-	if err := uc.tmplRepo.Update(ctx, e); err != nil {
-		return nil, errors.NewInternal(fmt.Sprintf("failed to update template: %v", err))
+	if err := uc.tmplRepo.Update(ctx, e, expectedUpdatedAt); err != nil {
+		errStr := err.Error()
+		if errStr == "template not found or modified by another user" {
+			return nil, errors.NewNotFound("contract template not found or modified by another user")
+		}
+		return nil, fmt.Errorf("update template: %w", err)
 	}
 	return e, nil
 }
 
 func (uc *ContractUsecase) DeleteTemplate(ctx context.Context, id string) error {
+	existing, err := uc.tmplRepo.FindByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("find template for delete: %w", err)
+	}
+	if existing == nil {
+		return errors.NewNotFound("contract template not found")
+	}
+
+	count, err := uc.tmplRepo.CountByTemplateID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("count contracts for template: %w", err)
+	}
+	if count > 0 {
+		return errors.NewInvalidInput("cannot delete template with existing contracts")
+	}
+
 	if err := uc.tmplRepo.Delete(ctx, id); err != nil {
-		return errors.NewInternal(fmt.Sprintf("failed to delete template: %v", err))
+		return fmt.Errorf("delete template: %w", err)
 	}
 	return nil
 }

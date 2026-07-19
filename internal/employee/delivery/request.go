@@ -52,3 +52,8 @@ type CreateRequest struct {
 	BankName              string  `json:"bank_name" validate:"omitempty"`
 	BankNumber            string  `json:"bank_number" validate:"omitempty"`
 }
+
+type ChangeDesignationRequest struct {
+	EmployeeIDs   []string `json:"employee_ids" validate:"required,min=1,dive,uuid"`
+	DesignationID *string  `json:"designation_id" validate:"required,uuid"`
+}

@@ -14,9 +14,11 @@ import (
 type TemplateRepository interface {
 	Create(ctx context.Context, e *entity.ContractTemplate) error
 	FindByID(ctx context.Context, id string) (*entity.ContractTemplate, error)
+	FindByName(ctx context.Context, name string) (*entity.ContractTemplate, error)
 	FindAll(ctx context.Context, filter models.ListTemplateInput) ([]*entity.ContractTemplate, int64, error)
-	Update(ctx context.Context, e *entity.ContractTemplate) error
+	Update(ctx context.Context, e *entity.ContractTemplate, expectedUpdatedAt time.Time) error
 	Delete(ctx context.Context, id string) error
+	CountByTemplateID(ctx context.Context, templateID string) (int64, error)
 }
 
 type ContractRepository interface {

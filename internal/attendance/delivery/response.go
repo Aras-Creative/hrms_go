@@ -61,14 +61,6 @@ func dailyToResponse(da *entity.DailyAttendance) DailyResponse {
 	}
 }
 
-func dailyListToResponse(list []*entity.DailyAttendance) []DailyResponse {
-	resp := make([]DailyResponse, 0, len(list))
-	for _, da := range list {
-		resp = append(resp, dailyToResponse(da))
-	}
-	return resp
-}
-
 // ---- Admin Attendance ----
 
 type AdminAttendanceResponse struct {
@@ -83,6 +75,7 @@ type AdminAttendanceResponse struct {
 	Status             string     `json:"status"`
 	IsLate             bool       `json:"is_late"`
 	IsEarlyLeave       bool       `json:"is_early_leave"`
+	IsOverdue          bool       `json:"is_overdue"`
 	ExpectedStartTime  *string    `json:"expected_start_time,omitempty"`
 	ExpectedEndTime    *string    `json:"expected_end_time,omitempty"`
 	Source             string     `json:"source"`
@@ -114,6 +107,30 @@ func computeLateMinutes(date time.Time, firstPunchIn *time.Time, expectedStartTi
 	return int(punch.Sub(ref).Minutes())
 }
 
+// computeIsOverdue returns true when the employee has not punched in and the
+// current time is past the expected_start_time.  This is computed on-the-fly
+// in the response layer (not stored) so admins see a real-time "not punched,
+// past entry time" signal without destroying the no_punch status that is
+// awaiting the finalize cutoff.
+func computeIsOverdue(status string, date time.Time, expectedStartTime *string, firstPunchIn *time.Time) bool {
+	if status != "no_punch" {
+		return false
+	}
+	if firstPunchIn != nil {
+		return false
+	}
+	if expectedStartTime == nil || *expectedStartTime == "" {
+		return false
+	}
+	startParsed, err := time.Parse("15:04", *expectedStartTime)
+	if err != nil {
+		return false
+	}
+	loc := timeutil.LoadDefaultLocation()
+	ref := time.Date(date.Year(), date.Month(), date.Day(), startParsed.Hour(), startParsed.Minute(), 0, 0, loc)
+	return time.Now().In(loc).After(ref)
+}
+
 func adminAttendanceToResponse(row *models.AdminAttendanceItem) AdminAttendanceResponse {
 	return AdminAttendanceResponse{
 		ID:                 row.ID,
@@ -126,6 +143,7 @@ func adminAttendanceToResponse(row *models.AdminAttendanceItem) AdminAttendanceR
 		Status:             row.Status,
 		IsLate:             row.IsLate,
 		IsEarlyLeave:       row.IsEarlyLeave,
+		IsOverdue:          computeIsOverdue(row.Status, row.Date, row.ExpectedStartTime, row.FirstPunchIn),
 		ExpectedStartTime:  row.ExpectedStartTime,
 		ExpectedEndTime:    row.ExpectedEndTime,
 		Source:             row.Source,

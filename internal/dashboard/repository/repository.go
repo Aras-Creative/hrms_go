@@ -6,12 +6,12 @@ import (
 )
 
 type MetricsCounts struct {
-	TotalEmployees  int
-	ActiveContracts int
-	Present         int
-	Late            int
-	OnLeave         int
-	PendingLeave    int
+	TotalEmployees  int `db:"total_employees"`
+	ActiveContracts int `db:"active_contracts"`
+	Present         int `db:"present"`
+	Absent          int `db:"absent"`
+	Late            int `db:"late"`
+	OnLeave         int `db:"on_leave"`
 }
 
 type TrendRow struct {

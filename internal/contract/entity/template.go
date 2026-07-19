@@ -1,10 +1,16 @@
 package entity
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var validBlockTypes = map[string]bool{
+	"clause": true, "header": true, "body": true,
+}
 
 type SpecialClause struct {
 	Title       string
@@ -43,6 +49,22 @@ type ContractTemplate struct {
 	UpdatedAt    time.Time
 }
 
+func validateTemplateName(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("template name is required")
+	}
+	return nil
+}
+
+func validateBlocks(blocks []Block) error {
+	for i, b := range blocks {
+		if b.Type != "" && !validBlockTypes[b.Type] {
+			return fmt.Errorf("block[%d]: invalid type %q (valid: clause, header, body)", i, b.Type)
+		}
+	}
+	return nil
+}
+
 // Update applies the given fields to the template and touches UpdatedAt.
 func (t *ContractTemplate) Update(
 	name string,
@@ -51,7 +73,13 @@ func (t *ContractTemplate) Update(
 	isActive bool,
 	data ContractTemplateData,
 	templates ContractTemplatePartials,
-) {
+) error {
+	if err := validateTemplateName(name); err != nil {
+		return err
+	}
+	if err := validateBlocks(templates.Blocks); err != nil {
+		return err
+	}
 	t.Name = name
 	t.ContractType = contractType
 	t.Description = description
@@ -59,6 +87,7 @@ func (t *ContractTemplate) Update(
 	t.Data = data
 	t.Templates = templates
 	t.UpdatedAt = time.Now()
+	return nil
 }
 
 func NewContractTemplate(
@@ -67,7 +96,13 @@ func NewContractTemplate(
 	description string,
 	data ContractTemplateData,
 	templates ContractTemplatePartials,
-) *ContractTemplate {
+) (*ContractTemplate, error) {
+	if err := validateTemplateName(name); err != nil {
+		return nil, err
+	}
+	if err := validateBlocks(templates.Blocks); err != nil {
+		return nil, err
+	}
 	now := time.Now()
 	return &ContractTemplate{
 		ID:           uuid.New().String(),
@@ -79,7 +114,7 @@ func NewContractTemplate(
 		Templates:    templates,
 		CreatedAt:    now,
 		UpdatedAt:    now,
-	}
+	}, nil
 }
 
 func ReconstituteContractTemplate(

@@ -80,9 +80,12 @@ func (r *PostgresLeaveTypeRepo) Update(ctx context.Context, lt *entity.LeaveType
 	if err != nil {
 		return fmt.Errorf("failed to update leave type: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("leave type not found")
+		return nil
 	}
 	return nil
 }

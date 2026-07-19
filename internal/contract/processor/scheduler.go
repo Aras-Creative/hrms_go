@@ -4,10 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/robfig/cron/v3"
 )
 
 const contractExpiryLockID int64 = 0x434F4E45 // "CONE" in hex
@@ -16,62 +16,37 @@ type Scheduler struct {
 	db        *sqlx.DB
 	processor *ExpiryProcessor
 	loc       *time.Location
-	mu        sync.Mutex
-	doneDate  string
-	cancel    context.CancelFunc
+	c         *cron.Cron
 }
 
-func NewScheduler(db *sqlx.DB, processor *ExpiryProcessor, timezone string) *Scheduler {
-	loc, err := time.LoadLocation(timezone)
-	if err != nil {
-		loc = time.UTC
-	}
-	return &Scheduler{
+func NewScheduler(db *sqlx.DB, processor *ExpiryProcessor, loc *time.Location) *Scheduler {
+	s := &Scheduler{
 		db:        db,
 		processor: processor,
 		loc:       loc,
 	}
+	s.c = cron.New(
+		cron.WithLocation(loc),
+	)
+	return s
 }
 
-func (s *Scheduler) Start(ctx context.Context) {
-	ctx, s.cancel = context.WithCancel(ctx)
-	go s.loop(ctx)
+func (s *Scheduler) Start(_ context.Context) {
+	s.c.AddFunc("0 0 * * *", s.runOnce)
+	s.c.Start()
+	slog.Info("scheduler: contract expiry started", "tz", s.loc.String())
 }
 
 func (s *Scheduler) Stop() {
-	if s.cancel != nil {
-		s.cancel()
-	}
+	ctx := s.c.Stop()
+	<-ctx.Done()
 }
 
-func (s *Scheduler) loop(ctx context.Context) {
-	ticker := time.NewTicker(1 * time.Minute)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			s.tick(ctx)
-		}
-	}
-}
-
-func (s *Scheduler) tick(ctx context.Context) {
+func (s *Scheduler) runOnce() {
+	ctx := context.Background()
 	now := time.Now().In(s.loc)
 	today := now.Format("2006-01-02")
 
-	s.mu.Lock()
-	if s.doneDate == today {
-		s.mu.Unlock()
-		return
-	}
-	s.mu.Unlock()
-
-	s.runOnce(ctx, today, now)
-}
-
-func (s *Scheduler) runOnce(ctx context.Context, today string, now time.Time) {
 	conn, acquired := s.tryLock(ctx)
 	if !acquired {
 		return
@@ -86,21 +61,6 @@ func (s *Scheduler) runOnce(ctx context.Context, today string, now time.Time) {
 		return
 	}
 
-	result, err := conn.ExecContext(ctx,
-		`INSERT INTO job_runs (target, run_date) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-		"contract.expiry", today)
-	if err != nil {
-		slog.Error("contract expiry scheduler: failed to insert job_run", "error", err)
-		return
-	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		slog.Info("contract expiry scheduler: already ran (another instance)", "date", today)
-	}
-
-	s.mu.Lock()
-	s.doneDate = today
-	s.mu.Unlock()
 	slog.Info("contract expiry scheduler: completed", "date", today)
 }
 

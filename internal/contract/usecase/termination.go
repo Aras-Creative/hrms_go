@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	contractEntity "hrms/internal/contract/entity"
@@ -77,7 +76,7 @@ type TerminateContractInput struct {
 func (uc *TerminationUsecase) TerminateContract(ctx context.Context, input TerminateContractInput) error {
 	c, err := uc.contractRepo.FindContractByID(ctx, input.ContractID)
 	if err != nil {
-		return errors.NewInternal(fmt.Sprintf("find contract: %v", err))
+		return errors.WrapInternal("find contract", err)
 	}
 	if c == nil {
 		return errors.NewNotFound("contract not found")
@@ -89,18 +88,18 @@ func (uc *TerminationUsecase) TerminateContract(ctx context.Context, input Termi
 
 	// 1. Terminate contract
 	if err := uc.contractRepo.UpdateContract(ctx, c); err != nil {
-		return errors.NewInternal(fmt.Sprintf("update contract: %v", err))
+		return errors.WrapInternal("update contract", err)
 	}
 
 	// 2. Terminate employee
 	if err := uc.empTerminator.TerminateEmployee(ctx, c.EmployeeID, input.TerminationDate); err != nil {
-		return errors.NewInternal(fmt.Sprintf("terminate employee: %v", err))
+		return errors.WrapInternal("terminate employee", err)
 	}
 
 	// 3. Deactivate user + revoke sessions + devices (best-effort)
 	empUserID, err := uc.empTerminator.FindEmployeeUserID(ctx, c.EmployeeID)
 	if err != nil {
-		return errors.NewInternal(fmt.Sprintf("find employee user: %v", err))
+		return errors.WrapInternal("find employee user", err)
 	}
 	if empUserID != "" {
 		_ = uc.userDeactiv.Deactivate(ctx, empUserID)
@@ -110,12 +109,12 @@ func (uc *TerminationUsecase) TerminateContract(ctx context.Context, input Termi
 
 	// 4. Deactivate work pattern (set valid_to = termination date)
 	if err := uc.ewpDeactiv.DeactivateCurrent(ctx, c.EmployeeID, input.TerminationDate); err != nil {
-		return errors.NewInternal(fmt.Sprintf("deactivate work pattern: %v", err))
+		return errors.WrapInternal("deactivate work pattern", err)
 	}
 
 	// 5. Delete future schedule overrides from termination date onward
 	if err := uc.overrideDel.DeleteFutureOverridesByEmployee(ctx, c.EmployeeID, input.TerminationDate); err != nil {
-		return errors.NewInternal(fmt.Sprintf("delete future overrides: %v", err))
+		return errors.WrapInternal("delete future overrides", err)
 	}
 
 	return nil

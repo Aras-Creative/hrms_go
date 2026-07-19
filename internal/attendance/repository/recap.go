@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"hrms/internal/pkg/timeutil"
 )
 
 type RecapRow struct {
@@ -125,7 +127,7 @@ const queryAttendanceMetricsBase = `
 		COALESCE(SUM(
 			CASE WHEN da.is_late = true AND da.first_punch_in IS NOT NULL AND da.expected_start_time IS NOT NULL THEN
 				GREATEST(0, EXTRACT(EPOCH FROM (
-					da.first_punch_in - (da.date + da.expected_start_time::time)
+					da.first_punch_in - ((da.date + da.expected_start_time::time) AT TIME ZONE %s)
 				))::int / 60)
 			ELSE 0 END
 		), 0) AS late_minutes
@@ -148,7 +150,8 @@ func (r *PostgresDailyAttendanceRepo) Recap(ctx context.Context, from, to time.T
 		argIdx++
 	}
 
-	metricsQuery := queryAttendanceMetricsBase + where + `
+	tz := fmt.Sprintf("'%s'", timeutil.DefaultTimezone)
+	metricsQuery := fmt.Sprintf(queryAttendanceMetricsBase, tz) + where + `
 		GROUP BY e.id, e.employee_number, e.full_name, e.profile_photo_id, des.name, lt.name
 		ORDER BY e.full_name ASC, lt.name ASC NULLS LAST
 	`

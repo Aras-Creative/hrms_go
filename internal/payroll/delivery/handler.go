@@ -582,7 +582,10 @@ func (h *PayrollHandler) ListPeriods(c fiber.Ctx) error {
 }
 
 func (h *PayrollHandler) ProcessPeriod(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
+	}
 	if err := h.procUc.ProcessPeriod(c.RequestCtx(), id); err != nil {
 		return response.Error(c, err)
 	}
@@ -620,7 +623,10 @@ func (h *PayrollHandler) ProcessPeriod(c fiber.Ctx) error {
 }
 
 func (h *PayrollHandler) ClosePeriod(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
+	}
 	p, err := h.periodUc.ClosePeriod(c.RequestCtx(), id)
 	if err != nil {
 		return response.Error(c, err)

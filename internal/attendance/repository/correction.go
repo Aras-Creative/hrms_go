@@ -66,9 +66,12 @@ func (r *PostgresCorrectionRepo) Update(ctx context.Context, c *entity.Attendanc
 	if err != nil {
 		return fmt.Errorf("failed to update correction: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("correction with id %s not found", c.ID)
+		return nil
 	}
 	return nil
 }
@@ -147,9 +150,12 @@ func (r *PostgresCorrectionRepo) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return fmt.Errorf("failed to delete correction: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("correction with id %s not found", id)
+		return nil
 	}
 	return nil
 }

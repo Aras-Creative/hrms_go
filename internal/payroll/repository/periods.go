@@ -107,9 +107,12 @@ func (r *PostgresPayrollPeriodRepo) Update(ctx context.Context, p *entity.Payrol
 	if err != nil {
 		return fmt.Errorf("update period: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("period not found")
+		return nil
 	}
 	return nil
 }
@@ -119,9 +122,12 @@ func (r *PostgresPayrollPeriodRepo) Delete(ctx context.Context, id string) error
 	if err != nil {
 		return fmt.Errorf("delete period: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("period not found")
+		return nil
 	}
 	return nil
 }

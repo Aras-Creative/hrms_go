@@ -6,6 +6,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/sse"
 
+	response "hrms/internal/pkg/api"
+	errors "hrms/internal/pkg/apperror"
 	sselib "hrms/internal/pkg/sse"
 )
 
@@ -18,7 +20,10 @@ func NewEventHandler(hub *sselib.Hub) *EventHandler {
 }
 
 func (h *EventHandler) Stream(c fiber.Ctx) error {
-	userID := c.Locals("user_id").(string)
+	userID, ok := c.Locals("user_id").(string)
+	if !ok || userID == "" {
+		return response.Error(c, errors.NewUnauthorized("user not authenticated"))
+	}
 
 	return sse.New(sse.Config{
 		Handler: func(c fiber.Ctx, stream *sse.Stream) error {

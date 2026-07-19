@@ -91,6 +91,11 @@ type UpdateBankInput struct {
 	BankNumber string
 }
 
+type ChangeDesignationInput struct {
+	EmployeeIDs   []string
+	DesignationID *string
+}
+
 type ListEmployeeInput struct {
 	Page          int
 	PerPage       int

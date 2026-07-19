@@ -10,6 +10,7 @@ func (h *EmployeeHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler) {
 	e.Get("/peek-next-number", authMw, h.PeekNextNumber)
 	e.Get("/:id", h.FindByID)
 	e.Post("/", authMw, h.Create)
+	e.Put("/designation", authMw, h.ChangeDesignation)
 	e.Put("/:id", authMw, h.Upsert)
 	e.Put("/:id/profile-photo", authMw, h.UpdateProfilePhoto)
 	e.Put("/:id/contact", authMw, h.UpdateContact)

@@ -59,11 +59,11 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 	for _, c := range input.Compensations {
 		amount, err := entity.NewAmount(c.Amount)
 		if err != nil {
-			return errors.NewInvalidInput(fmt.Sprintf("compensation %s: %v", c.CompensationItemID, err))
+			return errors.WrapInvalidInput(fmt.Sprintf("compensation %s", c.CompensationItemID), err)
 		}
 		freq, err := entity.ParseFrequency(c.Frequency)
 		if err != nil {
-			return errors.NewInvalidInput(fmt.Sprintf("compensation %s: %v", c.CompensationItemID, err))
+			return errors.WrapInvalidInput(fmt.Sprintf("compensation %s", c.CompensationItemID), err)
 		}
 		ec := entity.NewEmployeeCompensation(input.EmployeeID, c.CompensationItemID, amount, freq, c.EffectiveDate, c.EndDate)
 		if err := insertEmpCompTx(ctx, tx, ec); err != nil {

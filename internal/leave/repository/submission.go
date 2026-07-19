@@ -275,9 +275,12 @@ func (r *PostgresLeaveSubmissionRepo) Update(ctx context.Context, s *entity.Leav
 	if err != nil {
 		return fmt.Errorf("failed to update submission: %w", err)
 	}
-	rows, _ := result.RowsAffected()
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if rows == 0 {
-		return fmt.Errorf("submission not found")
+		return nil
 	}
 	return nil
 }

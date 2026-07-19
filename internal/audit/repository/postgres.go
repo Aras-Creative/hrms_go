@@ -212,4 +212,76 @@ func (r *PostgresAuditRepo) ListByResourceWithActor(ctx context.Context, resourc
 	return list, rows.Err()
 }
 
+func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Context, resource, resourceID string, actions []string, from, to time.Time) ([]*models.AuditEntryWithActor, error) {
+	type auditEntryRow struct {
+		ID         string          `db:"id"`
+		Action     string          `db:"action"`
+		ActorID    string          `db:"actor_id"`
+		ActorName  string          `db:"actor_name"`
+		Resource   string          `db:"resource"`
+		ResourceID string          `db:"resource_id"`
+		TargetID   *string         `db:"target_id"`
+		Payload    json.RawMessage `db:"payload"`
+		IPAddress  string          `db:"ip_address"`
+		UserAgent  string          `db:"user_agent"`
+		CreatedAt  time.Time       `db:"created_at"`
+	}
 
+	if len(actions) == 0 {
+		return []*models.AuditEntryWithActor{}, nil
+	}
+
+	query := `
+		SELECT a.id, a.action, a.actor_id, COALESCE(u.full_name, '') AS actor_name,
+		       a.resource, a.resource_id, a.target_id, a.payload,
+		       a.ip_address, a.user_agent, a.created_at
+		FROM audit_logs a
+		LEFT JOIN users u ON u.id = a.actor_id
+		WHERE a.resource = $1 AND a.resource_id = $2
+		  AND a.action IN (` + placeholders(len(actions)) + `)
+		  AND a.created_at >= $` + fmt.Sprintf("%d", len(actions)+3) + `
+		  AND a.created_at <= $` + fmt.Sprintf("%d", len(actions)+4) + `
+		ORDER BY a.created_at DESC
+	`
+
+	args := []interface{}{resource, resourceID}
+	for _, a := range actions {
+		args = append(args, a)
+	}
+	args = append(args, from, to)
+
+	rows, err := r.db.QueryxContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query correction audit logs: %w", err)
+	}
+	defer rows.Close()
+
+	var list []*models.AuditEntryWithActor
+	for rows.Next() {
+		var row auditEntryRow
+		if err := rows.StructScan(&row); err != nil {
+			return nil, fmt.Errorf("scan correction audit log: %w", err)
+		}
+		var payload map[string]any
+		if len(row.Payload) > 0 {
+			json.Unmarshal(row.Payload, &payload)
+		}
+		list = append(list, &models.AuditEntryWithActor{
+			ID: row.ID, Action: row.Action, ActorID: row.ActorID, ActorName: row.ActorName,
+			Resource: row.Resource, ResourceID: row.ResourceID, TargetID: row.TargetID,
+			Payload: payload, IPAddress: row.IPAddress, UserAgent: row.UserAgent, CreatedAt: row.CreatedAt,
+		})
+	}
+	return list, rows.Err()
+}
+
+func placeholders(n int) string {
+	s := ""
+	for i := 1; i <= n; i++ {
+		if i > 1 {
+			s += ", "
+		}
+		s += fmt.Sprintf("$%d", i)
+	}
+	return s
+}

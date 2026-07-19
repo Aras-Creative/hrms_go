@@ -150,7 +150,10 @@ func (h *AttendanceHandler) PunchHistory(c fiber.Ctx) error {
 // ---- Daily ----
 
 func (h *AttendanceHandler) GetDetail(c fiber.Ctx) error {
-	id := c.Params("id")
+	id, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
+	}
 	result, err := h.dailyUc.GetDetail(c.RequestCtx(), id)
 	if err != nil {
 		return response.Error(c, err)
@@ -185,8 +188,14 @@ func (h *AttendanceHandler) GetDetail(c fiber.Ctx) error {
 }
 
 func (h *AttendanceHandler) DailyList(c fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	perPage, err := strconv.Atoi(c.Query("per_page", "20"))
+	if err != nil || perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	result, err := h.dailyUc.List(c.RequestCtx(), models.ListInput{
 		SearchName: c.Query("search"), Status: c.Query("status"),
 		DesignationID: c.Query("designation_id"),
@@ -223,32 +232,6 @@ func (h *AttendanceHandler) DailyList(c fiber.Ctx) error {
 	}
 
 	return response.Paginate(c, items, page, perPage, result.Total)
-}
-
-func (h *AttendanceHandler) DailyQuery(c fiber.Ctx) error {
-	employeeID := c.Query("employee_id")
-	if employeeID == "" {
-		return response.Error(c, errors.NewInvalidInput("employee_id is required"))
-	}
-	// Security: only allow admin or requesting own data
-	userID, err := getUserID(c)
-	if err != nil {
-		return response.Error(c, err)
-	}
-	role, _ := c.Locals("role").(string)
-	if role != "admin" {
-		myEmpID, _, err := h.fetcher.FindByUserID(c.RequestCtx(), userID)
-		if err != nil || myEmpID != employeeID {
-			return response.Error(c, errors.NewForbidden("access denied"))
-		}
-	}
-	list, err := h.dailyUc.Query(c.RequestCtx(), models.DailyQueryInput{
-		EmployeeID: employeeID, From: c.Query("from"), To: c.Query("to"),
-	})
-	if err != nil {
-		return response.Error(c, err)
-	}
-	return response.OK(c, dailyListToResponse(list))
 }
 
 // ---- Correction ----
@@ -307,8 +290,14 @@ func (h *AttendanceHandler) CorrectionCreate(c fiber.Ctx) error {
 }
 
 func (h *AttendanceHandler) CorrectionList(c fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	perPage, err := strconv.Atoi(c.Query("per_page", "20"))
+	if err != nil || perPage < 1 || perPage > 100 {
+		perPage = 20
+	}
 	var startDate, endDate *time.Time
 	if s := c.Query("start_date"); s != "" {
 		d, err := time.Parse("2006-01-02", s)
@@ -338,9 +327,9 @@ func (h *AttendanceHandler) CorrectionDelete(c fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
-	id := c.Params("id")
-	if id == "" {
-		return response.Error(c, errors.NewInvalidInput("id is required"))
+	id, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
 	}
 	corr, err := h.correctionUc.Delete(c.RequestCtx(), id)
 	if err != nil {
@@ -375,9 +364,9 @@ func (h *AttendanceHandler) MyAttendanceHistory(c fiber.Ctx) error {
 }
 
 func (h *AttendanceHandler) EmployeeAttendanceHistory(c fiber.Ctx) error {
-	employeeID := c.Params("id")
-	if employeeID == "" {
-		return response.Error(c, errors.NewInvalidInput("employee id is required"))
+	employeeID, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
 	}
 	// Security: only allow admin or requesting own data
 	userID, err := getUserID(c)

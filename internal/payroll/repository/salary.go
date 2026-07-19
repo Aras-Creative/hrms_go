@@ -125,9 +125,12 @@ func (r *PostgresEmployeeBaseSalaryRepo) Update(ctx context.Context, s *entity.E
 	if err != nil {
 		return fmt.Errorf("update base salary: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("base salary not found")
+		return nil
 	}
 	return nil
 }
@@ -137,9 +140,12 @@ func (r *PostgresEmployeeBaseSalaryRepo) Delete(ctx context.Context, id string) 
 	if err != nil {
 		return fmt.Errorf("delete base salary: %w", err)
 	}
-	n, _ := res.RowsAffected()
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
 	if n == 0 {
-		return fmt.Errorf("base salary not found")
+		return nil
 	}
 	return nil
 }
@@ -151,3 +157,5 @@ func baseSalaryModelToEntity(m *EmployeeBaseSalaryModel) *entity.EmployeeBaseSal
 		m.CreatedAt, m.UpdatedAt,
 	)
 }
+
+var _ EmployeeBaseSalaryRepository = (*PostgresEmployeeBaseSalaryRepo)(nil)
