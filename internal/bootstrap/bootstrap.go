@@ -187,8 +187,10 @@ func Run(cfgPath string) {
 		s, err := settingUC.Get(context.Background())
 		if err == nil && s != nil && s.Timezone != "" {
 			timeutil.SetDefaultTimezone(s.Timezone)
+			log.Printf("timezone set from settings: %s", s.Timezone)
 		} else {
 			timeutil.SetDefaultTimezone("Asia/Jakarta")
+			log.Printf("timezone set to default: Asia/Jakarta (settings err=%v s=%v)", err, s)
 		}
 	}
 	settingHandler := settingDelivery.NewSettingHandler(settingUC)
