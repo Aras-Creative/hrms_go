@@ -199,6 +199,9 @@ func Run(cfgPath string) {
 	loc, err := time.LoadLocation(timeutil.DefaultTimezone)
 	if err != nil {
 		loc = time.UTC
+		log.Printf("WARN: LoadLocation(%s) failed: %v — falling back to UTC", timeutil.DefaultTimezone, err)
+	} else {
+		log.Printf("scheduler location loaded: %s", loc.String())
 	}
 
 	// Attendance

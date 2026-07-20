@@ -9,7 +9,13 @@ import (
 )
 
 var validBlockTypes = map[string]bool{
-	"clause": true, "header": true, "body": true,
+	"document_header": true,
+	"article":         true,
+	"paragraph":       true,
+	"first_party":     true,
+	"second_party":    true,
+	"sign_table":      true,
+	"text":            true,
 }
 
 type SpecialClause struct {
@@ -59,7 +65,7 @@ func validateTemplateName(name string) error {
 func validateBlocks(blocks []Block) error {
 	for i, b := range blocks {
 		if b.Type != "" && !validBlockTypes[b.Type] {
-			return fmt.Errorf("block[%d]: invalid type %q (valid: clause, header, body)", i, b.Type)
+			return fmt.Errorf("block[%d]: invalid type %q (valid: document_header, article, paragraph, first_party, second_party, sign_table, text)", i, b.Type)
 		}
 	}
 	return nil
