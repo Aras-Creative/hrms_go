@@ -57,6 +57,7 @@
 
 # documentation
 - Add explicit explanatory comments at business-rule decision points (e.g., "correction always wins" early returns) so future developers don't mistake deliberate logic for bugs. Confidence: 0.90
+- Document behavioral edge cases and tradeoff analyses in dedicated docs files (e.g., `docs/attendance-correction-behavior.md`) to capture decisions about when NOT to refactor, not just what was implemented. Confidence: 0.65
 
 # domain-design
 - Use domain entity methods instead of direct field assignment in usecase layer to avoid anemic domain model. Confidence: 0.65

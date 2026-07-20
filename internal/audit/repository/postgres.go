@@ -231,6 +231,7 @@ func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Contex
 		return []*models.AuditEntryWithActor{}, nil
 	}
 
+	actionOffset := 3
 	query := `
 		SELECT a.id, a.action, a.actor_id, COALESCE(u.full_name, '') AS actor_name,
 		       a.resource, a.resource_id, a.target_id, a.payload,
@@ -238,9 +239,9 @@ func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Contex
 		FROM audit_logs a
 		LEFT JOIN users u ON u.id = a.actor_id
 		WHERE a.resource = $1 AND a.resource_id = $2
-		  AND a.action IN (` + placeholders(len(actions)) + `)
-		  AND a.created_at >= $` + fmt.Sprintf("%d", len(actions)+3) + `
-		  AND a.created_at <= $` + fmt.Sprintf("%d", len(actions)+4) + `
+		  AND a.action IN (` + placeholders(actionOffset, len(actions)) + `)
+		  AND a.created_at >= $` + fmt.Sprintf("%d", actionOffset+len(actions)) + `
+		  AND a.created_at <= $` + fmt.Sprintf("%d", actionOffset+len(actions)+1) + `
 		ORDER BY a.created_at DESC
 	`
 
@@ -275,10 +276,10 @@ func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Contex
 	return list, rows.Err()
 }
 
-func placeholders(n int) string {
+func placeholders(start, n int) string {
 	s := ""
-	for i := 1; i <= n; i++ {
-		if i > 1 {
+	for i := start; i < start+n; i++ {
+		if i > start {
 			s += ", "
 		}
 		s += fmt.Sprintf("$%d", i)

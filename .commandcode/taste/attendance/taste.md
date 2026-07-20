@@ -14,3 +14,4 @@
 - Map attendance API statuses to semantic categories (present, absent, day_off, on_leave) instead of keeping the original detailed API status values or limiting to strict binary. Confidence: 0.80
 - For API status "Libur" (holiday), map to "day_off" instead of "absent" in the seed builder. Confidence: 0.65
 - For API status "Izin Cuti" (permitted leave), map to "on_leave" instead of "present" in the seed builder. Confidence: 0.65
+- For daily attendance reconciliation: treat corrections, punches, leaves, and schedules as recorded events—don't let any single source overwrite others. Use a processor (rule engine) that recomputes the final status from all events with priority: Correction > Punch > Leave > Schedule. Confidence: 0.65
