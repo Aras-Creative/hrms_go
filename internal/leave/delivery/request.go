@@ -2,7 +2,7 @@ package delivery
 
 type CreateLeaveTypeRequest struct {
 	Name        string `json:"name" validate:"required,min=1,max=255"`
-	DefaultDays int    `json:"default_days,string"`
+	DefaultDays int    `json:"default_days"`
 	IsPaid      bool   `json:"is_paid"`
 	IsUnlimited bool   `json:"is_unlimited"`
 	IsHalfDay   bool   `json:"is_half_day"`
@@ -10,7 +10,7 @@ type CreateLeaveTypeRequest struct {
 
 type UpdateLeaveTypeRequest struct {
 	Name        string `json:"name" validate:"omitempty,min=1,max=255"`
-	DefaultDays int    `json:"default_days,string"`
+	DefaultDays int    `json:"default_days"`
 	IsPaid      bool   `json:"is_paid"`
 	IsUnlimited bool   `json:"is_unlimited"`
 	IsHalfDay   bool   `json:"is_half_day"`

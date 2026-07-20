@@ -57,7 +57,7 @@ func userIDFromCtx(c fiber.Ctx) *string {
 func (h *LeaveHandler) CreateType(c fiber.Ctx) error {
 	var req CreateLeaveTypeRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
+		return response.Error(c, errors.NewInvalidInput("invalid request body"))
 	}
 
 	lt, err := h.uc.CreateLeaveType(c.RequestCtx(), models.CreateLeaveTypeInput{
@@ -123,7 +123,7 @@ func (h *LeaveHandler) UpdateType(c fiber.Ctx) error {
 	id := c.Params("id")
 	var req UpdateLeaveTypeRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
+		return response.Error(c, errors.NewInvalidInput("invalid request body"))
 	}
 
 	lt, err := h.uc.UpdateLeaveType(c.RequestCtx(), id, models.UpdateLeaveTypeInput{
@@ -197,7 +197,7 @@ func (h *LeaveHandler) UpdateBalance(c fiber.Ctx) error {
 
 	var req UpdateLeaveBalanceRequest
 	if err := c.Bind().Body(&req); err != nil {
-		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
+		return response.Error(c, errors.NewInvalidInput("invalid request body"))
 	}
 
 	b, err := h.uc.UpdateBalance(c.RequestCtx(), models.UpdateLeaveBalanceInput{
