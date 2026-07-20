@@ -40,15 +40,17 @@ type DailyComputationRow struct {
 }
 
 type CorrectionModel struct {
-	ID          string     `db:"id"`
-	EmployeeID  string     `db:"employee_id"`
-	Date        time.Time  `db:"date"`
-	ClockIn     *time.Time `db:"clock_in"`
-	ClockOut    *time.Time `db:"clock_out"`
-	Status      *string    `db:"status"`
-	Reason      string     `db:"reason"`
-	CorrectedBy string     `db:"corrected_by"`
-	CreatedAt   time.Time  `db:"created_at"`
+	ID           string     `db:"id"`
+	EmployeeID   string     `db:"employee_id"`
+	Date         time.Time  `db:"date"`
+	ClockIn      *time.Time `db:"clock_in"`
+	ClockOut     *time.Time `db:"clock_out"`
+	Status       *string    `db:"status"`
+	IsLate       *bool      `db:"is_late"`
+	IsEarlyLeave *bool      `db:"is_early_leave"`
+	Reason       string     `db:"reason"`
+	CorrectedBy  string     `db:"corrected_by"`
+	CreatedAt    time.Time  `db:"created_at"`
 }
 
 type PunchModel struct {

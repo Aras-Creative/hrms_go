@@ -101,6 +101,8 @@ func correctionRowToItem(r *repository.CorrectionViewRow) *models.CorrectionView
 		ClockIn:      r.ClockIn,
 		ClockOut:     r.ClockOut,
 		Status:       r.Status,
+		IsLate:       r.IsLate,
+		IsEarlyLeave: r.IsEarlyLeave,
 		Reason:       r.Reason,
 		CorrectedBy:  r.CorrectedBy,
 		CreatedAt:    r.CreatedAt,

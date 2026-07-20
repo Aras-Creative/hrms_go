@@ -13,12 +13,12 @@ import (
 
 const (
 	queryInsertCorrection = `
-		INSERT INTO attendance_corrections (id, employee_id, date, clock_in, clock_out, status, reason, corrected_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO attendance_corrections (id, employee_id, date, clock_in, clock_out, status, is_late, is_early_leave, reason, corrected_by, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 
 	querySelectCorrection = `
-		SELECT id, employee_id, date, clock_in, clock_out, status, reason, corrected_by, created_at
+		SELECT id, employee_id, date, clock_in, clock_out, status, is_late, is_early_leave, reason, corrected_by, created_at
 		FROM attendance_corrections
 	`
 
@@ -26,7 +26,7 @@ const (
 
 	queryUpdateCorrection = `
 		UPDATE attendance_corrections
-		SET clock_in = $2, clock_out = $3, status = $4, reason = $5
+		SET clock_in = $2, clock_out = $3, status = $4, is_late = $5, is_early_leave = $6, reason = $7
 		WHERE id = $1
 	`
 )
@@ -51,7 +51,7 @@ func (r *PostgresCorrectionRepo) WithTx(tx *sqlx.Tx) CorrectionRepository {
 
 func (r *PostgresCorrectionRepo) Create(ctx context.Context, c *entity.AttendanceCorrection) error {
 	_, err := r.db.ExecContext(ctx, queryInsertCorrection,
-		c.ID, c.EmployeeID, c.Date, c.ClockIn, c.ClockOut, c.Status, c.Reason, c.CorrectedBy, c.CreatedAt,
+		c.ID, c.EmployeeID, c.Date, c.ClockIn, c.ClockOut, c.Status, c.IsLate, c.IsEarlyLeave, c.Reason, c.CorrectedBy, c.CreatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create correction: %w", err)
@@ -61,7 +61,7 @@ func (r *PostgresCorrectionRepo) Create(ctx context.Context, c *entity.Attendanc
 
 func (r *PostgresCorrectionRepo) Update(ctx context.Context, c *entity.AttendanceCorrection) error {
 	result, err := r.db.ExecContext(ctx, queryUpdateCorrection,
-		c.ID, c.ClockIn, c.ClockOut, c.Status, c.Reason,
+		c.ID, c.ClockIn, c.ClockOut, c.Status, c.IsLate, c.IsEarlyLeave, c.Reason,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update correction: %w", err)
@@ -162,7 +162,7 @@ func (r *PostgresCorrectionRepo) Delete(ctx context.Context, id string) error {
 
 func modelToCorrection(m *CorrectionModel) *entity.AttendanceCorrection {
 	return entity.ReconstituteAttendanceCorrection(
-		m.ID, m.EmployeeID, m.Date, m.ClockIn, m.ClockOut, m.Status, m.Reason, m.CorrectedBy, m.CreatedAt,
+		m.ID, m.EmployeeID, m.Date, m.ClockIn, m.ClockOut, m.Status, m.IsLate, m.IsEarlyLeave, m.Reason, m.CorrectedBy, m.CreatedAt,
 	)
 }
 

@@ -247,7 +247,8 @@ func (h *AttendanceHandler) CorrectionCreate(c fiber.Ctx) error {
 	}
 	result, created, err := h.correctionUc.Create(c.RequestCtx(), usecase.CreateCorrectionInput{
 		EmployeeID: req.EmployeeID, Date: req.Date, ClockIn: req.ClockIn,
-		ClockOut: req.ClockOut, Status: req.Status, Reason: req.Reason, CorrectedBy: userID,
+		ClockOut: req.ClockOut, Status: req.Status, IsLate: req.IsLate,
+		IsEarlyLeave: req.IsEarlyLeave, Reason: req.Reason, CorrectedBy: userID,
 	})
 	if err != nil {
 		return response.Error(c, err)

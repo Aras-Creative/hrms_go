@@ -38,13 +38,15 @@ func NewCorrectionUsecase(
 }
 
 type CreateCorrectionInput struct {
-	EmployeeID string
-	Date       string
-	ClockIn    *time.Time
-	ClockOut   *time.Time
-	Status     *string
-	Reason     string
-	CorrectedBy string
+	EmployeeID   string
+	Date         string
+	ClockIn      *time.Time
+	ClockOut     *time.Time
+	Status       *string
+	IsLate       *bool
+	IsEarlyLeave *bool
+	Reason       string
+	CorrectedBy  string
 }
 
 type ListCorrectionsInput struct {
@@ -68,6 +70,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	correction := entity.NewAttendanceCorrection(
 		input.EmployeeID, date, input.ClockIn, input.ClockOut, input.Status,
+		input.IsLate, input.IsEarlyLeave,
 		input.Reason, input.CorrectedBy,
 	)
 
@@ -118,6 +121,8 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 		existing.ClockIn = input.ClockIn
 		existing.ClockOut = input.ClockOut
 		existing.Status = input.Status
+		existing.IsLate = input.IsLate
+		existing.IsEarlyLeave = input.IsEarlyLeave
 		existing.Reason = input.Reason
 		existing.CorrectedBy = input.CorrectedBy
 		if err := correctionRepo.Update(ctx, existing); err != nil {
