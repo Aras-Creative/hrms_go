@@ -95,7 +95,7 @@ func (uc *EmployeePatternUsecase) assignForEmployee(ctx context.Context, employe
 	}
 
 	ewp := entity.NewEmployeeWorkPattern(employeeID, workPatternID, validFrom, validTo)
-	if err := uc.ewpRepo.Create(ctx, ewp); err != nil {
+	if err := uc.ewpRepo.Upsert(ctx, ewp); err != nil {
 		return nil, fmt.Errorf("failed to assign work pattern: %w", err)
 	}
 	return ewp, nil

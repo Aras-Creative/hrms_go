@@ -5,6 +5,7 @@
 # workflow
 - Implement contract lifecycle as draft-first: create as draft, then process (sign/send) in a separate step when admin finalizes. Confidence: 0.65
 - FE should not be required to send content hashes for signing; signing validation is server-side only. Confidence: 0.70
+- In seed data builder scripts, fetch sequentially over a range of IDs (1-120) and skip errors instead of aborting on failure. Confidence: 0.65
 
 # api-design
 - Group API routes by component sub-paths (e.g., `/payroll/salary/*`, `/payroll/compensation/*`) instead of flat paths like `/payroll/base-salaries`. Confidence: 0.70

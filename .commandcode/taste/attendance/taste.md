@@ -1,4 +1,5 @@
 # attendance
+- Determine `is_late` using `late_today > 0` from the API response rather than comparing clock-in time against expected start time. Confidence: 0.85
 - Treat "pending" as a frontend-only display flag in lists, not as a real domain status in the attendance system. Confidence: 0.65
 - Detect half-day leave from an is_half_day flag on the leave type entity (not on individual leave submissions); apply half-day logic in the daily processor when determining attendance status. Confidence: 0.65
 - Do not hardcode timezone in SQL queries; timezone must come from config (e.g., a configurable application setting), not hardcoded like 'Asia/Jakarta'. Confidence: 0.85
@@ -9,3 +10,6 @@
 - Use "day_off" instead of "non_working" for days when employee is not scheduled to work (weekends, holidays, day off overrides). Confidence: 0.70
 - Separate lateness into two independent dimensions: attendance status (present/absent) and punctuality (is_late: true/false), instead of conflating them into a single "late" status. Confidence: 0.70
 - For 'dynamic' working type: intentionally skip late/early leave checks because flexible schedules don't have fixed start/end times to measure punctuality against; only apply lateness checks for 'fixed' working type. Confidence: 0.75
+- Map attendance API statuses to semantic categories (present, absent, day_off, on_leave) instead of keeping the original detailed API status values or limiting to strict binary. Confidence: 0.70
+- For API status "Libur" (holiday), map to "day_off" instead of "absent" in the seed builder. Confidence: 0.65
+- For API status "Izin Cuti" (permitted leave), map to "on_leave" instead of "present" in the seed builder. Confidence: 0.65

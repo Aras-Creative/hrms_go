@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	attendanceEntity "hrms/internal/attendance/entity"
 	attendanceRepo "hrms/internal/attendance/repository"
+	emplModels "hrms/internal/employee/models"
+	emplRepo "hrms/internal/employee/repository"
 	"hrms/internal/pkg/config"
 	"hrms/internal/pkg/database"
 	"hrms/internal/pkg/timeutil"
@@ -31,29 +35,39 @@ type LegacyRecord struct {
 	TotalWorkSeconds  *int    `json:"total_work_seconds"`
 }
 
+func findEmployeeByName(ctx context.Context, empRepo emplRepo.EmployeeRepository, nameSlug string) (string, string, error) {
+	// Search by first name — DB uses ILIKE '%searchName%'
+	result, total, err := empRepo.FindAllWithDetails(ctx, emplModels.ListEmployeeInput{
+		SearchName: nameSlug,
+		Page:       1,
+		PerPage:    20,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("find employee: %w", err)
+	}
+
+	if total == 0 {
+		return "", "", fmt.Errorf("no employee found matching %q", nameSlug)
+	}
+
+	// Try exact first-name match first
+	for _, e := range result {
+		first := strings.ToLower(strings.Split(e.FullName, " ")[0])
+		if first == nameSlug {
+			return e.ID, e.FullName, nil
+		}
+	}
+
+	// Fall back to the first result
+	e := result[0]
+	log.Printf("  warning: no exact match for %q, using %q (id=%s)", nameSlug, e.FullName, e.ID)
+	return e.ID, e.FullName, nil
+}
+
 func main() {
 	cfgPath := flag.String("config", "config/config.yaml", "path to configuration file")
-	employeeID := flag.String("employee", "", "employee UUID")
-	filePath := flag.String("file", "", "path to JSON file with legacy attendance records")
+	dataDir := flag.String("dir", "data", "directory containing JSON seed files")
 	flag.Parse()
-
-	if *employeeID == "" || *filePath == "" {
-		log.Fatal("usage: seed_daily_attendance -employee <uuid> -file legacy_data.json")
-	}
-
-	data, err := os.ReadFile(*filePath)
-	if err != nil {
-		log.Fatalf("read file: %v", err)
-	}
-
-	var records []LegacyRecord
-	if err := json.Unmarshal(data, &records); err != nil {
-		log.Fatalf("parse json: %v", err)
-	}
-
-	if len(records) == 0 {
-		log.Fatal("no records found in JSON")
-	}
 
 	cfg, err := config.Load(*cfgPath)
 	if err != nil {
@@ -71,63 +85,120 @@ func main() {
 	now := time.Now()
 
 	dailyRepo := attendanceRepo.NewPostgresDailyAttendanceRepo(db)
+	empRepo := emplRepo.NewPostgresEmployeeRepo(db)
 	ctx := context.Background()
 
-	inserted := 0
-	for _, r := range records {
-		date, err := time.ParseInLocation("2006-01-02", r.Date, loc)
-		if err != nil {
-			log.Printf("skip invalid date %q: %v", r.Date, err)
-			continue
-		}
-
-		if r.Source == "" {
-			r.Source = "legacy"
-		}
-
-		var firstPunchIn, lastPunchOut *time.Time
-		if r.FirstPunchIn != nil && *r.FirstPunchIn != "" {
-			t, err := time.ParseInLocation("2006-01-02T15:04:05", *r.FirstPunchIn, loc)
-			if err != nil {
-				t, err = time.ParseInLocation("2006-01-02 15:04:05", *r.FirstPunchIn, loc)
-			}
-			if err == nil {
-				firstPunchIn = &t
-			}
-		}
-		if r.LastPunchOut != nil && *r.LastPunchOut != "" {
-			t, err := time.ParseInLocation("2006-01-02T15:04:05", *r.LastPunchOut, loc)
-			if err != nil {
-				t, err = time.ParseInLocation("2006-01-02 15:04:05", *r.LastPunchOut, loc)
-			}
-			if err == nil {
-				lastPunchOut = &t
-			}
-		}
-
-		da := &attendanceEntity.DailyAttendance{
-			ID:                 uuid.New().String(),
-			EmployeeID:         *employeeID,
-			Date:               date,
-			Status:             attendanceEntity.AttendanceStatus(r.Status),
-			IsLate:             r.IsLate,
-			IsEarlyLeave:       r.IsEarlyLeave,
-			ExpectedStartTime:  r.ExpectedStartTime,
-			ExpectedEndTime:    r.ExpectedEndTime,
-			Source:             r.Source,
-			FirstPunchIn:       firstPunchIn,
-			LastPunchOut:       lastPunchOut,
-			TotalWorkSeconds:   r.TotalWorkSeconds,
-			CreatedAt:          now,
-			UpdatedAt:          now,
-		}
-
-		if err := dailyRepo.Upsert(ctx, da); err != nil {
-			log.Printf("  ERROR upsert %s: %v", r.Date, err)
-			continue
-		}
-		inserted++
+	entries, err := os.ReadDir(*dataDir)
+	if err != nil {
+		log.Fatalf("read dir %s: %v", *dataDir, err)
 	}
 
-	fmt.Printf("done. %d/%d records upserted for employee %s\n", inserted, len(records), *employeeID)
+	type job struct {
+		file    string
+		empID   string
+		empName string
+		records []LegacyRecord
+	}
+	var jobs []job
+
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			continue
+		}
+		filePath := filepath.Join(*dataDir, entry.Name())
+		nameSlug := strings.TrimSuffix(entry.Name(), ".json")
+
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			log.Printf("skip %s: read error: %v", entry.Name(), err)
+			continue
+		}
+
+		var records []LegacyRecord
+		if err := json.Unmarshal(data, &records); err != nil {
+			log.Printf("skip %s: parse error: %v", entry.Name(), err)
+			continue
+		}
+		if len(records) == 0 {
+			log.Printf("skip %s: empty records", entry.Name())
+			continue
+		}
+
+		empID, empName, err := findEmployeeByName(ctx, empRepo, nameSlug)
+		if err != nil {
+			log.Printf("skip %s: %v", entry.Name(), err)
+			continue
+		}
+
+		jobs = append(jobs, job{
+			file:    entry.Name(),
+			empID:   empID,
+			empName: empName,
+			records: records,
+		})
+	}
+
+	if len(jobs) == 0 {
+		log.Fatal("no valid seed files found")
+	}
+
+	for _, j := range jobs {
+		inserted := 0
+		for _, r := range j.records {
+			date, err := time.ParseInLocation("2006-01-02", r.Date, loc)
+			if err != nil {
+				log.Printf("  [%s] skip invalid date %q: %v", j.file, r.Date, err)
+				continue
+			}
+
+			if r.Source == "" {
+				r.Source = "legacy"
+			}
+
+			var firstPunchIn, lastPunchOut *time.Time
+			if r.FirstPunchIn != nil && *r.FirstPunchIn != "" {
+				t, err := time.ParseInLocation("2006-01-02T15:04:05", *r.FirstPunchIn, loc)
+				if err != nil {
+					t, err = time.ParseInLocation("2006-01-02 15:04:05", *r.FirstPunchIn, loc)
+				}
+				if err == nil {
+					firstPunchIn = &t
+				}
+			}
+			if r.LastPunchOut != nil && *r.LastPunchOut != "" {
+				t, err := time.ParseInLocation("2006-01-02T15:04:05", *r.LastPunchOut, loc)
+				if err != nil {
+					t, err = time.ParseInLocation("2006-01-02 15:04:05", *r.LastPunchOut, loc)
+				}
+				if err == nil {
+					lastPunchOut = &t
+				}
+			}
+
+			da := &attendanceEntity.DailyAttendance{
+				ID:                 uuid.New().String(),
+				EmployeeID:         j.empID,
+				Date:               date,
+				Status:             attendanceEntity.AttendanceStatus(r.Status),
+				IsLate:             r.IsLate,
+				IsEarlyLeave:       r.IsEarlyLeave,
+				ExpectedStartTime:  r.ExpectedStartTime,
+				ExpectedEndTime:    r.ExpectedEndTime,
+				Source:             r.Source,
+				FirstPunchIn:       firstPunchIn,
+				LastPunchOut:       lastPunchOut,
+				TotalWorkSeconds:   r.TotalWorkSeconds,
+				CreatedAt:          now,
+				UpdatedAt:          now,
+			}
+
+			if err := dailyRepo.Upsert(ctx, da); err != nil {
+				log.Printf("  [%s] ERROR upsert %s: %v", j.file, r.Date, err)
+				continue
+			}
+			inserted++
+		}
+
+		fmt.Printf("%s (%s): %d/%d records upserted\n", j.file, j.empName, inserted, len(j.records))
+	}
 }
