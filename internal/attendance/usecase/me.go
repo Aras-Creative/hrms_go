@@ -62,8 +62,14 @@ func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.Mo
 		return nil, errors.WrapInternal("failed to find records", err)
 	}
 
+	// Index persisted records by date so we can detect missing today.
+	today := entity.LocalDate(now)
+	seen := make(map[string]bool)
 	monthMap := make(map[string]*models.MonthlyStats)
 	for _, r := range records {
+		dateKey := r.Date.Format("2006-01-02")
+		seen[dateKey] = true
+
 		key := r.Date.Format("2006-01")
 		ms, ok := monthMap[key]
 		if !ok {
@@ -84,6 +90,34 @@ func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.Mo
 			// skip — no_punch is a transient state, not counted as absent
 		}
 		ms.LateMinutes += r.LateMinutes()
+	}
+
+	// If today isn't in the persisted records, compute it on the fly so the
+	// stats reflect the current state (e.g. before the first punch or sweep).
+	todayKey := today.Format("2006-01-02")
+	if !seen[todayKey] {
+		da, err := uc.processor.ComputeDaily(ctx, employeeID, today)
+		if err == nil && da != nil {
+			key := today.Format("2006-01")
+			ms, ok := monthMap[key]
+			if !ok {
+				ms = &models.MonthlyStats{Month: key}
+				monthMap[key] = ms
+			}
+			switch da.Status {
+			case entity.AttendancePresent:
+				ms.Present++
+			case entity.AttendanceOnLeave:
+				ms.OnLeave++
+			case entity.AttendanceAbsent:
+				ms.Absent++
+			case entity.AttendanceDayOff:
+				ms.DayOff++
+			case entity.AttendanceNoPunch:
+				// skip
+			}
+			ms.LateMinutes += da.LateMinutes()
+		}
 	}
 
 	result := make([]models.MonthlyStats, 0, len(monthMap))

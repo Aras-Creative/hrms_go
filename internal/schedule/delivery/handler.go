@@ -9,6 +9,7 @@ import (
 
 	response "hrms/internal/pkg/api"
 	errors "hrms/internal/pkg/apperror"
+	"hrms/internal/pkg/timeutil"
 	scheduleAdapter "hrms/internal/schedule/adapter"
 	"hrms/internal/schedule/entity"
 	"hrms/internal/schedule/usecase"
@@ -367,7 +368,7 @@ func (h *ScheduleHandler) MyToday(c fiber.Ctx) error {
 		return response.Error(c, errors.NewNotFound("employee not found for user"))
 	}
 
-	now := time.Now()
+	now := time.Now().In(timeutil.LoadDefaultLocation())
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
 	// Get active pattern assignment

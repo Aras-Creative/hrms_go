@@ -46,7 +46,17 @@ func (s *Scheduler) Stop() {
 func (s *Scheduler) runSweep() {
 	ctx := context.Background()
 	now := time.Now().In(s.loc)
-	today := now.Format("2006-01-02")
+	hour := now.Hour()
+	minute := now.Minute()
+
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, s.loc)
+
+	// At 00:30 the sweep finalises yesterday's day — the 00:30-next-day cutoff
+	// has just passed, so yesterday's no_punch entries become absent.
+	date := today
+	if hour == 0 && minute == 30 {
+		date = today.AddDate(0, 0, -1)
+	}
 
 	conn, acquired := s.tryLock(ctx)
 	if !acquired {
@@ -58,13 +68,12 @@ func (s *Scheduler) runSweep() {
 		conn.Close()
 	}()
 
-	date := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, s.loc)
 	if err := s.processor.ProcessRange(ctx, date, date); err != nil {
 		slog.Error("scheduler: ProcessRange failed", "error", err)
 		return
 	}
 
-	slog.Info("scheduler: finalize sweep completed", "date", today)
+	slog.Info("scheduler: finalize sweep completed", "date", date.Format("2006-01-02"))
 }
 
 func (s *Scheduler) tryLock(ctx context.Context) (*sql.Conn, bool) {
