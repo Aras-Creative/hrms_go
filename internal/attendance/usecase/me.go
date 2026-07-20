@@ -33,7 +33,7 @@ func (uc *MeUsecase) GetMyAttendance(ctx context.Context, userID string) (*model
 		return nil, errors.NewNotFound("employee not found for user")
 	}
 
-	now := time.Now()
+	now := time.Now().In(timeutil.LoadDefaultLocation())
 	today := entity.LocalDate(now)
 
 	da, err := uc.processor.ComputeDaily(ctx, employeeID, today)
@@ -53,9 +53,9 @@ func (uc *MeUsecase) GetMyStats(ctx context.Context, userID string) ([]models.Mo
 		return nil, errors.NewNotFound("employee not found for user")
 	}
 
-	now := time.Now()
-	from := time.Date(now.Year()-1, now.Month(), 1, 0, 0, 0, 0, time.UTC)
-	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, time.UTC)
+	now := time.Now().In(timeutil.LoadDefaultLocation())
+	from := time.Date(now.Year()-1, now.Month(), 1, 0, 0, 0, 0, now.Location())
+	to := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 
 	records, err := uc.dailyRepo.FindByEmployeeAndDateRange(ctx, employeeID, from, to)
 	if err != nil {
