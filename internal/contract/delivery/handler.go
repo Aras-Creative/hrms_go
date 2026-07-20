@@ -124,7 +124,10 @@ func (h *ContractHandler) ListTemplates(c fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
-	return response.Paginate(c, toListItemResponses(result.Entities), page, perPage, result.Total)
+	return response.OK(c, TemplateListResponse{
+		Items: toListItemResponses(result.Entities),
+		Total: result.Total,
+	})
 }
 
 func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {

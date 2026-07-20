@@ -56,6 +56,11 @@ type TemplateListItemResponse struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
+type TemplateListResponse struct {
+	Items []*TemplateListItemResponse `json:"items"`
+	Total int64                       `json:"total"`
+}
+
 type TemplatePrefillResponse struct {
 	ID           string               `json:"id"`
 	Name         string               `json:"name"`
