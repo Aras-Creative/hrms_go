@@ -76,8 +76,8 @@ func (c *AttendanceCorrection) Validate() error {
 	if c.Reason == "" {
 		return fmt.Errorf("reason is required")
 	}
-	if c.ClockIn == nil && c.ClockOut == nil && c.Status == nil {
-		return fmt.Errorf("at least one of clock_in, clock_out, or status must be provided")
+	if c.ClockIn == nil && c.ClockOut == nil && c.Status == nil && c.IsLate == nil && c.IsEarlyLeave == nil {
+		return fmt.Errorf("at least one field to correct must be provided")
 	}
 	if c.ClockIn != nil && c.ClockOut != nil && c.ClockOut.Before(*c.ClockIn) {
 		return fmt.Errorf("clock_out cannot be before clock_in")

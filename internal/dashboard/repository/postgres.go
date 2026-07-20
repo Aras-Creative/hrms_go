@@ -28,17 +28,17 @@ const queryResolvedStatus = `
 					WHEN eso.id IS NOT NULL AND eso.is_working_day = false THEN 'day_off'
 					WHEN wpd.id IS NOT NULL AND wpd.start_time IS NOT NULL AND wpd.start_time != ''
 						AND (wpd.working_type IS NULL OR wpd.working_type != 'off') THEN
-						CASE WHEN (NOW() AT TIME ZONE $3) > (
+						CASE WHEN d::date = CURRENT_DATE AND (NOW() AT TIME ZONE $3) > (
 							CASE WHEN wpd.end_time IS NOT NULL AND wpd.end_time != ''
 								THEN d::date + wpd.end_time::time
 								ELSE d::date + INTERVAL '1 day' + INTERVAL '30 minutes'
 							END
 						) THEN 'absent' ELSE 'no_punch' END
 					WHEN wpd.id IS NOT NULL AND wpd.working_type = 'dynamic' THEN
-						CASE WHEN (NOW() AT TIME ZONE $3) > (d::date + INTERVAL '1 day' + INTERVAL '30 minutes')
+						CASE WHEN d::date = CURRENT_DATE AND (NOW() AT TIME ZONE $3) > (d::date + INTERVAL '1 day' + INTERVAL '30 minutes')
 							THEN 'absent' ELSE 'no_punch' END
 					WHEN eso.id IS NOT NULL AND eso.start_time IS NOT NULL AND eso.start_time != '' THEN
-						CASE WHEN (NOW() AT TIME ZONE $3) > (
+						CASE WHEN d::date = CURRENT_DATE AND (NOW() AT TIME ZONE $3) > (
 							CASE WHEN eso.end_time IS NOT NULL AND eso.end_time != ''
 								THEN d::date + eso.end_time::time
 								ELSE d::date + INTERVAL '1 day' + INTERVAL '30 minutes'
