@@ -8,17 +8,17 @@ import (
 )
 
 type AttendanceCorrection struct {
-	ID            string
-	EmployeeID    string
-	Date          time.Time
-	ClockIn       *time.Time
-	ClockOut      *time.Time
-	Status        *string
-	IsLate        *bool
-	IsEarlyLeave  *bool
-	Reason        string
-	CorrectedBy   string
-	CreatedAt     time.Time
+	ID           string
+	EmployeeID   string
+	Date         time.Time
+	ClockIn      *time.Time
+	ClockOut     *time.Time
+	Status       *string
+	IsLate       *bool
+	IsEarlyLeave *bool
+	Reason       string
+	CorrectedBy  string
+	CreatedAt    time.Time
 }
 
 func NewAttendanceCorrection(
@@ -30,17 +30,17 @@ func NewAttendanceCorrection(
 	reason, correctedBy string,
 ) *AttendanceCorrection {
 	return &AttendanceCorrection{
-		ID:           uuid.New().String(),
-		EmployeeID:   employeeID,
-		Date:         date,
-		ClockIn:      clockIn,
-		ClockOut:     clockOut,
-		Status:       status,
-		IsLate:       isLate,
+		ID:          uuid.New().String(),
+		EmployeeID:  employeeID,
+		Date:        date,
+		ClockIn:     clockIn,
+		ClockOut:    clockOut,
+		Status:      status,
+		IsLate:      isLate,
 		IsEarlyLeave: isEarlyLeave,
-		Reason:       reason,
-		CorrectedBy:  correctedBy,
-		CreatedAt:    time.Now(),
+		Reason:      reason,
+		CorrectedBy: correctedBy,
+		CreatedAt:   time.Now(),
 	}
 }
 
@@ -54,17 +54,10 @@ func ReconstituteAttendanceCorrection(
 	createdAt time.Time,
 ) *AttendanceCorrection {
 	return &AttendanceCorrection{
-		ID:           id,
-		EmployeeID:   employeeID,
-		Date:         date,
-		ClockIn:      clockIn,
-		ClockOut:     clockOut,
-		Status:       status,
-		IsLate:       isLate,
-		IsEarlyLeave: isEarlyLeave,
-		Reason:       reason,
-		CorrectedBy:  correctedBy,
-		CreatedAt:    createdAt,
+		ID: id, EmployeeID: employeeID, Date: date,
+		ClockIn: clockIn, ClockOut: clockOut, Status: status,
+		IsLate: isLate, IsEarlyLeave: isEarlyLeave,
+		Reason: reason, CorrectedBy: correctedBy, CreatedAt: createdAt,
 	}
 }
 

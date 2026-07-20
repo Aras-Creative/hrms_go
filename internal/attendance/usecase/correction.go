@@ -38,15 +38,15 @@ func NewCorrectionUsecase(
 }
 
 type CreateCorrectionInput struct {
-	EmployeeID   string
-	Date         string
-	ClockIn      *time.Time
-	ClockOut     *time.Time
-	Status       *string
-	IsLate       *bool
+	EmployeeID  string
+	Date        string
+	ClockIn     *time.Time
+	ClockOut    *time.Time
+	Status      *string
+	IsLate      *bool
 	IsEarlyLeave *bool
-	Reason       string
-	CorrectedBy  string
+	Reason      string
+	CorrectedBy string
 }
 
 type ListCorrectionsInput struct {
