@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	contractEntity "hrms/internal/contract/entity"
@@ -172,10 +173,21 @@ func normalizeReligion(r string) string {
 	return r
 }
 
+var idMonthNames = map[time.Month]string{
+	time.January: "Januari", time.February: "Februari", time.March: "Maret",
+	time.April: "April", time.May: "Mei", time.June: "Juni",
+	time.July: "Juli", time.August: "Agustus", time.September: "September",
+	time.October: "Oktober", time.November: "November", time.December: "Desember",
+}
+
+func formatDateID(d emplEntity.Date) string {
+	return fmt.Sprintf("%d %s %d", d.Day, idMonthNames[d.Month], d.Year)
+}
+
 func mapToRenderData(emp *emplEntity.Employee) *contractEntity.EmployeeRenderData {
 	birthInfo := emp.PlaceOfBirth
 	if emp.DateOfBirth != nil {
-		birthInfo = emp.PlaceOfBirth + ", " + emp.DateOfBirth.String()
+		birthInfo = emp.PlaceOfBirth + ", " + formatDateID(*emp.DateOfBirth)
 	}
 	return &contractEntity.EmployeeRenderData{
 		Name:           emp.FullName,

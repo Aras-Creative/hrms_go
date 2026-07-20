@@ -34,7 +34,7 @@ func resolveBlockContent(blocks []RenderBlock, ctx *RenderContext) {
 }
 
 // buildContractRenderData maps a contract entity to the render-safe struct.
-func buildContractRenderData(c *entity.Contract) entity.ContractRenderData {
+func buildContractRenderData(c *entity.Contract, shiftStart, shiftEnd string) entity.ContractRenderData {
 	salary := c.Salary
 	if salary == "" {
 		salary = "0"
@@ -45,6 +45,8 @@ func buildContractRenderData(c *entity.Contract) entity.ContractRenderData {
 		EndDate:          formatTime(c.EndDate),
 		Salary:           formatSalaryCurrency(salary),
 		DesignationTitle: c.DesignationTitle,
+		ShiftStart:       shiftStart,
+		ShiftEnd:         shiftEnd,
 	}
 }
 

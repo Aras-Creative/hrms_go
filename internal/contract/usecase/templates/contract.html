@@ -13,7 +13,7 @@
       }
       body {
         font-family: "Times New Roman", Times, serif;
-        font-size: 12px;
+        font-size: 14px;
         margin: 0;
         color: #000;
       }
@@ -40,12 +40,12 @@
       }
       .doc-header .company-info {
         line-height: 1.4;
-        font-size: 14px;
+        font-size: 16px;
         max-width: 480px;
       }
       .doc-header .company-info p {
         margin: 0;
-        font-size: 14px;
+        font-size: 16px;
       }
       .doc-header .company-info a {
         color: #000;
@@ -56,12 +56,22 @@
       }
 
       .doc-body {
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.6;
         text-align: justify;
       }
+      .doc-title + * {
+        margin-top: 0 !important;
+      }
+      .doc-body > * + * {
+        margin-top: 14px;
+      }
       .doc-body p {
         margin: 0 0 10px;
+      }
+      .raw-content p {
+        margin: 0 !important;
+        padding: 0 !important;
       }
 
       .doc-title {
@@ -69,13 +79,13 @@
         margin-bottom: 18px;
       }
       .doc-title h1 {
-        font-size: 13px;
+        font-size: 15px;
         text-decoration: underline;
         margin: 0 0 2px;
       }
       .doc-title p {
         margin: 0;
-        font-size: 12px;
+        font-size: 14px;
       }
 
       .party-list {
@@ -86,8 +96,8 @@
         margin-bottom: 2px;
       }
       .party-label {
-        width: 100px;
-        flex: 0 0 100px;
+        width: 140px;
+        flex: 0 0 140px;
       }
       .party-colon {
         width: 12px;
@@ -163,7 +173,7 @@
         padding-bottom: 2px;
       }
       .sig-space {
-        min-height: 90px;
+        height: 120px;
         vertical-align: middle;
       }
       .sig-name {
@@ -171,6 +181,11 @@
       }
       .sig-role {
         font-weight: bold;
+      }
+      .doc-body .sig-legal-date {
+        margin: 0 0 8px;
+        font-weight: bold;
+        text-align: start;
       }
       .sig-blank {
         display: block;
@@ -236,12 +251,12 @@
                 <div class="party-row">
                   <div class="party-label">Nama</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">{{$.Signatory.Name}}</div>
+                  <div class="party-value">{{show $.Signatory.Name "...................................."}}</div>
                 </div>
                 <div class="party-row">
                   <div class="party-label">Jabatan</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">{{$.Signatory.Designation}}</div>
+                  <div class="party-value">{{show $.Signatory.Designation "...................................."}}</div>
                 </div>
               </div>
               <p>
@@ -285,9 +300,15 @@
               {{else if eq .Type "text"}}
               <p>{{.Resolved}}</p>
 
+              {{else if eq .Type "raw"}}
+              <div class="raw-content">{{.Resolved}}</div>
+
               {{end}} {{end}}
 
               <div class="signature-section">
+                <p class="sig-legal-date">
+                  Dibuat di {{with $.FirstSig}}{{show .Place "...................................."}}{{else}}....................................{{end}}{{with $.FirstSig}}{{if .SignedAt}}, {{show .SignedAt "...................................."}}{{else}}, ....................................{{end}}{{else}}, ....................................{{end}}
+                </p>
                 <table class="signature-table">
                   <tr>
                     <td>PIHAK PERTAMA</td>
@@ -309,32 +330,18 @@
                   </tr>
                   <tr>
                     <td class="sig-name">
-                      <br />{{with $.FirstSig}}{{.SignedByName}}{{else}}<span
-                        class="sig-blank"
-                        >&nbsp;</span
-                      >{{end}}
+                      <br />{{with $.FirstSig}}{{show .SignedByName "...................................."}}{{else}}....................................{{end}}
                     </td>
                     <td class="sig-name">
-                      <br />{{with $.SecondSig}}{{.SignedByName}}{{else}}<span
-                        class="sig-blank"
-                        >&nbsp;</span
-                      >{{end}}
+                      <br />{{with $.SecondSig}}{{show .SignedByName "...................................."}}{{else}}....................................{{end}}
                     </td>
                   </tr>
                   <tr>
                     <td class="sig-role">
-                      {{with $.FirstSig}}{{.SignedByTitle}}{{end}}
+                      {{with $.FirstSig}}{{show .SignedByTitle "...................................."}}{{else}}....................................{{end}}
                     </td>
                     <td class="sig-role">
-                      {{with $.SecondSig}}{{.SignedByTitle}}{{end}}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="sig-role">
-                      {{with $.FirstSig}}{{if .Place}}Dibuat di {{.Place}}{{if .SignedAt}}, {{.SignedAt}}{{end}}{{end}}{{end}}
-                    </td>
-                    <td class="sig-role">
-                      {{with $.SecondSig}}{{if .Place}}Dibuat di {{.Place}}{{if .SignedAt}}, {{.SignedAt}}{{end}}{{end}}{{end}}
+                      {{with $.SecondSig}}{{show .SignedByTitle "...................................."}}{{else}}....................................{{end}}
                     </td>
                   </tr>
                 </table>

@@ -61,7 +61,7 @@
 # domain-design
 - Use domain entity methods instead of direct field assignment in usecase layer to avoid anemic domain model. Confidence: 0.65
 - Use domain service/value objects (e.g., BankAccount value object) instead of raw primitive fields on entities for conceptually grouped data. Confidence: 0.60
-- Do not import domain entities from other modules (e.g., auth entity in attendance); use adapter interfaces instead to avoid leaking domain boundaries across modules. Confidence: 0.87
+- Do not import domain entities from other modules (e.g., auth entity in attendance); use adapter interfaces instead to avoid leaking domain boundaries across modules. Confidence: 0.95
 - Cache the singleton settings entity in memory (e.g., via sync.Map or atomic.Value) instead of reading from DB on every request. Confidence: 0.70
 
 # code-organization
@@ -79,6 +79,9 @@
 
 # code-organization
 - Delivery layer should only depend on model or entity types, never on repository types. Confidence: 0.70
+
+# templates
+- Use dots (``.........``) as the empty/null placeholder in contract signature HTML templates instead of showing the template variable name or leaving it blank. Confidence: 0.65
 
 # attendance
 See [attendance/taste.md](attendance/taste.md)

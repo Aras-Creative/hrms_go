@@ -71,6 +71,36 @@ func (g *Generator) formatNumber(code string, seq int) string {
 	return fmt.Sprintf("%s%s%02d", g.prefix, code, seq)
 }
 
+// NextSequence returns the next sequence number for the given code.
+// Unlike Generate, it only returns the raw integer without formatting.
+func (g *Generator) NextSequence(ctx context.Context, code string) (int, error) {
+	seq, err := g.seqRepo.GetForUpdate(ctx, code)
+	if err != nil {
+		return 0, fmt.Errorf("next sequence: %w", err)
+	}
+
+	if seq == nil {
+		if err := g.seqRepo.CreateSequence(ctx, code, g.prefix, 1); err != nil {
+			seq, err = g.seqRepo.GetForUpdate(ctx, code)
+			if err != nil || seq == nil {
+				return 0, fmt.Errorf("next sequence: %w", err)
+			}
+			next := seq.LastSequence + 1
+			if err := g.seqRepo.Increment(ctx, code, next); err != nil {
+				return 0, fmt.Errorf("next sequence increment: %w", err)
+			}
+			return next, nil
+		}
+		return 1, nil
+	}
+
+	next := seq.LastSequence + 1
+	if err := g.seqRepo.Increment(ctx, code, next); err != nil {
+		return 0, fmt.Errorf("next sequence increment: %w", err)
+	}
+	return next, nil
+}
+
 func (g *Generator) EnsureAtLeast(ctx context.Context, designationCode string, minSeq int) error {
 	seq, err := g.seqRepo.GetForUpdate(ctx, designationCode)
 	if err != nil {

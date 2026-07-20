@@ -17,6 +17,32 @@ import (
 
 var tmplFuncs = template.FuncMap{
 	"safeURL": func(s string) template.URL { return template.URL(s) },
+	"join":    strings.Join,
+	"orderedList": func(items []string) template.HTML {
+		return buildOrderedListHTML(items)
+	},
+	"show": func(value, placeholder string) string {
+		if value == "" {
+			return placeholder
+		}
+		return value
+	},
+}
+
+// buildOrderedListHTML converts a string slice into a complete <ol> with <li> items.
+func buildOrderedListHTML(items []string) template.HTML {
+	if len(items) == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("<ol>\n")
+	for _, item := range items {
+		b.WriteString("<li>")
+		b.WriteString(template.HTMLEscapeString(item))
+		b.WriteString("</li>\n")
+	}
+	b.WriteString("</ol>")
+	return template.HTML(b.String())
 }
 
 //go:embed templates/contract.html
@@ -24,6 +50,11 @@ var contractTemplate string
 
 //go:embed templates/company_logo.jpeg
 var companyLogo []byte
+
+// ShiftTimeFetcher fetches an employee's shift start and end time from their work pattern.
+type ShiftTimeFetcher interface {
+	FindShiftTimesByEmployeeID(ctx context.Context, employeeID string) (start, end string, err error)
+}
 
 type FieldRow struct {
 	Label string
@@ -41,13 +72,17 @@ type RenderBlock struct {
 }
 
 type RenderContext struct {
-	Employee    entity.EmployeeRenderData
-	Contract    entity.ContractRenderData
-	Signatory   entity.SignatoryRenderData
-	Data        entity.ContractTemplateData
-	Signings    []entity.ContractSigningRenderData
-	Blocks      []RenderBlock
-	CompanyLogo string
+	Employee         entity.EmployeeRenderData
+	Contract         entity.ContractRenderData
+	Signatory        entity.SignatoryRenderData
+	Data             entity.ContractTemplateData
+	Signings         []entity.ContractSigningRenderData
+	Blocks           []RenderBlock
+	CompanyLogo      string
+	JobDutiesJoined  string
+	InventoryJoined  string
+	JobDutiesList    template.HTML
+	InventoryList    template.HTML
 }
 
 func (r *RenderContext) FirstSig() *entity.ContractSigningRenderData {
@@ -72,11 +107,12 @@ type RenderUsecase struct {
 	contractRepo repository.ContractRepository
 	signingRepo  repository.SigningRepository
 	empFetcher   EmployeeFetcher
+	shiftFetcher ShiftTimeFetcher
 	pdf          PDFRenderer
 }
 
-func NewRenderUsecase(contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, empFetcher EmployeeFetcher, pdf PDFRenderer) *RenderUsecase {
-	return &RenderUsecase{contractRepo: contractRepo, signingRepo: signingRepo, empFetcher: empFetcher, pdf: pdf}
+func NewRenderUsecase(contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, empFetcher EmployeeFetcher, shiftFetcher ShiftTimeFetcher, pdf PDFRenderer) *RenderUsecase {
+	return &RenderUsecase{contractRepo: contractRepo, signingRepo: signingRepo, empFetcher: empFetcher, shiftFetcher: shiftFetcher, pdf: pdf}
 }
 
 func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signatoryName, signatoryTitle string) ([]byte, error) {
@@ -122,7 +158,9 @@ func (uc *RenderUsecase) PreviewWithSignings(ctx context.Context, contractID str
 }
 
 func (uc *RenderUsecase) renderAndGeneratePDF(ctx context.Context, c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning) ([]byte, error) {
-	html, err := uc.renderHTML(c, emp, signatoryName, signatoryTitle, signings)
+	shiftStart, shiftEnd, _ := uc.shiftFetcher.FindShiftTimesByEmployeeID(ctx, c.EmployeeID)
+
+	html, err := uc.renderHTML(c, emp, signatoryName, signatoryTitle, signings, shiftStart, shiftEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +168,8 @@ func (uc *RenderUsecase) renderAndGeneratePDF(ctx context.Context, c *entity.Con
 	return uc.pdf.Render(ctx, html)
 }
 
-func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning) ([]byte, error) {
-	renderCtx := buildRenderContext(c, emp, signatoryName, signatoryTitle, signings)
+func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning, shiftStart, shiftEnd string) ([]byte, error) {
+	renderCtx := buildRenderContext(c, emp, signatoryName, signatoryTitle, signings, shiftStart, shiftEnd)
 
 	// Resolve variable placeholders in block content
 	resolveBlockContent(renderCtx.Blocks, renderCtx)
@@ -149,14 +187,18 @@ func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRend
 	return buf.Bytes(), nil
 }
 
-func buildRenderContext(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning) *RenderContext {
+func buildRenderContext(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning, shiftStart, shiftEnd string) *RenderContext {
 	renderCtx := &RenderContext{
-		Employee:    *emp,
-		Contract:    buildContractRenderData(c),
-		Signatory:   entity.SignatoryRenderData{Name: signatoryName, Designation: signatoryTitle},
-		Data:        c.Data,
-		Signings:    buildSigningRenderData(signings),
-		CompanyLogo: base64.StdEncoding.EncodeToString(companyLogo),
+		Employee:        *emp,
+		Contract:        buildContractRenderData(c, shiftStart, shiftEnd),
+		Signatory:       entity.SignatoryRenderData{Name: signatoryName, Designation: signatoryTitle},
+		Data:            c.Data,
+		Signings:        buildSigningRenderData(signings),
+		CompanyLogo:     base64.StdEncoding.EncodeToString(companyLogo),
+		JobDutiesJoined: strings.Join(c.Data.JobDuties, "\n"),
+		InventoryJoined: strings.Join(c.Data.InventoryItems, "\n"),
+		JobDutiesList:   buildOrderedListHTML(c.Data.JobDuties),
+		InventoryList:   buildOrderedListHTML(c.Data.InventoryItems),
 	}
 
 	articleNum := 0
@@ -200,11 +242,18 @@ func coalesceStr(s *string) string {
 	return *s
 }
 
+var idMonthNames = map[time.Month]string{
+	time.January: "Januari", time.February: "Februari", time.March: "Maret",
+	time.April: "April", time.May: "Mei", time.June: "Juni",
+	time.July: "Juli", time.August: "Agustus", time.September: "September",
+	time.October: "Oktober", time.November: "November", time.December: "Desember",
+}
+
 func formatTime(t *time.Time) string {
 	if t == nil {
 		return ""
 	}
-	return t.Format("2 January 2006")
+	return fmt.Sprintf("%d %s %d", t.Day(), idMonthNames[t.Month()], t.Year())
 }
 
 func buildFields(employeeFields []string, emp *entity.EmployeeRenderData) []FieldRow {

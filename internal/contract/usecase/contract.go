@@ -10,6 +10,13 @@ import (
 	errors "hrms/internal/pkg/apperror"
 )
 
+var romanMonths = map[time.Month]string{
+	time.January: "I", time.February: "II", time.March: "III",
+	time.April: "IV", time.May: "V", time.June: "VI",
+	time.July: "VII", time.August: "VIII", time.September: "IX",
+	time.October: "X", time.November: "XI", time.December: "XII",
+}
+
 func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.CreateContractInput) (*models.BulkCreateContractResult, error) {
 	tmpl, err := uc.tmplRepo.FindByID(ctx, input.TemplateID)
 	if err != nil {
@@ -79,10 +86,12 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 			return nil, errors.NewInvalidInput(fmt.Sprintf("no base salary found for employee %s", empID))
 		}
 
-		number, err := uc.numGen.Generate(ctx, "CTR")
+		seq, err := uc.numGen.NextSequence(ctx, "CTR")
 		if err != nil {
 			return nil, fmt.Errorf("generate contract number: %w", err)
 		}
+		number := fmt.Sprintf("%03d/HRD-ARAS/%s/%s/%d",
+			seq, tmpl.ContractType, romanMonths[startDate.Month()], startDate.Year())
 
 		e := entity.NewContract(
 			input.TemplateID,

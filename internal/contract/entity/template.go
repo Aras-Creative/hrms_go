@@ -16,6 +16,7 @@ var validBlockTypes = map[string]bool{
 	"second_party":    true,
 	"sign_table":      true,
 	"text":            true,
+	"raw":             true,
 }
 
 type SpecialClause struct {

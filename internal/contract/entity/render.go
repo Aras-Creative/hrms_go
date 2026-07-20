@@ -22,6 +22,8 @@ type ContractRenderData struct {
 	EndDate          string
 	Salary           string
 	DesignationTitle string
+	ShiftStart       string
+	ShiftEnd         string
 }
 
 type ContractSigningRenderData struct {
