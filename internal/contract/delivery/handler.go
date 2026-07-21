@@ -325,6 +325,52 @@ func (h *ContractHandler) GetContract(c fiber.Ctx) error {
 	return response.OK(c, toContractDetailResponse(e, templateName, contractType, signings))
 }
 
+func (h *ContractHandler) GetDraftContract(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	e, _, _, _, err := h.uc.GetContractDetail(c.RequestCtx(), id)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if e.Status != entity.ContractStatusDraft {
+		return response.Error(c, errors.NewInvalidInput("contract is not in draft status"))
+	}
+
+	return response.OK(c, toContractResponse(e))
+}
+
+func (h *ContractHandler) UpdateDraftContract(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	var req UpdateDraftContractRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return err
+	}
+
+	input, err := req.ToInput(id)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	e, err := h.uc.UpdateDraftContract(c.RequestCtx(), *input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		userID, _ := c.Locals("user_id").(string)
+		h.auditLogger.Log(c.RequestCtx(), userID, "contract", e.ID, "",
+			contractAdapter.ActionUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
+			map[string]any{
+				"status": "draft",
+			},
+		)
+	}
+
+	return response.OK(c, toContractResponse(e))
+}
+
 func (h *ContractHandler) CountSoonExpired(c fiber.Ctx) error {
 	count, err := h.uc.CountSoonExpired(c.RequestCtx(), 14)
 	if err != nil {

@@ -102,18 +102,20 @@ type AdminAttendanceItem struct {
 
 // CorrectionViewItem is a read-model DTO for the correction list view.
 type CorrectionViewItem struct {
-	ID           string     `json:"id"`
-	EmployeeID   string     `json:"employee_id"`
-	EmployeeName string     `json:"employee_name"`
-	Date         time.Time  `json:"date"`
-	ClockIn      *time.Time `json:"clock_in,omitempty"`
-	ClockOut     *time.Time `json:"clock_out,omitempty"`
-	Status       *string    `json:"status,omitempty"`
-	IsLate       *bool      `json:"is_late,omitempty"`
-	IsEarlyLeave *bool      `json:"is_early_leave,omitempty"`
-	Reason       string     `json:"reason"`
-	CorrectedBy  string     `json:"corrected_by"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID               string     `json:"id"`
+	EmployeeID       string     `json:"employee_id"`
+	EmployeeName     string     `json:"employee_name"`
+	Date             time.Time  `json:"date"`
+	ClockIn          *time.Time `json:"clock_in,omitempty"`
+	ClockOut         *time.Time `json:"clock_out,omitempty"`
+	Status           *string    `json:"status,omitempty"`
+	IsLate           *bool      `json:"is_late,omitempty"`
+	IsEarlyLeave     *bool      `json:"is_early_leave,omitempty"`
+	LeaveTypeName    *string    `json:"leave_type_name,omitempty"`
+	LeaveSubmissionID *string   `json:"leave_submission_id,omitempty"`
+	Reason           string     `json:"reason"`
+	CorrectedBy      string     `json:"corrected_by"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 
 type ListResult struct {

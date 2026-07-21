@@ -91,6 +91,11 @@ type UpdateBankInput struct {
 	BankNumber string
 }
 
+type UpdateEmployeeNumberInput struct {
+	EmployeeID     string
+	EmployeeNumber string
+}
+
 type ChangeDesignationInput struct {
 	EmployeeIDs   []string
 	DesignationID *string

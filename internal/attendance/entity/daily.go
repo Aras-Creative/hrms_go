@@ -246,17 +246,8 @@ func (d *DailyAttendance) evaluateLeaveCase(leaveSubmissionID, leaveTypeName *st
 	if leaveIsHalfDay != nil && *leaveIsHalfDay {
 		d.LeaveSubmissionID = leaveSubmissionID
 		d.LeaveTypeName = leaveTypeName
-		if d.FirstPunchIn != nil {
-			d.MarkPresent()
-			if d.LateMinutes() > 0 {
-				d.IsLate = true
-			}
-			if d.LastPunchOut != nil && d.EarlyLeaveMinutes() > 0 {
-				d.IsEarlyLeave = true
-			}
-			return true
-		}
-		return false
+		d.MarkPresent()
+		return true
 	}
 	// Full-day leave
 	d.MarkOnLeave(*leaveSubmissionID, *leaveTypeName)

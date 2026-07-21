@@ -151,6 +151,7 @@ func (r *PostgresLeaveSubmissionRepo) HasApprovedLeave(ctx context.Context, empl
 		JOIN leave_types lt ON lt.id = ls.leave_type_id
 		WHERE ls.employee_id = $1 AND ls.status = 'approved'
 			AND ls.start_date <= $2::date AND ls.end_date >= $2::date
+			AND lt.is_half_day = false
 		LIMIT 1
 	`, employeeID, date).Scan(&name)
 	if err == sql.ErrNoRows {

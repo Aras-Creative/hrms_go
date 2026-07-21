@@ -163,3 +163,24 @@ func (uc *EmployeeUsecase) UpdateIdentity(ctx context.Context, input models.Upda
 	}
 	return e, nil
 }
+
+func (uc *EmployeeUsecase) UpdateEmployeeNumber(ctx context.Context, input models.UpdateEmployeeNumberInput) (*entity.Employee, error) {
+	e, err := uc.repo.FindByID(ctx, input.EmployeeID)
+	if err != nil {
+		return nil, fmt.Errorf("find employee: %w", err)
+	}
+	if e == nil {
+		return nil, errors.NewNotFound("employee not found")
+	}
+
+	num, err := entity.NewEmployeeNumber(input.EmployeeNumber)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
+	e.UpdateEmployeeNumber(num)
+	if err := uc.repo.Update(ctx, e); err != nil {
+		return nil, fmt.Errorf("update employee number: %w", err)
+	}
+	return e, nil
+}

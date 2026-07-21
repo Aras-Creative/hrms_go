@@ -63,6 +63,12 @@ func (e *Employee) UpdateProfilePhoto(photoID *string) {
 	e.UpdatedAt = time.Now()
 }
 
+// UpdateEmployeeNumber replaces the employee number and touches UpdatedAt.
+func (e *Employee) UpdateEmployeeNumber(num EmployeeNumber) {
+	e.EmployeeNumber = num
+	e.UpdatedAt = time.Now()
+}
+
 // UpdateIdentityInfo replaces identity fields and touches UpdatedAt.
 func (e *Employee) UpdateIdentityInfo(fullName, placeOfBirth string, dateOfBirth *Date, gender Gender, education, address, nationalID string, religion Religion) {
 	e.FullName = fullName

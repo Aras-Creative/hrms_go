@@ -85,7 +85,8 @@ const (
 		       status, data, templates, sent_at, created_at, updated_at
 		FROM contracts
 	`
-	queryUpdateContract = `UPDATE contracts SET status=$1, sent_at=$2, updated_at=$3 WHERE id=$4`
+	queryUpdateContract        = `UPDATE contracts SET status=$1, sent_at=$2, updated_at=$3 WHERE id=$4`
+	queryUpdateContractData    = `UPDATE contracts SET number=$1, start_date=$2, end_date=$3, salary=$4, designation_id=$5, designation_title=$6, data=$7, templates=$8, updated_at=NOW() WHERE id=$9`
 
 	querySelectNumberSequenceByCode          = `SELECT designation_code, prefix, last_sequence, updated_at FROM number_sequences WHERE designation_code=$1`
 	querySelectNumberSequenceByCodeForUpdate = `SELECT designation_code, prefix, last_sequence, updated_at FROM number_sequences WHERE designation_code=$1 FOR UPDATE`
@@ -321,6 +322,27 @@ func (r *PostgresContractRepo) CountByEmployeeIDAndStatus(ctx context.Context, e
 		return 0, fmt.Errorf("count contracts: %w", err)
 	}
 	return count, nil
+}
+
+func (r *PostgresContractRepo) UpdateContractData(ctx context.Context, e *entity.Contract) error {
+	dataJSON, err := json.Marshal(e.Data)
+	if err != nil {
+		return fmt.Errorf("marshal contract data: %w", err)
+	}
+	templatesJSON, err := json.Marshal(e.Templates)
+	if err != nil {
+		return fmt.Errorf("marshal contract templates: %w", err)
+	}
+	_, err = r.db.ExecContext(ctx, queryUpdateContractData,
+		e.Number,
+		e.StartDate, e.EndDate,
+		e.Salary, e.DesignationID, e.DesignationTitle,
+		dataJSON, templatesJSON, e.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("update contract data: %w", err)
+	}
+	return nil
 }
 
 func modelToContract(m *ContractModel) *entity.Contract {

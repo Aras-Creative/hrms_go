@@ -8,19 +8,21 @@ import (
 )
 
 type AttendanceCorrection struct {
-	ID           string
-	EmployeeID   string
-	Date         time.Time
-	ClockIn      *time.Time
-	ClockOut     *time.Time
-	Status       *string
-	IsLate       *bool
-	IsEarlyLeave *bool
-	Reason       string
-	CorrectedBy  string
-	CreatedAt    time.Time
-	HasClockIn   bool
-	HasClockOut  bool
+	ID               string
+	EmployeeID       string
+	Date             time.Time
+	ClockIn          *time.Time
+	ClockOut         *time.Time
+	Status           *string
+	IsLate           *bool
+	IsEarlyLeave     *bool
+	LeaveTypeName    *string
+	LeaveSubmissionID *string
+	Reason           string
+	CorrectedBy      string
+	CreatedAt        time.Time
+	HasClockIn       bool
+	HasClockOut      bool
 }
 
 func NewAttendanceCorrection(
@@ -29,23 +31,26 @@ func NewAttendanceCorrection(
 	clockIn, clockOut *time.Time,
 	status *string,
 	isLate, isEarlyLeave *bool,
+	leaveTypeName, leaveSubmissionID *string,
 	reason, correctedBy string,
 	hasClockIn, hasClockOut bool,
 ) *AttendanceCorrection {
 	return &AttendanceCorrection{
-		ID:           uuid.New().String(),
-		EmployeeID:   employeeID,
-		Date:         date,
-		ClockIn:      clockIn,
-		ClockOut:     clockOut,
-		Status:       status,
-		IsLate:       isLate,
-		IsEarlyLeave: isEarlyLeave,
-		Reason:       reason,
-		CorrectedBy:  correctedBy,
-		CreatedAt:    time.Now(),
-		HasClockIn:   hasClockIn,
-		HasClockOut:  hasClockOut,
+		ID:               uuid.New().String(),
+		EmployeeID:       employeeID,
+		Date:             date,
+		ClockIn:          clockIn,
+		ClockOut:         clockOut,
+		Status:           status,
+		IsLate:           isLate,
+		IsEarlyLeave:     isEarlyLeave,
+		LeaveTypeName:    leaveTypeName,
+		LeaveSubmissionID: leaveSubmissionID,
+		Reason:           reason,
+		CorrectedBy:      correctedBy,
+		CreatedAt:        time.Now(),
+		HasClockIn:       hasClockIn,
+		HasClockOut:      hasClockOut,
 	}
 }
 
@@ -74,7 +79,7 @@ func (c *AttendanceCorrection) Validate() error {
 	if c.Reason == "" {
 		return fmt.Errorf("reason is required")
 	}
-	hasField := c.HasClockIn || c.HasClockOut || c.Status != nil || c.IsLate != nil || c.IsEarlyLeave != nil
+	hasField := c.HasClockIn || c.HasClockOut || c.Status != nil || c.IsLate != nil || c.IsEarlyLeave != nil || c.LeaveTypeName != nil || c.LeaveSubmissionID != nil
 	if !hasField {
 		return fmt.Errorf("at least one field to correct must be provided")
 	}
@@ -91,7 +96,7 @@ func (c *AttendanceCorrection) Validate() error {
 
 // ApplyTo applies this correction's values to a DailyAttendance record.
 // It overwrites clock_in, clock_out, status, lateness flags,
-// total work seconds, and marks the source as "correction".
+// leave_type_name, leave_submission_id, total work seconds, and marks the source as "correction".
 func (c *AttendanceCorrection) ApplyTo(da *DailyAttendance) {
 	if c.HasClockIn {
 		da.FirstPunchIn = c.ClockIn
@@ -102,13 +107,23 @@ func (c *AttendanceCorrection) ApplyTo(da *DailyAttendance) {
 	if c.Status != nil {
 		da.Status = AttendanceStatus(*c.Status)
 	}
+	if c.LeaveTypeName != nil {
+		da.LeaveTypeName = c.LeaveTypeName
+	}
+	if c.LeaveSubmissionID != nil {
+		da.LeaveSubmissionID = c.LeaveSubmissionID
+	}
 	if c.IsLate != nil {
 		da.IsLate = *c.IsLate
+	} else if c.LeaveSubmissionID != nil || da.LeaveSubmissionID != nil {
+		da.IsLate = false
 	} else {
 		da.IsLate = da.LateMinutes() > 0
 	}
 	if c.IsEarlyLeave != nil {
 		da.IsEarlyLeave = *c.IsEarlyLeave
+	} else if c.LeaveSubmissionID != nil || da.LeaveSubmissionID != nil {
+		da.IsEarlyLeave = false
 	} else {
 		da.IsEarlyLeave = da.EarlyLeaveMinutes() > 0
 	}

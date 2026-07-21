@@ -17,7 +17,8 @@ type UpdateLeaveTypeRequest struct {
 }
 
 type UpdateLeaveBalanceRequest struct {
-	TotalDays int `json:"total_days"`
+	TotalDays int  `json:"total_days"`
+	UsedDays  *int `json:"used_days,omitempty"`
 }
 
 type CreateLeaveSubmissionRequest struct {

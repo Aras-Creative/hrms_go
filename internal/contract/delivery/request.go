@@ -113,6 +113,47 @@ func (r *TerminateContractRequest) GetTerminationDate() (time.Time, error) {
 	return parsed, nil
 }
 
+// ---- Update Draft Contract Request ----
+
+type UpdateDraftContractRequest struct {
+	Number           string                 `json:"number"`
+	StartDate        string                 `json:"start_date" validate:"required"`
+	EndDate          *string                `json:"end_date,omitempty"`
+	Salary           string                 `json:"salary"`
+	DesignationID    *string                `json:"designation_id,omitempty"`
+	DesignationTitle string                 `json:"designation_title"`
+	Data             TemplateDataRequest    `json:"data"`
+	Templates        TemplatePartialsRequest `json:"templates"`
+}
+
+func (r *UpdateDraftContractRequest) ToInput(id string) (*models.UpdateContractInput, error) {
+	startDate, err := time.Parse("2006-01-02", r.StartDate)
+	if err != nil {
+		return nil, errors.NewInvalidInput("invalid start_date, expected YYYY-MM-DD")
+	}
+
+	var endDate *time.Time
+	if r.EndDate != nil {
+		t, err := time.Parse("2006-01-02", *r.EndDate)
+		if err != nil {
+			return nil, errors.NewInvalidInput("invalid end_date, expected YYYY-MM-DD")
+		}
+		endDate = &t
+	}
+
+	return &models.UpdateContractInput{
+		ID:               id,
+		Number:           r.Number,
+		StartDate:        startDate,
+		EndDate:          endDate,
+		Salary:           r.Salary,
+		DesignationID:    r.DesignationID,
+		DesignationTitle: r.DesignationTitle,
+		Data:             toEntityData(r.Data),
+		Templates:        toEntityPartials(r.Templates),
+	}, nil
+}
+
 func toEntityData(d TemplateDataRequest) entity.ContractTemplateData {
 	clauses := make([]entity.SpecialClause, len(d.SpecialClauses))
 	for i, c := range d.SpecialClauses {

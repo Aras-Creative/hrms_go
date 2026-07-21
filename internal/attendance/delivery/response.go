@@ -162,17 +162,19 @@ func adminAttendanceToResponse(row *models.AdminAttendanceItem) AdminAttendanceR
 // ---- Correction ----
 
 type CorrectionResponse struct {
-	ID           string     `json:"id"`
-	EmployeeID   string     `json:"employee_id"`
-	Date         time.Time  `json:"date"`
-	ClockIn      *time.Time `json:"clock_in,omitempty"`
-	ClockOut     *time.Time `json:"clock_out,omitempty"`
-	Status       *string    `json:"status,omitempty"`
-	IsLate       *bool      `json:"is_late,omitempty"`
-	IsEarlyLeave *bool      `json:"is_early_leave,omitempty"`
-	Reason       string     `json:"reason"`
-	CorrectedBy  string     `json:"corrected_by"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID               string     `json:"id"`
+	EmployeeID       string     `json:"employee_id"`
+	Date             time.Time  `json:"date"`
+	ClockIn          *time.Time `json:"clock_in,omitempty"`
+	ClockOut         *time.Time `json:"clock_out,omitempty"`
+	Status           *string    `json:"status,omitempty"`
+	IsLate           *bool      `json:"is_late,omitempty"`
+	IsEarlyLeave     *bool      `json:"is_early_leave,omitempty"`
+	LeaveTypeName    *string    `json:"leave_type_name,omitempty"`
+	LeaveSubmissionID *string   `json:"leave_submission_id,omitempty"`
+	Reason           string     `json:"reason"`
+	CorrectedBy      string     `json:"corrected_by"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 
 func correctionToResponse(c *entity.AttendanceCorrection) CorrectionResponse {
@@ -180,23 +182,26 @@ func correctionToResponse(c *entity.AttendanceCorrection) CorrectionResponse {
 		ID: c.ID, EmployeeID: c.EmployeeID, Date: c.Date,
 		ClockIn: c.ClockIn, ClockOut: c.ClockOut, Status: c.Status,
 		IsLate: c.IsLate, IsEarlyLeave: c.IsEarlyLeave,
+		LeaveTypeName: c.LeaveTypeName, LeaveSubmissionID: c.LeaveSubmissionID,
 		Reason: c.Reason, CorrectedBy: c.CorrectedBy, CreatedAt: c.CreatedAt,
 	}
 }
 
 type CorrectionViewResponse struct {
-	ID           string     `json:"id"`
-	EmployeeID   string     `json:"employee_id"`
-	EmployeeName string     `json:"employee_name"`
-	Date         time.Time  `json:"date"`
-	ClockIn      *time.Time `json:"clock_in,omitempty"`
-	ClockOut     *time.Time `json:"clock_out,omitempty"`
-	Status       *string    `json:"status,omitempty"`
-	IsLate       *bool      `json:"is_late,omitempty"`
-	IsEarlyLeave *bool      `json:"is_early_leave,omitempty"`
-	Reason       string     `json:"reason"`
-	CorrectedBy  string     `json:"corrected_by"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID               string     `json:"id"`
+	EmployeeID       string     `json:"employee_id"`
+	EmployeeName     string     `json:"employee_name"`
+	Date             time.Time  `json:"date"`
+	ClockIn          *time.Time `json:"clock_in,omitempty"`
+	ClockOut         *time.Time `json:"clock_out,omitempty"`
+	Status           *string    `json:"status,omitempty"`
+	IsLate           *bool      `json:"is_late,omitempty"`
+	IsEarlyLeave     *bool      `json:"is_early_leave,omitempty"`
+	LeaveTypeName    *string    `json:"leave_type_name,omitempty"`
+	LeaveSubmissionID *string   `json:"leave_submission_id,omitempty"`
+	Reason           string     `json:"reason"`
+	CorrectedBy      string     `json:"corrected_by"`
+	CreatedAt        time.Time  `json:"created_at"`
 }
 
 func correctionViewToResponse(c *models.CorrectionViewItem) CorrectionViewResponse {
@@ -204,6 +209,7 @@ func correctionViewToResponse(c *models.CorrectionViewItem) CorrectionViewRespon
 		ID: c.ID, EmployeeID: c.EmployeeID, EmployeeName: c.EmployeeName,
 		Date: c.Date, ClockIn: c.ClockIn, ClockOut: c.ClockOut,
 		Status: c.Status, IsLate: c.IsLate, IsEarlyLeave: c.IsEarlyLeave,
+		LeaveTypeName: c.LeaveTypeName, LeaveSubmissionID: c.LeaveSubmissionID,
 		Reason: c.Reason, CorrectedBy: c.CorrectedBy, CreatedAt: c.CreatedAt,
 	}
 }

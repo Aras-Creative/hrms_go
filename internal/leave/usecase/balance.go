@@ -39,6 +39,9 @@ func (uc *LeaveUsecase) UpdateBalance(ctx context.Context, input models.UpdateLe
 	}
 
 	b.SetTotalDays(input.TotalDays)
+	if input.UsedDays != nil {
+		b.SetUsedDays(*input.UsedDays)
+	}
 
 	if err := uc.leaveBalanceRepo.Update(ctx, b); err != nil {
 		return nil, fmt.Errorf("failed to update balance: %w", err)

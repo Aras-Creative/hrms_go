@@ -54,4 +54,16 @@ type ListContractResult struct {
 	Total int64
 }
 
+type UpdateContractInput struct {
+	ID               string
+	Number           string
+	StartDate        time.Time
+	EndDate          *time.Time
+	Salary           string
+	DesignationID    *string
+	DesignationTitle string
+	Data             entity.ContractTemplateData
+	Templates        entity.ContractTemplatePartials
+}
+
 

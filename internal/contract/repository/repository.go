@@ -31,6 +31,7 @@ type ContractRepository interface {
 	FindActiveContractEmployeeIDs(ctx context.Context, employeeIDs []string) (map[string]*time.Time, error)
 	FindAllContracts(ctx context.Context, filter models.ListContractInput) ([]*entity.Contract, int64, error)
 	UpdateContract(ctx context.Context, e *entity.Contract) error
+	UpdateContractData(ctx context.Context, e *entity.Contract) error
 	DeleteContract(ctx context.Context, id string) error
 	CountByEmployeeIDAndStatus(ctx context.Context, employeeID string, status string) (int64, error)
 	FindActiveContractsPastEndDate(ctx context.Context, asOf time.Time) ([]*entity.Contract, error)

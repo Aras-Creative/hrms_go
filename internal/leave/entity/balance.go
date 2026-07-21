@@ -50,6 +50,14 @@ func (lb *LeaveBalance) SetTotalDays(days int) {
 	lb.UpdatedAt = time.Now()
 }
 
+func (lb *LeaveBalance) SetUsedDays(days int) {
+	lb.UsedDays = days
+	if lb.UsedDays < 0 {
+		lb.UsedDays = 0
+	}
+	lb.UpdatedAt = time.Now()
+}
+
 func (lb *LeaveBalance) Restore(days int) {
 	lb.UsedDays -= days
 	if lb.UsedDays < 0 {

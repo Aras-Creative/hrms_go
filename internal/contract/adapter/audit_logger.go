@@ -9,6 +9,7 @@ import (
 
 const (
 	ActionCreate          = "contract.create"
+	ActionUpdate          = "contract.update"
 	ActionSignFirstParty  = "contract.sign-first-party"
 	ActionSignSecondParty = "contract.sign-second-party"
 	ActionTerminate       = "contract.terminate"

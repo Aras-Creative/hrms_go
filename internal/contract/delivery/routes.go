@@ -18,6 +18,8 @@ func (h *ContractHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber.H
 	r.Get("/contracts/me/pending", authMw, h.PendingContracts)
 	r.Get("/contracts/employee/:id", authMw, adminMw, h.GetEmployeeContract)
 	r.Get("/contracts/:id", authMw, h.GetContract)
+	r.Get("/contracts/:id/draft", authMw, adminMw, h.GetDraftContract)
+	r.Put("/contracts/:id", authMw, adminMw, h.UpdateDraftContract)
 	r.Get("/contracts/:id/preview", authMw, h.PreviewContract)
 	r.Get("/contracts/:id/download", authMw, h.DownloadContract)
 	r.Post("/contracts/:id/generate-pdf", authMw, adminMw, h.GeneratePDF)

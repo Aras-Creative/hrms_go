@@ -61,9 +61,10 @@ func main() {
 	}
 
 	dailyRepo := attendanceRepo.NewPostgresDailyAttendanceRepo(db)
+	correctionRepo := attendanceRepo.NewPostgresCorrectionRepo(db)
 	overrideRepo := scheduleRepo.NewPostgresScheduleOverrideRepo(db)
 	scheduleResolver := attendanceAdapter.NewScheduleResolverAdapter(overrideRepo)
-	processor := attendanceUc.NewDailyProcessor(dailyRepo, scheduleResolver)
+	processor := attendanceUc.NewDailyProcessor(dailyRepo, correctionRepo, scheduleResolver)
 
 	if from == to {
 		log.Printf("processing date: %s", from.Format("2006-01-02"))

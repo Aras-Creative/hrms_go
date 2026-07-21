@@ -205,6 +205,7 @@ func (h *LeaveHandler) UpdateBalance(c fiber.Ctx) error {
 		LeaveTypeID: leaveTypeID,
 		Year:        year,
 		TotalDays:   req.TotalDays,
+		UsedDays:    req.UsedDays,
 	})
 	if err != nil {
 		return response.Error(c, err)
@@ -214,7 +215,7 @@ func (h *LeaveHandler) UpdateBalance(c fiber.Ctx) error {
 		if uid != "" {
 			h.auditLogger.Log(c.RequestCtx(), uid, "leave_balance", b.ID, "",
 				adapter.ActionBalanceUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
-				map[string]any{"employee_id": employeeID, "leave_type_id": leaveTypeID, "total_days": req.TotalDays, "year": year},
+				map[string]any{"employee_id": employeeID, "leave_type_id": leaveTypeID, "total_days": req.TotalDays, "used_days": req.UsedDays, "year": year},
 			)
 		}
 	}

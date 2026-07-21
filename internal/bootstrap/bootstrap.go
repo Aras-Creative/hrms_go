@@ -207,8 +207,9 @@ func Run(cfgPath string) {
 	// Attendance
 	punchRepo := attendanceRepo.NewPostgresPunchRepo(db)
 	dailyRepo := attendanceRepo.NewPostgresDailyAttendanceRepo(db)
+	correctionRepo := attendanceRepo.NewPostgresCorrectionRepo(db)
 	scheduleResolver := attendanceAdapter.NewScheduleResolverAdapter(overrideRepo)
-	dailyProcessor := attendanceUc.NewDailyProcessor(dailyRepo, scheduleResolver)
+	dailyProcessor := attendanceUc.NewDailyProcessor(dailyRepo, correctionRepo, scheduleResolver)
 	scheduler := attendanceUc.NewScheduler(db, dailyProcessor, loc)
 	scheduler.Start(context.Background())
 	defer scheduler.Stop()
@@ -216,7 +217,6 @@ func Run(cfgPath string) {
 
 	punchUc := attendanceUc.NewPunchUsecase(punchRepo, dailyProcessor, attendanceLeaveFetcher, punchHub)
 	attendanceEmpFetcher := attendanceAdapter.NewEmployeeFetcherAdapter(emplRepo)
-	correctionRepo := attendanceRepo.NewPostgresCorrectionRepo(db)
 	dailyUc := attendanceUc.NewDailyAttendanceUsecase(dailyRepo, correctionRepo, punchRepo, dailyProcessor)
 	correctionUc := attendanceUc.NewCorrectionUsecase(db, correctionRepo, dailyRepo, attendanceEmpFetcher, scheduleResolver)
 	correctionAuditFetcher := attendanceAdapter.NewCorrectionAuditFetcherAdapter(auditUC)

@@ -107,6 +107,33 @@ func (c *Contract) EvaluateSigningState(signings []*ContractSigning) (bool, erro
 	return false, nil
 }
 
+// UpdateDraft applies content changes to a draft contract.
+// Only call this when the contract is still in draft status.
+func (c *Contract) UpdateDraft(
+	number string,
+	startDate *time.Time,
+	endDate *time.Time,
+	salary string,
+	designationID *string,
+	designationTitle string,
+	data ContractTemplateData,
+	templates ContractTemplatePartials,
+) error {
+	if c.Status != ContractStatusDraft {
+		return fmt.Errorf("contract must be in draft status to update")
+	}
+	c.Number = number
+	c.StartDate = startDate
+	c.EndDate = endDate
+	c.Salary = salary
+	c.DesignationID = designationID
+	c.DesignationTitle = designationTitle
+	c.Data = data
+	c.Templates = templates
+	c.UpdatedAt = time.Now()
+	return nil
+}
+
 // Expire transitions the contract to Expired status (superseded by a new active contract).
 func (c *Contract) Expire() error {
 	if c.Status != ContractStatusActive {

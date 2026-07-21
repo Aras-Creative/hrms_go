@@ -303,3 +303,31 @@ func (uc *ContractUsecase) DeleteContract(ctx context.Context, contractID string
 	}
 	return nil
 }
+
+func (uc *ContractUsecase) UpdateDraftContract(ctx context.Context, input models.UpdateContractInput) (*entity.Contract, error) {
+	e, err := uc.contractRepo.FindContractByID(ctx, input.ID)
+	if err != nil {
+		return nil, fmt.Errorf("find contract: %w", err)
+	}
+	if e == nil {
+		return nil, errors.NewNotFound("contract not found")
+	}
+
+	if err := e.UpdateDraft(
+		input.Number,
+		&input.StartDate,
+		input.EndDate,
+		input.Salary,
+		input.DesignationID,
+		input.DesignationTitle,
+		input.Data,
+		input.Templates,
+	); err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
+	if err := uc.contractRepo.UpdateContractData(ctx, e); err != nil {
+		return nil, fmt.Errorf("update contract data: %w", err)
+	}
+	return e, nil
+}

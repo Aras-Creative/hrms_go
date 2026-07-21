@@ -38,17 +38,19 @@ func NewCorrectionUsecase(
 }
 
 type CreateCorrectionInput struct {
-	EmployeeID   string
-	Date         string
-	ClockIn      *time.Time
-	ClockOut     *time.Time
-	HasClockIn   bool
-	HasClockOut  bool
-	Status       *string
-	IsLate       *bool
-	IsEarlyLeave *bool
-	Reason       string
-	CorrectedBy  string
+	EmployeeID       string
+	Date             string
+	ClockIn          *time.Time
+	ClockOut         *time.Time
+	HasClockIn       bool
+	HasClockOut      bool
+	Status           *string
+	IsLate           *bool
+	IsEarlyLeave     *bool
+	LeaveTypeName    *string
+	LeaveSubmissionID *string
+	Reason           string
+	CorrectedBy      string
 }
 
 type ListCorrectionsInput struct {
@@ -72,7 +74,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	correction := entity.NewAttendanceCorrection(
 		input.EmployeeID, date, input.ClockIn, input.ClockOut, input.Status,
-		input.IsLate, input.IsEarlyLeave,
+		input.IsLate, input.IsEarlyLeave, input.LeaveTypeName, input.LeaveSubmissionID,
 		input.Reason, input.CorrectedBy,
 		input.HasClockIn, input.HasClockOut,
 	)
@@ -107,7 +109,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 
 	dailyRepo := uc.dailyRepo.WithTx(tx)
 	correctionRepo := uc.correctionRepo.WithTx(tx)
-	processor := NewDailyProcessor(dailyRepo, uc.resolver)
+	processor := NewDailyProcessor(dailyRepo, correctionRepo, uc.resolver)
 
 	da, err := processor.ComputeDaily(ctx, input.EmployeeID, date)
 	if err != nil {
@@ -132,6 +134,8 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 		existing.Status = input.Status
 		existing.IsLate = input.IsLate
 		existing.IsEarlyLeave = input.IsEarlyLeave
+		existing.LeaveTypeName = input.LeaveTypeName
+		existing.LeaveSubmissionID = input.LeaveSubmissionID
 		existing.Reason = input.Reason
 		existing.CorrectedBy = input.CorrectedBy
 		if err := correctionRepo.Update(ctx, existing); err != nil {
@@ -198,7 +202,7 @@ func (uc *CorrectionUsecase) Delete(ctx context.Context, id string) (*entity.Att
 
 	correctionRepo := uc.correctionRepo.WithTx(tx)
 	dailyRepo := uc.dailyRepo.WithTx(tx)
-	processor := NewDailyProcessor(dailyRepo, uc.resolver)
+	processor := NewDailyProcessor(dailyRepo, correctionRepo, uc.resolver)
 
 	if err := correctionRepo.Delete(ctx, id); err != nil {
 		return nil, errors.WrapInternal("failed to delete correction", err)

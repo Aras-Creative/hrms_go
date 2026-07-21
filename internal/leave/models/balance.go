@@ -42,4 +42,5 @@ type UpdateLeaveBalanceInput struct {
 	LeaveTypeID string
 	Year        int
 	TotalDays   int
+	UsedDays    *int
 }

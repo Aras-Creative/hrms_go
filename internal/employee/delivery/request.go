@@ -57,3 +57,7 @@ type ChangeDesignationRequest struct {
 	EmployeeIDs   []string `json:"employee_ids" validate:"required,min=1,dive,uuid"`
 	DesignationID *string  `json:"designation_id" validate:"required,uuid"`
 }
+
+type UpdateEmployeeNumberRequest struct {
+	EmployeeNumber string `json:"employee_number" validate:"required"`
+}
