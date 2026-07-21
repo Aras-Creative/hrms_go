@@ -19,6 +19,8 @@ type AttendanceCorrection struct {
 	Reason       string
 	CorrectedBy  string
 	CreatedAt    time.Time
+	HasClockIn   bool
+	HasClockOut  bool
 }
 
 func NewAttendanceCorrection(
@@ -28,19 +30,22 @@ func NewAttendanceCorrection(
 	status *string,
 	isLate, isEarlyLeave *bool,
 	reason, correctedBy string,
+	hasClockIn, hasClockOut bool,
 ) *AttendanceCorrection {
 	return &AttendanceCorrection{
-		ID:          uuid.New().String(),
-		EmployeeID:  employeeID,
-		Date:        date,
-		ClockIn:     clockIn,
-		ClockOut:    clockOut,
-		Status:      status,
-		IsLate:      isLate,
+		ID:           uuid.New().String(),
+		EmployeeID:   employeeID,
+		Date:         date,
+		ClockIn:      clockIn,
+		ClockOut:     clockOut,
+		Status:       status,
+		IsLate:       isLate,
 		IsEarlyLeave: isEarlyLeave,
-		Reason:      reason,
-		CorrectedBy: correctedBy,
-		CreatedAt:   time.Now(),
+		Reason:       reason,
+		CorrectedBy:  correctedBy,
+		CreatedAt:    time.Now(),
+		HasClockIn:   hasClockIn,
+		HasClockOut:  hasClockOut,
 	}
 }
 
@@ -69,7 +74,8 @@ func (c *AttendanceCorrection) Validate() error {
 	if c.Reason == "" {
 		return fmt.Errorf("reason is required")
 	}
-	if c.ClockIn == nil && c.ClockOut == nil && c.Status == nil && c.IsLate == nil && c.IsEarlyLeave == nil {
+	hasField := c.HasClockIn || c.HasClockOut || c.Status != nil || c.IsLate != nil || c.IsEarlyLeave != nil
+	if !hasField {
 		return fmt.Errorf("at least one field to correct must be provided")
 	}
 	if c.ClockIn != nil && c.ClockOut != nil && c.ClockOut.Before(*c.ClockIn) {
@@ -87,10 +93,10 @@ func (c *AttendanceCorrection) Validate() error {
 // It overwrites clock_in, clock_out, status, lateness flags,
 // total work seconds, and marks the source as "correction".
 func (c *AttendanceCorrection) ApplyTo(da *DailyAttendance) {
-	if c.ClockIn != nil {
+	if c.HasClockIn {
 		da.FirstPunchIn = c.ClockIn
 	}
-	if c.ClockOut != nil {
+	if c.HasClockOut {
 		da.LastPunchOut = c.ClockOut
 	}
 	if c.Status != nil {

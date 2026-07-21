@@ -15,3 +15,4 @@
 - For API status "Libur" (holiday), map to "day_off" instead of "absent" in the seed builder. Confidence: 0.65
 - For API status "Izin Cuti" (permitted leave), map to "on_leave" instead of "present" in the seed builder. Confidence: 0.65
 - For daily attendance reconciliation: treat corrections, punches, leaves, and schedules as recorded events—don't let any single source overwrite others. Use a processor (rule engine) that recomputes the final status from all events with priority: Correction > Punch > Leave > Schedule. Confidence: 0.65
+- For half-day leave: the approval itself must have zero side effects on attendance — no status change, no present marking, no late/early flagging. Just approve the leave and wait until the employee manually punches to process attendance. When marking present via half-day leave (triggered by the punch, not the approval), skip is_late and is_early_leave checks. Confidence: 0.80

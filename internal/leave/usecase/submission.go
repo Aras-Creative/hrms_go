@@ -113,12 +113,10 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 		return nil, errors.WrapInternal("failed to update submission", err)
 	}
 
-	if lt.IsHalfDay {
-		uc.ensureHalfDayPunches(ctx, s.EmployeeID, s.StartDate, s.EndDate, lt.Name)
-	}
-
 	if lt.IsUnlimited {
-		uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+		if !lt.IsHalfDay {
+			uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, errors.WrapInternal("failed to commit transaction", err)
 		}
@@ -143,7 +141,9 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 		return nil, errors.WrapInternal("failed to commit transaction", err)
 	}
 
-	uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	if !lt.IsHalfDay {
+		uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	}
 	return s, nil
 }
 
@@ -163,8 +163,18 @@ func (uc *LeaveUsecase) RejectSubmission(ctx context.Context, submissionID strin
 		return nil, fmt.Errorf("failed to update submission: %w", err)
 	}
 
-	uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	if lt := uc.getLeaveType(ctx, s.LeaveTypeID); lt != nil && !lt.IsHalfDay {
+		uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	}
 	return s, nil
+}
+
+func (uc *LeaveUsecase) getLeaveType(ctx context.Context, id string) *entity.LeaveType {
+	lt, err := uc.leaveTypeRepo.FindByID(ctx, id)
+	if err != nil || lt == nil {
+		return nil
+	}
+	return lt
 }
 
 func (uc *LeaveUsecase) CancelSubmission(ctx context.Context, submissionID, userID string) (*entity.LeaveSubmission, error) {
@@ -200,11 +210,13 @@ func (uc *LeaveUsecase) CancelSubmission(ctx context.Context, submissionID, user
 		return nil, errors.NewInvalidInput(err.Error())
 	}
 
+	isHalfDay := false
 	if wasApproved {
 		lt, err := uc.leaveTypeRepo.FindByID(ctx, s.LeaveTypeID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to find leave type: %w", err)
 		}
+		isHalfDay = lt != nil && lt.IsHalfDay
 		if lt != nil && !lt.IsUnlimited {
 			year := s.StartDate.Year()
 			balance, err := uc.leaveBalanceRepo.FindByEmployeeAndTypeYear(ctx, s.EmployeeID, s.LeaveTypeID, year)
@@ -224,7 +236,9 @@ func (uc *LeaveUsecase) CancelSubmission(ctx context.Context, submissionID, user
 		return nil, fmt.Errorf("failed to update submission: %w", err)
 	}
 
-	uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	if !isHalfDay {
+		uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
+	}
 	return s, nil
 }
 

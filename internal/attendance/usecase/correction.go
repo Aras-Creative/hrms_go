@@ -38,15 +38,17 @@ func NewCorrectionUsecase(
 }
 
 type CreateCorrectionInput struct {
-	EmployeeID  string
-	Date        string
-	ClockIn     *time.Time
-	ClockOut    *time.Time
-	Status      *string
-	IsLate      *bool
+	EmployeeID   string
+	Date         string
+	ClockIn      *time.Time
+	ClockOut     *time.Time
+	HasClockIn   bool
+	HasClockOut  bool
+	Status       *string
+	IsLate       *bool
 	IsEarlyLeave *bool
-	Reason      string
-	CorrectedBy string
+	Reason       string
+	CorrectedBy  string
 }
 
 type ListCorrectionsInput struct {
@@ -72,6 +74,7 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 		input.EmployeeID, date, input.ClockIn, input.ClockOut, input.Status,
 		input.IsLate, input.IsEarlyLeave,
 		input.Reason, input.CorrectedBy,
+		input.HasClockIn, input.HasClockOut,
 	)
 
 	if err := correction.Validate(); err != nil {
@@ -118,8 +121,14 @@ func (uc *CorrectionUsecase) Create(ctx context.Context, input CreateCorrectionI
 			return nil, false, errors.WrapInternal("failed to save correction", err)
 		}
 	} else {
-		existing.ClockIn = input.ClockIn
-		existing.ClockOut = input.ClockOut
+		if input.HasClockIn {
+			existing.ClockIn = input.ClockIn
+			existing.HasClockIn = true
+		}
+		if input.HasClockOut {
+			existing.ClockOut = input.ClockOut
+			existing.HasClockOut = true
+		}
 		existing.Status = input.Status
 		existing.IsLate = input.IsLate
 		existing.IsEarlyLeave = input.IsEarlyLeave

@@ -241,13 +241,26 @@ func (h *AttendanceHandler) CorrectionCreate(c fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
+
+	// Peek at raw JSON to detect explicit nulls (Go's decoder can't distinguish
+	// null from absent for *time.Time).
+	rawBody := c.Body()
+	var rawMap map[string]any
+	hasClockIn := false
+	hasClockOut := false
+	if err := json.Unmarshal(rawBody, &rawMap); err == nil {
+		_, hasClockIn = rawMap["clock_in"]
+		_, hasClockOut = rawMap["clock_out"]
+	}
+
 	var req CreateCorrectionRequest
 	if err := c.Bind().Body(&req); err != nil {
 		return response.Error(c, errors.NewInvalidInput("invalid request body"))
 	}
 	result, created, err := h.correctionUc.Create(c.RequestCtx(), usecase.CreateCorrectionInput{
 		EmployeeID: req.EmployeeID, Date: req.Date, ClockIn: req.ClockIn,
-		ClockOut: req.ClockOut, Status: req.Status, IsLate: req.IsLate,
+		ClockOut: req.ClockOut, HasClockIn: hasClockIn, HasClockOut: hasClockOut,
+		Status: req.Status, IsLate: req.IsLate,
 		IsEarlyLeave: req.IsEarlyLeave, Reason: req.Reason, CorrectedBy: userID,
 	})
 	if err != nil {
