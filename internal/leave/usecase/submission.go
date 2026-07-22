@@ -114,11 +114,11 @@ func (uc *LeaveUsecase) ApproveSubmission(ctx context.Context, submissionID, app
 	}
 
 	if lt.IsUnlimited {
-		if !lt.IsHalfDay {
-			uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
-		}
 		if err := tx.Commit(); err != nil {
 			return nil, errors.WrapInternal("failed to commit transaction", err)
+		}
+		if !lt.IsHalfDay {
+			uc.reprocessAttendance(ctx, s.EmployeeID, s.StartDate, s.EndDate)
 		}
 		return s, nil
 	}
