@@ -289,7 +289,7 @@ func (r *PostgresEmployeeRepo) FindAllWithDetails(ctx context.Context, filter mo
 	}
 	offset := (page - 1) * perPage
 
-	dataQuery := queryEmployeeAllWithDetailsBase + where + fmt.Sprintf(" ORDER BY e.full_name ASC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	dataQuery := `SELECT * FROM (` + queryEmployeeAllWithDetailsBase + where + ` ORDER BY e.id) sub ORDER BY sub.full_name ASC LIMIT $` + fmt.Sprintf("%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 
 	rows, err := r.db.QueryxContext(ctx, dataQuery, args...)
