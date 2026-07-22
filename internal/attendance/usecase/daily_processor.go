@@ -66,6 +66,12 @@ func (p *DailyProcessor) ProcessDaily(ctx context.Context, employeeID string, da
 }
 
 func (p *DailyProcessor) computeBase(ctx context.Context, employeeID string, date time.Time) (*entity.DailyAttendance, error) {
+	// Legacy rows are ground truth — never recompute.
+	existing, err := p.dailyRepo.FindByEmployeeAndDate(ctx, employeeID, date)
+	if err == nil && existing != nil && existing.Source == "legacy" {
+		return existing, nil
+	}
+
 	schedules, err := p.resolver.ResolveRange(ctx, employeeID, date, date)
 	if err != nil {
 		return nil, errors.WrapInternal("failed to resolve schedule", err)
@@ -98,18 +104,9 @@ func (p *DailyProcessor) computeBase(ctx context.Context, employeeID string, dat
 }
 
 // ComputeDaily computes attendance from raw events and overlays any existing
-// correction on top. If a stored row exists with a non-transient status
-// (anything other than no_punch), the fresh computation is skipped and the
-// stored row is used as the base — it was set by a punch, scheduler sweep,
-// or legacy import and is treated as ground truth.
+// correction on top. Always recomputes from scratch so leave approvals,
+// punches, and schedule changes are reflected.
 func (p *DailyProcessor) ComputeDaily(ctx context.Context, employeeID string, date time.Time) (*entity.DailyAttendance, error) {
-	existing, err := p.dailyRepo.FindByEmployeeAndDate(ctx, employeeID, date)
-	if err == nil && existing != nil && existing.Status != entity.AttendanceNoPunch && existing.Status != "" {
-		// Still overlay correction on top of the stored row.
-		p.applyCorrectionOverlay(ctx, existing, employeeID, date)
-		return existing, nil
-	}
-
 	da, err := p.computeBase(ctx, employeeID, date)
 	if err != nil {
 		return nil, err

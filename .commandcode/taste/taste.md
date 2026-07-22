@@ -83,6 +83,10 @@
 
 # templates
 - Use dots (``.........``) as the empty/null placeholder in contract signature HTML templates instead of showing the template variable name or leaving it blank. Confidence: 0.65
+- Add a `show(value, placeholder)` template function to Go html/template FuncMap for rendering placeholder text when values are empty, instead of showing blank or Go zero values. Confidence: 0.70
+
+# scheduler
+- Schedule the 00:30 daily finalization sweep to process yesterday's date (today-1), not today, since the 00:30-next-day cutoff has just passed for the previous calendar day. Confidence: 0.85
 
 # attendance
 See [attendance/taste.md](attendance/taste.md)
