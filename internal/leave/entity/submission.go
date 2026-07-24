@@ -11,7 +11,7 @@ import (
 func CountWeekdays(start, end time.Time) int {
 	days := 0
 	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
-		if w := d.Weekday(); w != time.Saturday && w != time.Sunday {
+		if d.Weekday() != time.Sunday {
 			days++
 		}
 	}
