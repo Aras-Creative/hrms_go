@@ -11,7 +11,6 @@ import (
 	"hrms/internal/leave/models"
 	"hrms/internal/leave/repository"
 	errors "hrms/internal/pkg/apperror"
-	"hrms/internal/pkg/timeutil"
 )
 
 func (uc *LeaveUsecase) SubmitLeave(ctx context.Context, input models.CreateLeaveSubmissionInput) (*entity.LeaveSubmission, error) {
@@ -31,12 +30,6 @@ func (uc *LeaveUsecase) SubmitLeave(ctx context.Context, input models.CreateLeav
 		return nil, errors.NewInvalidInput("leave type not found or inactive")
 	}
 
-	loc := timeutil.LoadDefaultLocation()
-	now := time.Now().In(loc)
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
-	if input.StartDate.Before(today) {
-		return nil, errors.NewInvalidInput("start date cannot be in the past")
-	}
 	if input.EndDate.Before(input.StartDate) {
 		return nil, errors.NewInvalidInput("end date must be after start date")
 	}
@@ -353,11 +346,11 @@ func (uc *LeaveUsecase) ensureHalfDayPunches(ctx context.Context, employeeID str
 		}
 		if in || out {
 			uc.log.WithFields(logrus.Fields{
-				"employee_id":     employeeID,
-				"date":            d.Format("2006-01-02"),
-				"clock_in_auto":   in,
-				"clock_out_auto":  out,
-				"leave_type":      leaveTypeName,
+				"employee_id":    employeeID,
+				"date":           d.Format("2006-01-02"),
+				"clock_in_auto":  in,
+				"clock_out_auto": out,
+				"leave_type":     leaveTypeName,
 			}).Info("auto-created half-day attendance punches")
 		}
 	}
