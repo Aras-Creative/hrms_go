@@ -3,11 +3,10 @@ package adapter
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
-	contractUc "hrms/internal/contract/usecase"
 	payrollRepo "hrms/internal/payroll/repository"
+	contractUc "hrms/internal/contract/usecase"
 )
 
 type CompensationFetcherAdapter struct {
@@ -50,7 +49,7 @@ func (a *CompensationFetcherAdapter) FindByEmployeeID(ctx context.Context, emplo
 			Amount: formatRupiah(entry.amount),
 		})
 	}
-	slog.Debug("compensations fetched", "employee_id", employeeID, "count", len(items), "total_emp_comps", len(empComps), "active_entries", len(entries))
+	fmt.Printf("[compensation] employee=%s total_emp_comps=%d active_entries=%d returned=%d\n", employeeID, len(empComps), len(entries), len(items))
 	return items, nil
 }
 
