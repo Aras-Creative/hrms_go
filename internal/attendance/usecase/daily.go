@@ -203,14 +203,16 @@ func (uc *DailyAttendanceUsecase) GetReportData(ctx context.Context, fromStr, to
 			empOrder = append(empOrder, r.EmployeeID)
 		}
 
+		loc := timeutil.LoadDefaultLocation()
+
 		var clockIn, clockOut string
 		if r.FirstPunchIn != nil {
-			clockIn = r.FirstPunchIn.Format("15:04")
+			clockIn = r.FirstPunchIn.In(loc).Format("15:04")
 		} else {
 			clockIn = "-"
 		}
 		if r.LastPunchOut != nil {
-			clockOut = r.LastPunchOut.Format("15:04")
+			clockOut = r.LastPunchOut.In(loc).Format("15:04")
 		} else {
 			clockOut = "-"
 		}
