@@ -20,7 +20,7 @@ func (uc *DailyAttendanceUsecase) GenerateReportXLSX(ctx context.Context, fromSt
 	}
 
 	loc := timeutil.LoadDefaultLocation()
-	from := report.From.In(loc)
+	from := time.Date(report.From.Year(), report.From.Month(), 1, 0, 0, 0, 0, loc)
 	daysInMonth := time.Date(from.Year(), from.Month()+1, 0, 0, 0, 0, 0, loc).Day()
 
 	monthName := indonesianMonths[from.Month()]
