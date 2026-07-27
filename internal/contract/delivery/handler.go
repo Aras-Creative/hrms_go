@@ -47,9 +47,14 @@ func (h *ContractHandler) CreateTemplate(c fiber.Ctx) error {
 		return err
 	}
 
+	contractType, err := entity.ParseContractType(req.ContractType)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
 	input := models.CreateTemplateInput{
 		Name:         req.Name,
-		ContractType: entity.ContractType(req.ContractType),
+		ContractType: contractType,
 		Description:  req.Description,
 		Data:         toEntityData(req.Data),
 		Templates:    toEntityPartials(req.Templates),
@@ -140,6 +145,11 @@ func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
 		return err
 	}
 
+	contractType, err := entity.ParseContractType(req.ContractType)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
 	isActive := true
 	if req.IsActive != nil {
 		isActive = *req.IsActive
@@ -148,7 +158,7 @@ func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
 	input := models.UpdateTemplateInput{
 		ID:           id,
 		Name:         req.Name,
-		ContractType: entity.ContractType(req.ContractType),
+		ContractType: contractType,
 		Description:  req.Description,
 		IsActive:     isActive,
 		Data:         toEntityData(req.Data),
@@ -261,8 +271,17 @@ func (h *ContractHandler) CheckActiveContracts(c fiber.Ctx) error {
 }
 
 func (h *ContractHandler) ListContracts(c fiber.Ctx) error {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	perPage, err := strconv.Atoi(c.Query("per_page", "20"))
+	if err != nil || perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
 
 	input := models.ListContractInput{
 		Page:          page,
@@ -399,8 +418,17 @@ func (h *ContractHandler) MyContracts(c fiber.Ctx) error {
 		return response.Error(c, errors.NewUnauthorized("unauthorized"))
 	}
 
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	perPage, _ := strconv.Atoi(c.Query("per_page", "20"))
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+	perPage, err := strconv.Atoi(c.Query("per_page", "20"))
+	if err != nil || perPage < 1 {
+		perPage = 20
+	}
+	if perPage > 100 {
+		perPage = 100
+	}
 
 	input := models.ListContractInput{
 		Page:         page,
@@ -455,11 +483,16 @@ func (h *ContractHandler) SignBySecondParty(c fiber.Ctx) error {
 		return err
 	}
 
+	signedByTitle := req.SignedByTitle
+	if signedByTitle == "" {
+		signedByTitle = "Karyawan"
+	}
+
 	input := models.BulkSignContractInput{
 		ContractIDs:     req.ContractIDs,
 		SignedBy:        req.SignedBy,
 		SignedByName:    req.SignedByName,
-		SignedByTitle:   req.SignedByTitle,
+		SignedByTitle:   signedByTitle,
 		Place:           req.Place,
 		SignatureBase64: req.SignatureBase64,
 	}
@@ -514,8 +547,18 @@ func (h *ContractHandler) GeneratePDF(c fiber.Ctx) error {
 		return response.Error(c, errors.NewInvalidInput("contract has no signings"))
 	}
 
-	signatoryName := signings[0].SignedByName
-	signatoryTitle := signings[0].SignedByTitle
+	var signatoryName, signatoryTitle string
+	for _, s := range signings {
+		if s.Party == "first" {
+			signatoryName = s.SignedByName
+			signatoryTitle = s.SignedByTitle
+			break
+		}
+	}
+	if signatoryName == "" {
+		signatoryName = signings[0].SignedByName
+		signatoryTitle = signings[0].SignedByTitle
+	}
 
 	docID, contentHash, err := h.docUC.StorePDF(c.RequestCtx(), e.ID, e.Number, signatoryName, signatoryTitle)
 	if err != nil {
@@ -590,12 +633,17 @@ func (h *ContractHandler) SignByFirstParty(c fiber.Ctx) error {
 		return err
 	}
 
+	signedByTitle := req.SignedByTitle
+	if signedByTitle == "" {
+		signedByTitle = "Direktur"
+	}
+
 	input := models.BulkSignContractInput{
 		ContractIDs:     req.ContractIDs,
-		Party:           req.Party,
+		Party:           "first",
 		SignedBy:        req.SignedBy,
 		SignedByName:    req.SignedByName,
-		SignedByTitle:   req.SignedByTitle,
+		SignedByTitle:   signedByTitle,
 		Place:           req.Place,
 		SignatureBase64: req.SignatureBase64,
 	}

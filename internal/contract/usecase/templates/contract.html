@@ -251,12 +251,18 @@
                 <div class="party-row">
                   <div class="party-label">Nama</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">{{show $.Signatory.Name "...................................."}}</div>
+                  <div class="party-value">
+                    {{show $.Signatory.Name
+                    "...................................."}}
+                  </div>
                 </div>
                 <div class="party-row">
                   <div class="party-label">Jabatan</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">{{show $.Signatory.Designation "...................................."}}</div>
+                  <div class="party-value">
+                    {{show $.Signatory.Designation
+                    "...................................."}}
+                  </div>
                 </div>
               </div>
               <p>
@@ -306,9 +312,6 @@
               {{end}} {{end}}
 
               <div class="signature-section">
-                <p class="sig-legal-date">
-                  Dibuat di {{with $.FirstSig}}{{show .Place "...................................."}}{{else}}....................................{{end}}{{with $.FirstSig}}{{if .SignedAt}}, {{show .SignedAt "...................................."}}{{else}}, ....................................{{end}}{{else}}, ....................................{{end}}
-                </p>
                 <table class="signature-table">
                   <tr>
                     <td>PIHAK PERTAMA</td>
@@ -330,18 +333,22 @@
                   </tr>
                   <tr>
                     <td class="sig-name">
-                      <br />{{with $.FirstSig}}{{show .SignedByName "...................................."}}{{else}}....................................{{end}}
+                      <br />{{with $.FirstSig}}{{show .SignedByName
+                      "...................................."}}{{else}}....................................{{end}}
                     </td>
                     <td class="sig-name">
-                      <br />{{with $.SecondSig}}{{show .SignedByName "...................................."}}{{else}}....................................{{end}}
+                      <br />{{with $.SecondSig}}{{show .SignedByName
+                      "...................................."}}{{else}}....................................{{end}}
                     </td>
                   </tr>
                   <tr>
                     <td class="sig-role">
-                      {{with $.FirstSig}}{{show .SignedByTitle "...................................."}}{{else}}....................................{{end}}
+                      {{with $.FirstSig}}{{show .SignedByTitle
+                      "...................................."}}{{else}}....................................{{end}}
                     </td>
                     <td class="sig-role">
-                      {{with $.SecondSig}}{{show .SignedByTitle "...................................."}}{{else}}....................................{{end}}
+                      {{with $.SecondSig}}{{show .SignedByTitle
+                      "...................................."}}{{else}}....................................{{end}}
                     </td>
                   </tr>
                 </table>

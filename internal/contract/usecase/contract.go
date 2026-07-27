@@ -10,13 +10,6 @@ import (
 	errors "hrms/internal/pkg/apperror"
 )
 
-var romanMonths = map[time.Month]string{
-	time.January: "I", time.February: "II", time.March: "III",
-	time.April: "IV", time.May: "V", time.June: "VI",
-	time.July: "VII", time.August: "VIII", time.September: "IX",
-	time.October: "X", time.November: "XI", time.December: "XII",
-}
-
 func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.CreateContractInput) (*models.BulkCreateContractResult, error) {
 	tmpl, err := uc.tmplRepo.FindByID(ctx, input.TemplateID)
 	if err != nil {
@@ -29,7 +22,10 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 		return nil, errors.NewInvalidInput("contract template is not active")
 	}
 
-	employeeIDs := input.EmployeeIDs
+	employeeIDs := make([]string, len(input.Contracts))
+	for i, c := range input.Contracts {
+		employeeIDs[i] = c.EmployeeID
+	}
 
 	empDesIDs, err := uc.empFetcher.FindDesignationIDs(ctx, employeeIDs)
 	if err != nil {
@@ -41,6 +37,9 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 		if desID != nil {
 			desIDSet[*desID] = struct{}{}
 		}
+	}
+	if input.DesignationID != nil {
+		desIDSet[*input.DesignationID] = struct{}{}
 	}
 	desIDs := make([]string, 0, len(desIDSet))
 	for id := range desIDSet {
@@ -56,9 +55,6 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 		desNames = names
 	}
 
-	data := tmpl.Data
-	templates := tmpl.Templates
-
 	startDate := &input.StartDate
 
 	var endDate *time.Time
@@ -73,37 +69,46 @@ func (uc *ContractUsecase) CreateContract(ctx context.Context, input models.Crea
 		return nil, fmt.Errorf("fetch salaries: %w", err)
 	}
 
-	contracts := make([]*entity.Contract, 0, len(employeeIDs))
+	contracts := make([]*entity.Contract, 0, len(input.Contracts))
 
-	for _, empID := range employeeIDs {
+	for _, ci := range input.Contracts {
+		desID := empDesIDs[ci.EmployeeID]
+		if input.DesignationID != nil {
+			desID = input.DesignationID
+		}
+
 		designationTitle := ""
-		if desID := empDesIDs[empID]; desID != nil {
+		if desID != nil {
 			designationTitle = desNames[*desID]
 		}
 
-		salary, ok := salaries[empID]
+		salary, ok := salaries[ci.EmployeeID]
 		if !ok || salary == "" {
-			return nil, errors.NewInvalidInput(fmt.Sprintf("no base salary found for employee %s", empID))
+			return nil, errors.NewInvalidInput(fmt.Sprintf("no base salary found for employee %s", ci.EmployeeID))
 		}
 
-		seq, err := uc.numGen.NextSequence(ctx, "CTR")
-		if err != nil {
-			return nil, fmt.Errorf("generate contract number: %w", err)
+		contractData := tmpl.Data
+		if input.WorkingPatternID != nil {
+			contractData.WorkingPatternID = input.WorkingPatternID
 		}
-		number := fmt.Sprintf("%03d/HRD-ARAS/%s/%s/%d",
-			seq, tmpl.ContractType, romanMonths[startDate.Month()], startDate.Year())
+		if len(input.JobDuties) > 0 {
+			contractData.JobDuties = input.JobDuties
+		}
+		if len(input.InventoryItems) > 0 {
+			contractData.InventoryItems = input.InventoryItems
+		}
 
 		e := entity.NewContract(
 			input.TemplateID,
-			empID,
-			number,
+			ci.EmployeeID,
+			ci.Number,
 			startDate,
 			endDate,
 			salary,
-			empDesIDs[empID],
+			desID,
 			designationTitle,
-			data,
-			templates,
+			contractData,
+			tmpl.Templates,
 		)
 
 		contracts = append(contracts, e)
@@ -194,19 +199,6 @@ func (uc *ContractUsecase) ListMyContractsWithDetail(ctx context.Context, input 
 
 func (uc *ContractUsecase) FindSigningsByContractIDs(ctx context.Context, contractIDs []string) (map[string][]*entity.ContractSigning, error) {
 	return uc.signingRepo.FindSigningsByContractIDs(ctx, contractIDs)
-}
-
-func (uc *ContractUsecase) ListMyContracts(ctx context.Context, input models.ListContractInput, userID string) (*models.ListContractResult, error) {
-	employeeID, err := uc.empFetcher.FindEmployeeIDByUserID(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("resolve user: %w", err)
-	}
-	if employeeID == "" {
-		return nil, errors.NewNotFound("employee not found for authenticated user")
-	}
-
-	input.EmployeeID = employeeID
-	return uc.ListContracts(ctx, input)
 }
 
 func (uc *ContractUsecase) CountSoonExpired(ctx context.Context, withinDays int) (int64, error) {

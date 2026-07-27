@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -72,17 +73,18 @@ type RenderBlock struct {
 }
 
 type RenderContext struct {
-	Employee         entity.EmployeeRenderData
-	Contract         entity.ContractRenderData
-	Signatory        entity.SignatoryRenderData
-	Data             entity.ContractTemplateData
-	Signings         []entity.ContractSigningRenderData
-	Blocks           []RenderBlock
-	CompanyLogo      string
-	JobDutiesJoined  string
-	InventoryJoined  string
-	JobDutiesList    template.HTML
-	InventoryList    template.HTML
+	Employee      entity.EmployeeRenderData
+	Contract      entity.ContractRenderData
+	Signatory     entity.SignatoryRenderData
+	Data          entity.ContractTemplateData
+	Signings      []entity.ContractSigningRenderData
+	Blocks        []RenderBlock
+	CompanyLogo   string
+	Place         string
+	LegalDate     string
+	Compensations []string
+	Benefits      []string
+	Deductions    []string
 }
 
 func (r *RenderContext) FirstSig() *entity.ContractSigningRenderData {
@@ -103,16 +105,28 @@ func (r *RenderContext) SecondSig() *entity.ContractSigningRenderData {
 	return nil
 }
 
-type RenderUsecase struct {
-	contractRepo repository.ContractRepository
-	signingRepo  repository.SigningRepository
-	empFetcher   EmployeeFetcher
-	shiftFetcher ShiftTimeFetcher
-	pdf          PDFRenderer
+func findFirstSigning(signings []*entity.ContractSigning) *entity.ContractSigning {
+	for _, s := range signings {
+		if s.Party == "first" {
+			return s
+		}
+	}
+	return nil
 }
 
-func NewRenderUsecase(contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, empFetcher EmployeeFetcher, shiftFetcher ShiftTimeFetcher, pdf PDFRenderer) *RenderUsecase {
-	return &RenderUsecase{contractRepo: contractRepo, signingRepo: signingRepo, empFetcher: empFetcher, shiftFetcher: shiftFetcher, pdf: pdf}
+type RenderUsecase struct {
+	contractRepo     repository.ContractRepository
+	signingRepo      repository.SigningRepository
+	empFetcher       EmployeeFetcher
+	shiftFetcher     ShiftTimeFetcher
+	compFetcher      CompensationFetcher
+	benefitFetcher   BenefitFetcher
+	deductionFetcher DeductionFetcher
+	pdf              PDFRenderer
+}
+
+func NewRenderUsecase(contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, empFetcher EmployeeFetcher, shiftFetcher ShiftTimeFetcher, compFetcher CompensationFetcher, benefitFetcher BenefitFetcher, deductionFetcher DeductionFetcher, pdf PDFRenderer) *RenderUsecase {
+	return &RenderUsecase{contractRepo: contractRepo, signingRepo: signingRepo, empFetcher: empFetcher, shiftFetcher: shiftFetcher, compFetcher: compFetcher, benefitFetcher: benefitFetcher, deductionFetcher: deductionFetcher, pdf: pdf}
 }
 
 func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signatoryName, signatoryTitle string) ([]byte, error) {
@@ -132,7 +146,10 @@ func (uc *RenderUsecase) Preview(ctx context.Context, contractID string, signato
 		return nil, errors.NewNotFound("employee not found")
 	}
 
-	signings, _ := uc.signingRepo.FindSigningsByContractID(ctx, contractID)
+	signings, err := uc.signingRepo.FindSigningsByContractID(ctx, contractID)
+	if err != nil {
+		slog.Warn("failed to fetch signings for preview", "contract_id", contractID, "error", err)
+	}
 
 	return uc.renderAndGeneratePDF(ctx, c, emp, signatoryName, signatoryTitle, signings)
 }
@@ -158,9 +175,12 @@ func (uc *RenderUsecase) PreviewWithSignings(ctx context.Context, contractID str
 }
 
 func (uc *RenderUsecase) renderAndGeneratePDF(ctx context.Context, c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning) ([]byte, error) {
-	shiftStart, shiftEnd, _ := uc.shiftFetcher.FindShiftTimesByEmployeeID(ctx, c.EmployeeID)
+	shiftStart, shiftEnd, err := uc.shiftFetcher.FindShiftTimesByEmployeeID(ctx, c.EmployeeID)
+	if err != nil {
+		slog.Warn("failed to fetch shift times", "employee_id", c.EmployeeID, "error", err)
+	}
 
-	html, err := uc.renderHTML(c, emp, signatoryName, signatoryTitle, signings, shiftStart, shiftEnd)
+	html, err := uc.renderHTML(ctx, c, emp, signatoryName, signatoryTitle, signings, shiftStart, shiftEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -168,8 +188,37 @@ func (uc *RenderUsecase) renderAndGeneratePDF(ctx context.Context, c *entity.Con
 	return uc.pdf.Render(ctx, html)
 }
 
-func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning, shiftStart, shiftEnd string) ([]byte, error) {
+func (uc *RenderUsecase) renderHTML(ctx context.Context, c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning, shiftStart, shiftEnd string) ([]byte, error) {
+	compensations, err := uc.compFetcher.FindByEmployeeID(ctx, c.EmployeeID)
+	if err != nil {
+		slog.Warn("failed to fetch compensations", "employee_id", c.EmployeeID, "error", err)
+	}
+	benefits, err := uc.benefitFetcher.FindByEmployeeID(ctx, c.EmployeeID)
+	if err != nil {
+		slog.Warn("failed to fetch benefits", "employee_id", c.EmployeeID, "error", err)
+	}
+	deductions, err := uc.deductionFetcher.FindByEmployeeID(ctx, c.EmployeeID)
+	if err != nil {
+		slog.Warn("failed to fetch deductions", "employee_id", c.EmployeeID, "error", err)
+	}
+
+	compNames := make([]string, len(compensations))
+	for i, c := range compensations {
+		compNames[i] = fmt.Sprintf("%s : %s", c.Name, c.Amount)
+	}
+	benefitNames := make([]string, len(benefits))
+	for i, b := range benefits {
+		benefitNames[i] = b.Name
+	}
+	deductionNames := make([]string, len(deductions))
+	for i, d := range deductions {
+		deductionNames[i] = d.Name
+	}
+
 	renderCtx := buildRenderContext(c, emp, signatoryName, signatoryTitle, signings, shiftStart, shiftEnd)
+	renderCtx.Compensations = compNames
+	renderCtx.Benefits = benefitNames
+	renderCtx.Deductions = deductionNames
 
 	// Resolve variable placeholders in block content
 	resolveBlockContent(renderCtx.Blocks, renderCtx)
@@ -189,16 +238,23 @@ func (uc *RenderUsecase) renderHTML(c *entity.Contract, emp *entity.EmployeeRend
 
 func buildRenderContext(c *entity.Contract, emp *entity.EmployeeRenderData, signatoryName, signatoryTitle string, signings []*entity.ContractSigning, shiftStart, shiftEnd string) *RenderContext {
 	renderCtx := &RenderContext{
-		Employee:        *emp,
-		Contract:        buildContractRenderData(c, shiftStart, shiftEnd),
-		Signatory:       entity.SignatoryRenderData{Name: signatoryName, Designation: signatoryTitle},
-		Data:            c.Data,
-		Signings:        buildSigningRenderData(signings),
-		CompanyLogo:     base64.StdEncoding.EncodeToString(companyLogo),
-		JobDutiesJoined: strings.Join(c.Data.JobDuties, "\n"),
-		InventoryJoined: strings.Join(c.Data.InventoryItems, "\n"),
-		JobDutiesList:   buildOrderedListHTML(c.Data.JobDuties),
-		InventoryList:   buildOrderedListHTML(c.Data.InventoryItems),
+		Employee:   *emp,
+		Contract:   buildContractRenderData(c, shiftStart, shiftEnd),
+		Signatory:  entity.SignatoryRenderData{Name: signatoryName, Designation: signatoryTitle},
+		Data:       c.Data,
+		Signings:   buildSigningRenderData(signings),
+		CompanyLogo: base64.StdEncoding.EncodeToString(companyLogo),
+	}
+
+	if firstSig := findFirstSigning(signings); firstSig != nil {
+		renderCtx.Place = firstSig.Place
+		renderCtx.LegalDate = formatTime(&firstSig.SignedAt)
+	}
+	if renderCtx.Place == "" {
+		renderCtx.Place = "...................................."
+	}
+	if renderCtx.LegalDate == "" {
+		renderCtx.LegalDate = "...................................."
 	}
 
 	articleNum := 0

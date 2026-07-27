@@ -211,6 +211,7 @@ func ReconstituteContract(
 	data ContractTemplateData,
 	templates ContractTemplatePartials,
 	sentAt *time.Time,
+	documentID *string,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) *Contract {
@@ -229,6 +230,7 @@ func ReconstituteContract(
 		Data:             data,
 		Templates:        templates,
 		SentAt:           sentAt,
+		DocumentID:       documentID,
 		CreatedAt:        createdAt,
 		UpdatedAt:        updatedAt,
 	}

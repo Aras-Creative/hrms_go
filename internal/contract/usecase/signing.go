@@ -26,7 +26,11 @@ type EmployeeUserIDFinder interface {
 }
 
 type WorkPatternAssigner interface {
-	AssignDefaultWorkPattern(ctx context.Context, employeeID string, validFrom time.Time) error
+	AssignWorkPattern(ctx context.Context, employeeID string, workPatternID *string, validFrom time.Time) error
+}
+
+type DesignationAssigner interface {
+	AssignDesignation(ctx context.Context, employeeID string, designationID *string) error
 }
 
 type SigningUsecase struct {
@@ -37,15 +41,27 @@ type SigningUsecase struct {
 	empFetcher    EmployeeFetcher
 	empActivator  EmployeeActivator
 	wpAssigner    WorkPatternAssigner
+	desAssigner   DesignationAssigner
 	userActivator UserActivator
 	empFinder     EmployeeUserIDFinder
 }
 
-func NewSigningUsecase(db *sqlx.DB, contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, docUC *DocumentUsecase, empFetcher EmployeeFetcher, empActivator EmployeeActivator, wpAssigner WorkPatternAssigner, userActivator UserActivator, empFinder EmployeeUserIDFinder) *SigningUsecase {
-	return &SigningUsecase{db: db, contractRepo: contractRepo, signingRepo: signingRepo, docUC: docUC, empFetcher: empFetcher, empActivator: empActivator, wpAssigner: wpAssigner, userActivator: userActivator, empFinder: empFinder}
+func NewSigningUsecase(db *sqlx.DB, contractRepo repository.ContractRepository, signingRepo repository.SigningRepository, docUC *DocumentUsecase, empFetcher EmployeeFetcher, empActivator EmployeeActivator, wpAssigner WorkPatternAssigner, desAssigner DesignationAssigner, userActivator UserActivator, empFinder EmployeeUserIDFinder) *SigningUsecase {
+	return &SigningUsecase{db: db, contractRepo: contractRepo, signingRepo: signingRepo, docUC: docUC, empFetcher: empFetcher, empActivator: empActivator, wpAssigner: wpAssigner, desAssigner: desAssigner, userActivator: userActivator, empFinder: empFinder}
 }
 
 func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignContractInput) ([]*entity.Contract, error) {
+	// Deduplicate contract IDs
+	seen := make(map[string]struct{}, len(input.ContractIDs))
+	uniqueIDs := make([]string, 0, len(input.ContractIDs))
+	for _, id := range input.ContractIDs {
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			uniqueIDs = append(uniqueIDs, id)
+		}
+	}
+	input.ContractIDs = uniqueIDs
+
 	tx, err := uc.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return nil, errors.WrapInternal("failed to begin transaction", err)
@@ -56,6 +72,12 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 	signingRepo := uc.signingRepo.WithTx(tx)
 
 	var results []*entity.Contract
+	// Collect contracts that need post-commit side effects
+	type pendingSideEffect struct {
+		contract *entity.Contract
+		signings []*entity.ContractSigning
+	}
+	var sideEffects []pendingSideEffect
 
 	for _, contractID := range input.ContractIDs {
 		e, err := contractRepo.FindContractByID(ctx, contractID)
@@ -112,34 +134,36 @@ func (uc *SigningUsecase) BulkSign(ctx context.Context, input models.BulkSignCon
 			}
 		}
 
-		// Stage 5: When new contract becomes active, activate the employee and assign default work pattern
-		if shouldGeneratePDF && uc.empActivator != nil {
-			if err := uc.empActivator.ActivateEmployee(ctx, e.EmployeeID); err != nil {
-				return nil, errors.WrapInternal(fmt.Sprintf("activate employee for contract %s", contractID), err)
-			}
-		}
-		if shouldGeneratePDF && uc.wpAssigner != nil && e.StartDate != nil {
-			if err := uc.wpAssigner.AssignDefaultWorkPattern(ctx, e.EmployeeID, *e.StartDate); err != nil {
-				return nil, errors.WrapInternal(fmt.Sprintf("assign work pattern for contract %s", contractID), err)
-			}
-		}
-
-		// Stage 6: Generate and store the final PDF after both parties have signed
-		if shouldGeneratePDF {
-			if _, _, err := uc.docUC.StorePDFWithSignings(ctx, e.ID, e.Number, input.SignedByName, input.SignedByTitle, signings); err != nil {
-				return nil, errors.WrapInternal(fmt.Sprintf("failed to store signed PDF for contract %s", contractID), err)
-			}
-			e.AttachDocument()
-			if err := contractRepo.UpdateContract(ctx, e); err != nil {
-				return nil, errors.WrapInternal(fmt.Sprintf("failed to update contract %s after attaching doc", contractID), err)
-			}
-		}
-
 		results = append(results, e)
+
+		// Collect side effects to run after commit
+		if shouldGeneratePDF {
+			sideEffects = append(sideEffects, pendingSideEffect{contract: e, signings: signings})
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, errors.WrapInternal("failed to commit transaction", err)
+	}
+
+	// Stage 5-6: Side effects after commit — cannot be rolled back
+	for _, se := range sideEffects {
+		if uc.empActivator != nil {
+			_ = uc.empActivator.ActivateEmployee(ctx, se.contract.EmployeeID)
+		}
+		if uc.desAssigner != nil {
+			_ = uc.desAssigner.AssignDesignation(ctx, se.contract.EmployeeID, se.contract.DesignationID)
+		}
+		if uc.wpAssigner != nil && se.contract.StartDate != nil {
+			_ = uc.wpAssigner.AssignWorkPattern(ctx, se.contract.EmployeeID, se.contract.Data.WorkingPatternID, *se.contract.StartDate)
+		}
+		if _, _, err := uc.docUC.StorePDFWithSignings(ctx, se.contract.ID, se.contract.Number, input.SignedByName, input.SignedByTitle, se.signings); err != nil {
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to store signed PDF for contract %s", se.contract.ID), err)
+		}
+		se.contract.AttachDocument()
+		if err := uc.contractRepo.UpdateContract(ctx, se.contract); err != nil {
+			return nil, errors.WrapInternal(fmt.Sprintf("failed to update contract %s after attaching doc", se.contract.ID), err)
+		}
 	}
 
 	return results, nil
@@ -158,20 +182,6 @@ func (uc *SigningUsecase) expireOldActiveContractWithRepo(ctx context.Context, c
 		return fmt.Errorf("expire previous contract: %w", err)
 	}
 	return contractRepo.UpdateContract(ctx, oldContract)
-}
-
-func (uc *SigningUsecase) expireOldActiveContract(ctx context.Context, newContract *entity.Contract) error {
-	oldContract, err := uc.contractRepo.FindActiveByEmployeeID(ctx, newContract.EmployeeID)
-	if err != nil {
-		return fmt.Errorf("find previous active contract: %w", err)
-	}
-	if oldContract == nil || oldContract.ID == newContract.ID {
-		return nil
-	}
-	if err := oldContract.Expire(); err != nil {
-		return fmt.Errorf("expire previous contract: %w", err)
-	}
-	return uc.contractRepo.UpdateContract(ctx, oldContract)
 }
 
 func (uc *SigningUsecase) BulkSignAsSecondParty(ctx context.Context, input models.BulkSignContractInput, userID string) ([]*entity.Contract, error) {

@@ -7,7 +7,6 @@ import (
 	"hrms/internal/contract/entity"
 	"hrms/internal/contract/models"
 	"hrms/internal/contract/repository"
-	"hrms/internal/employee/numbergen"
 	errors "hrms/internal/pkg/apperror"
 )
 
@@ -32,11 +31,35 @@ type SalaryFetcher interface {
 	FindCurrentByEmployeeIDs(ctx context.Context, employeeIDs []string) (map[string]string, error)
 }
 
+type CompensationFetcher interface {
+	FindByEmployeeID(ctx context.Context, employeeID string) ([]CompensationItem, error)
+}
+
+type BenefitFetcher interface {
+	FindByEmployeeID(ctx context.Context, employeeID string) ([]BenefitItem, error)
+}
+
+type DeductionFetcher interface {
+	FindByEmployeeID(ctx context.Context, employeeID string) ([]DeductionItem, error)
+}
+
+type CompensationItem struct {
+	Name   string
+	Amount string
+}
+
+type BenefitItem struct {
+	Name string
+}
+
+type DeductionItem struct {
+	Name string
+}
+
 type ContractUsecase struct {
 	tmplRepo     repository.TemplateRepository
 	contractRepo repository.ContractRepository
 	signingRepo  repository.SigningRepository
-	numGen       *numbergen.Generator
 	empFetcher   EmployeeFetcher
 	desFetcher   DesignationFetcher
 	salFetcher   SalaryFetcher
@@ -46,7 +69,6 @@ func NewContractUsecase(
 	tmplRepo repository.TemplateRepository,
 	contractRepo repository.ContractRepository,
 	signingRepo repository.SigningRepository,
-	numGen *numbergen.Generator,
 	empFetcher EmployeeFetcher,
 	desFetcher DesignationFetcher,
 	salFetcher SalaryFetcher,
@@ -55,7 +77,6 @@ func NewContractUsecase(
 		tmplRepo:     tmplRepo,
 		contractRepo: contractRepo,
 		signingRepo:  signingRepo,
-		numGen:       numGen,
 		empFetcher:   empFetcher,
 		desFetcher:   desFetcher,
 		salFetcher:   salFetcher,

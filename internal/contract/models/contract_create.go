@@ -5,11 +5,20 @@ import (
 	"time"
 )
 
+type ContractItemInput struct {
+	EmployeeID string
+	Number     string
+}
+
 type CreateContractInput struct {
-	TemplateID  string
-	EmployeeIDs []string
-	StartDate   time.Time
-	EndDate     *time.Time
+	TemplateID       string
+	Contracts        []ContractItemInput
+	StartDate        time.Time
+	EndDate          *time.Time
+	DesignationID    *string
+	WorkingPatternID *string
+	JobDuties        []string
+	InventoryItems   []string
 }
 
 type BulkCreateContractResult struct {

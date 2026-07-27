@@ -54,11 +54,20 @@ type UpdateTemplateRequest struct {
 
 // ---- Contract Requests ----
 
+type ContractItemRequest struct {
+	EmployeeID string `json:"employee_id" validate:"required,uuid"`
+	Number     string `json:"number" validate:"required"`
+}
+
 type CreateContractRequest struct {
-	TemplateID  string   `json:"template_id" validate:"required,uuid"`
-	EmployeeIDs []string `json:"employee_ids" validate:"required,min=1,dive,uuid"`
-	StartDate   string   `json:"start_date" validate:"required"`
-	EndDate     *string  `json:"end_date,omitempty"`
+	TemplateID       string               `json:"template_id" validate:"required,uuid"`
+	Contracts        []ContractItemRequest `json:"contracts" validate:"required,min=1,dive"`
+	StartDate        string               `json:"start_date" validate:"required"`
+	EndDate          *string              `json:"end_date,omitempty"`
+	DesignationID    *string              `json:"designation_id,omitempty" validate:"omitempty,uuid"`
+	WorkingPatternID *string              `json:"working_pattern_id,omitempty" validate:"omitempty,uuid"`
+	JobDuties        []string             `json:"job_duties,omitempty"`
+	InventoryItems   []string             `json:"inventory_items,omitempty"`
 }
 
 type SignContractRequest struct {
@@ -66,7 +75,7 @@ type SignContractRequest struct {
 	Party           string   `json:"party" validate:"required,oneof=first second"`
 	SignedBy        string   `json:"signed_by" validate:"required"`
 	SignedByName    string   `json:"signed_by_name" validate:"required"`
-	SignedByTitle   string   `json:"signed_by_title" validate:"required"`
+	SignedByTitle   string   `json:"signed_by_title"`
 	Place           string   `json:"place" validate:"required"`
 	SignatureBase64 string   `json:"signature_base64" validate:"required"`
 }
@@ -92,13 +101,28 @@ func (r *CreateContractRequest) ToInput() (*models.CreateContractInput, error) {
 			return nil, errors.NewInvalidInput("invalid end_date, expected YYYY-MM-DD")
 		}
 		endDate = &t
+		if !endDate.After(startDate) {
+			return nil, errors.NewInvalidInput("end_date must be after start_date")
+		}
+	}
+
+	contracts := make([]models.ContractItemInput, len(r.Contracts))
+	for i, c := range r.Contracts {
+		contracts[i] = models.ContractItemInput{
+			EmployeeID: c.EmployeeID,
+			Number:     c.Number,
+		}
 	}
 
 	return &models.CreateContractInput{
-		TemplateID:  r.TemplateID,
-		EmployeeIDs: r.EmployeeIDs,
-		StartDate:   startDate,
-		EndDate:     endDate,
+		TemplateID:       r.TemplateID,
+		Contracts:        contracts,
+		StartDate:        startDate,
+		EndDate:          endDate,
+		DesignationID:    r.DesignationID,
+		WorkingPatternID: r.WorkingPatternID,
+		JobDuties:        r.JobDuties,
+		InventoryItems:   r.InventoryItems,
 	}, nil
 }
 

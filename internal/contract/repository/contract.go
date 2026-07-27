@@ -358,8 +358,7 @@ func modelToContract(m *ContractModel) *entity.Contract {
 		m.StartDate, m.EndDate, m.Salary,
 		m.DesignationID, m.DesignationTitle,
 		entity.ContractStatus(m.Status), m.ContractType, data, templates,
-		m.SentAt, m.CreatedAt, m.UpdatedAt)
-	c.DocumentID = m.DocumentID
+		m.SentAt, m.DocumentID, m.CreatedAt, m.UpdatedAt)
 	return c
 }
 
@@ -376,8 +375,7 @@ func rowToContract(r *ContractListRow) *entity.Contract {
 		r.StartDate, r.EndDate, r.Salary,
 		r.DesignationID, r.DesignationTitle,
 		entity.ContractStatus(r.Status), r.ContractType, data, templates,
-		r.SentAt, r.CreatedAt, r.UpdatedAt)
-	c.DocumentID = r.DocumentID
+		r.SentAt, r.DocumentID, r.CreatedAt, r.UpdatedAt)
 	return c
 }
 
