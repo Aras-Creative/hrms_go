@@ -25,6 +25,7 @@ type DailyAttendanceRepository interface {
 	ComputeDaily(ctx context.Context, employeeID string, date time.Time) (*DailyComputationRow, error)
 	ComputeRange(ctx context.Context, from, to time.Time) ([]DailyComputationRow, error)
 	FindAllPaginated(ctx context.Context, searchName, status, designationID, isLate, isEarlyLeave string, from, to time.Time, page, perPage int) ([]*AdminAttendanceRow, int64, error)
+	FindReportData(ctx context.Context, from, to time.Time) ([]*AdminAttendanceRow, error)
 	Recap(ctx context.Context, from, to time.Time, designationID string) ([]*RecapRow, error)
 	FindActiveLeaveTypes(ctx context.Context) ([]LeaveTypeRow, error)
 }

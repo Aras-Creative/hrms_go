@@ -263,7 +263,7 @@ func (h *AttendanceHandler) CorrectionCreate(c fiber.Ctx) error {
 		Status: req.Status, IsLate: req.IsLate,
 		IsEarlyLeave: req.IsEarlyLeave, LeaveTypeName: req.LeaveTypeName,
 		LeaveSubmissionID: req.LeaveSubmissionID,
-		Reason: req.Reason, CorrectedBy: userID,
+		Reason:            req.Reason, CorrectedBy: userID,
 	})
 	if err != nil {
 		return response.Error(c, err)
@@ -502,6 +502,23 @@ func (h *AttendanceHandler) Recap(c fiber.Ctx) error {
 }
 
 // ---- SSE ----
+
+func (h *AttendanceHandler) RecapDownload(c fiber.Ctx) error {
+	fromStr := c.Query("from")
+	toStr := c.Query("to")
+	if fromStr == "" || toStr == "" {
+		return response.Error(c, errors.NewInvalidInput("from and to query params are required"))
+	}
+
+	data, fileName, err := h.dailyUc.GenerateReportXLSX(c.RequestCtx(), fromStr, toStr)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	c.Attachment(fileName)
+	c.Response().Header.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	return c.Send(data)
+}
 
 func (h *AttendanceHandler) PunchEvents(c fiber.Ctx) error {
 	return sse.New(sse.Config{

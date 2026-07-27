@@ -161,4 +161,46 @@ func (r *PostgresDailyAttendanceRepo) FindAllPaginated(ctx context.Context, sear
 	return list, total, rows.Err()
 }
 
+func (r *PostgresDailyAttendanceRepo) FindReportData(ctx context.Context, from, to time.Time) ([]*AdminAttendanceRow, error) {
+	where := " WHERE 1=1"
+	args := []interface{}{from, to}
+
+	dataQuery := querySelectAdminAttendance + where + " ORDER BY e.full_name ASC, date_series.d ASC"
+	rows, err := r.db.QueryxContext(ctx, dataQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query report data: %w", err)
+	}
+	defer rows.Close()
+
+	list := make([]*AdminAttendanceRow, 0)
+	for rows.Next() {
+		var m AdminAttendanceRow
+		if err := rows.StructScan(&m); err != nil {
+			return nil, fmt.Errorf("failed to scan report row: %w", err)
+		}
+		sf := entity.AdminScheduleFields{
+			Status:             m.Status,
+			Source:             m.Source,
+			Date:               m.Date,
+			ExpectedStartTime:  m.ExpectedStartTime,
+			ExpectedEndTime:    m.ExpectedEndTime,
+			ScheduleOverrideID: m.ScheduleOverrideID,
+			OverrideIsWorking:  m.OverrideIsWorking,
+			OverrideStartTime:  m.OverrideStartTime,
+			OverrideEndTime:    m.OverrideEndTime,
+			PatternStartTime:   m.PatternStartTime,
+			PatternEndTime:     m.PatternEndTime,
+			PatternType:        m.PatternType,
+		}
+		entity.ResolveAdminAttendance(&sf)
+		m.Status = sf.Status
+		m.Source = sf.Source
+		m.ExpectedStartTime = sf.ExpectedStartTime
+		m.ExpectedEndTime = sf.ExpectedEndTime
+		m.ScheduleOverrideID = sf.ScheduleOverrideID
+		list = append(list, &m)
+	}
+	return list, rows.Err()
+}
+
 var _ DailyAttendanceRepository = (*PostgresDailyAttendanceRepo)(nil)

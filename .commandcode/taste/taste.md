@@ -90,3 +90,6 @@
 
 # attendance
 See [attendance/taste.md](attendance/taste.md)
+
+# code-organization
+- Keep handler/delivery layer thin by moving file generation and data transformation (e.g., xlsx generation) to the usecase layer; handler should only handle HTTP concerns (parse request, call usecase, send response). Confidence: 0.65

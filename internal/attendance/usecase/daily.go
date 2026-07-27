@@ -147,6 +147,109 @@ func (uc *DailyAttendanceUsecase) GetDetail(ctx context.Context, id string) (*At
 	}, nil
 }
 
+type ReportDailyLog struct {
+	Date     time.Time
+	ClockIn  string
+	ClockOut string
+	Status   string
+}
+
+type ReportEmployeeData struct {
+	EmployeeID   string
+	EmployeeName string
+	DailyLogs    []ReportDailyLog
+}
+
+type ReportData struct {
+	From      time.Time
+	To        time.Time
+	Employees []ReportEmployeeData
+}
+
+var reportStatusMap = map[string]string{
+	"present":   "Hadir",
+	"absent":    "Tidak Masuk",
+	"no_punch":  "Tidak Masuk",
+	"day_off":   "Libur",
+	"on_leave":  "Cuti",
+	"no_checkin": "Tidak Absen Masuk",
+}
+
+func (uc *DailyAttendanceUsecase) GetReportData(ctx context.Context, fromStr, toStr string) (*ReportData, error) {
+	from, to, err := timeutil.ParseDateRange(fromStr, toStr)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
+	rows, err := uc.dailyRepo.FindReportData(ctx, from, to)
+	if err != nil {
+		return nil, errors.WrapInternal("failed to fetch report data", err)
+	}
+
+	// Group rows by employee
+	type empGroup struct {
+		id   string
+		name string
+		logs []ReportDailyLog
+	}
+	empMap := make(map[string]*empGroup)
+	empOrder := make([]string, 0)
+
+	for _, r := range rows {
+		g, ok := empMap[r.EmployeeID]
+		if !ok {
+			g = &empGroup{id: r.EmployeeID, name: r.EmployeeName}
+			empMap[r.EmployeeID] = g
+			empOrder = append(empOrder, r.EmployeeID)
+		}
+
+		var clockIn, clockOut string
+		if r.FirstPunchIn != nil {
+			clockIn = r.FirstPunchIn.Format("15:04")
+		} else {
+			clockIn = "-"
+		}
+		if r.LastPunchOut != nil {
+			clockOut = r.LastPunchOut.Format("15:04")
+		} else {
+			clockOut = "-"
+		}
+
+		status := r.Status
+		if r.LeaveTypeName != nil && *r.LeaveTypeName != "" {
+			status = *r.LeaveTypeName
+		} else if display, ok := reportStatusMap[status]; ok {
+			status = display
+			if status == "Hadir" && r.IsLate {
+				status = "Terlambat"
+			} else if status == "Hadir" && r.IsEarlyLeave {
+				status = "Pulang Awal"
+			}
+		} else if status == "" {
+			status = "-"
+		}
+
+		g.logs = append(g.logs, ReportDailyLog{
+			Date:     r.Date,
+			ClockIn:  clockIn,
+			ClockOut: clockOut,
+			Status:   status,
+		})
+	}
+
+	employees := make([]ReportEmployeeData, 0, len(empOrder))
+	for _, id := range empOrder {
+		g := empMap[id]
+		employees = append(employees, ReportEmployeeData{
+			EmployeeID:   g.id,
+			EmployeeName: g.name,
+			DailyLogs:    g.logs,
+		})
+	}
+
+	return &ReportData{From: from, To: to, Employees: employees}, nil
+}
+
 func (uc *DailyAttendanceUsecase) GetAttendanceHistoryByEmployeeID(ctx context.Context, employeeID, fromStr, toStr string) ([]models.MyAttendanceHistoryItem, error) {
 	from, to, err := timeutil.ParseDateRange(fromStr, toStr)
 	if err != nil {
