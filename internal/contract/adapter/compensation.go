@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	payrollRepo "hrms/internal/payroll/repository"
 	contractUc "hrms/internal/contract/usecase"
+	payrollRepo "hrms/internal/payroll/repository"
 )
 
 type CompensationFetcherAdapter struct {
@@ -30,11 +30,9 @@ func (a *CompensationFetcherAdapter) FindByEmployeeID(ctx context.Context, emplo
 	}
 	entries := make(map[string]compEntry)
 	for _, ec := range empComps {
-		if ec.EndDate == nil {
-			entries[ec.CompensationItemID] = compEntry{
-				itemID: ec.CompensationItemID,
-				amount: ec.Amount.Float(),
-			}
+		entries[ec.CompensationItemID] = compEntry{
+			itemID: ec.CompensationItemID,
+			amount: ec.Amount.Float(),
 		}
 	}
 
@@ -49,7 +47,7 @@ func (a *CompensationFetcherAdapter) FindByEmployeeID(ctx context.Context, emplo
 			Amount: formatRupiah(entry.amount),
 		})
 	}
-	fmt.Printf("[compensation] employee=%s total_emp_comps=%d active_entries=%d returned=%d\n", employeeID, len(empComps), len(entries), len(items))
+
 	return items, nil
 }
 
