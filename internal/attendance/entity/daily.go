@@ -172,7 +172,7 @@ func (d *DailyAttendance) ApplyScheduleAndPunches(
 	d.EvaluateAndDetermineStatus(leaveSubmissionID, leaveTypeName, leaveIsHalfDay, overrideIsWorking, workingType)
 }
 
-func (d *DailyAttendance) LateMinutes() int {
+func (d *DailyAttendance) rawLateMinutes() int {
 	if d.FirstPunchIn == nil || d.ExpectedStartTime == nil || *d.ExpectedStartTime == "" {
 		return 0
 	}
@@ -187,6 +187,13 @@ func (d *DailyAttendance) LateMinutes() int {
 		return 0
 	}
 	return int(punch.Sub(ref).Minutes())
+}
+
+func (d *DailyAttendance) LateMinutes() int {
+	if !d.IsLate {
+		return 0
+	}
+	return d.rawLateMinutes()
 }
 
 func (d *DailyAttendance) EarlyLeaveMinutes() int {
@@ -273,7 +280,7 @@ func (d *DailyAttendance) evaluateWorkCase(workingType string) bool {
 	}
 	d.MarkPresent()
 	if workingType != "dynamic" {
-		if d.LateMinutes() > 0 {
+		if d.rawLateMinutes() > 0 {
 			d.IsLate = true
 		}
 		if d.LastPunchOut != nil && d.EarlyLeaveMinutes() > 0 {

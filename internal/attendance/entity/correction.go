@@ -118,7 +118,7 @@ func (c *AttendanceCorrection) ApplyTo(da *DailyAttendance) {
 	} else if c.LeaveSubmissionID != nil || da.LeaveSubmissionID != nil {
 		da.IsLate = false
 	} else {
-		da.IsLate = da.LateMinutes() > 0
+		da.IsLate = da.rawLateMinutes() > 0
 	}
 	if c.IsEarlyLeave != nil {
 		da.IsEarlyLeave = *c.IsEarlyLeave
