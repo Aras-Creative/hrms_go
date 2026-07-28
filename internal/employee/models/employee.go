@@ -96,6 +96,11 @@ type UpdateEmployeeNumberInput struct {
 	EmployeeNumber string
 }
 
+type UpdateJoinDateInput struct {
+	EmployeeID string
+	JoinDate   *string
+}
+
 type ChangeDesignationInput struct {
 	EmployeeIDs   []string
 	DesignationID *string

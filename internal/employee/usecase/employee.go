@@ -244,6 +244,32 @@ func (uc *EmployeeUsecase) PeekNextEmployeeNumber(ctx context.Context, input mod
 	return &models.PeekNextNumberResult{EmployeeNumber: next}, nil
 }
 
+func (uc *EmployeeUsecase) UpdateJoinDate(ctx context.Context, input models.UpdateJoinDateInput) (*entity.Employee, error) {
+	e, err := uc.repo.FindByID(ctx, input.EmployeeID)
+	if err != nil {
+		return nil, fmt.Errorf("find employee: %w", err)
+	}
+	if e == nil {
+		return nil, errors.NewNotFound("employee not found")
+	}
+
+	var joinDate *entity.Date
+	if input.JoinDate != nil {
+		jd, err := entity.ParseDate(*input.JoinDate)
+		if err != nil {
+			return nil, errors.NewInvalidInput(err.Error())
+		}
+		joinDate = &jd
+	}
+
+	e.UpdateJoinDate(joinDate)
+
+	if err := uc.repo.Update(ctx, e); err != nil {
+		return nil, fmt.Errorf("update join date: %w", err)
+	}
+	return e, nil
+}
+
 // ---- Read ----
 
 func (uc *EmployeeUsecase) List(ctx context.Context, input models.ListEmployeeInput) (*models.ListEmployeeResult, error) {

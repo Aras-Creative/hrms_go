@@ -63,6 +63,12 @@ func (e *Employee) UpdateProfilePhoto(photoID *string) {
 	e.UpdatedAt = time.Now()
 }
 
+// UpdateJoinDate replaces the join date and touches UpdatedAt.
+func (e *Employee) UpdateJoinDate(joinDate *Date) {
+	e.JoinDate = joinDate
+	e.UpdatedAt = time.Now()
+}
+
 // UpdateEmployeeNumber replaces the employee number and touches UpdatedAt.
 func (e *Employee) UpdateEmployeeNumber(num EmployeeNumber) {
 	e.EmployeeNumber = num

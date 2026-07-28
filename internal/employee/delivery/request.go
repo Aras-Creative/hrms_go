@@ -61,3 +61,7 @@ type ChangeDesignationRequest struct {
 type UpdateEmployeeNumberRequest struct {
 	EmployeeNumber string `json:"employee_number" validate:"required"`
 }
+
+type UpdateJoinDateRequest struct {
+	JoinDate *string `json:"join_date"`
+}
