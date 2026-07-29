@@ -30,6 +30,11 @@ type ListTemplateInput struct {
 	IsActive     *bool
 }
 
+type CopyTemplateInput struct {
+	SourceID string
+	Name     string
+}
+
 type ListTemplateResult struct {
 	Entities []*entity.ContractTemplate
 	Total    int64

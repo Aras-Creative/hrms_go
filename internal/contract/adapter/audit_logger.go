@@ -14,6 +14,7 @@ const (
 	ActionSignSecondParty = "contract.sign-second-party"
 	ActionTerminate       = "contract.terminate"
 	ActionTemplateCreate  = "contract.template.create"
+	ActionTemplateCopy    = "contract.template.copy"
 	ActionTemplateUpdate  = "contract.template.update"
 	ActionTemplateDelete  = "contract.template.delete"
 )

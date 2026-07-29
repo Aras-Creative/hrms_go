@@ -8,6 +8,7 @@ func (h *ContractHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber.H
 	ct.Get("/:id", authMw, h.GetTemplate)
 	ct.Get("/:id/prefill", authMw, h.GetTemplatePrefill)
 	ct.Post("/", authMw, adminMw, h.CreateTemplate)
+	ct.Post("/:id/copy", authMw, adminMw, h.CopyTemplate)
 	ct.Put("/:id", authMw, adminMw, h.UpdateTemplate)
 	ct.Delete("/:id", authMw, adminMw, h.DeleteTemplate)
 

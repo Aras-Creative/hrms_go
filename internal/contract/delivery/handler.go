@@ -135,6 +135,35 @@ func (h *ContractHandler) ListTemplates(c fiber.Ctx) error {
 	})
 }
 
+func (h *ContractHandler) CopyTemplate(c fiber.Ctx) error {
+	id, err := parseID(c)
+	if err != nil {
+		return response.Error(c, err)
+	}
+	var req CopyTemplateRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return err
+	}
+
+	input := models.CopyTemplateInput{
+		SourceID: id,
+		Name:     req.Name,
+	}
+
+	e, err := h.uc.CopyTemplate(c.RequestCtx(), input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+	if h.auditLogger != nil {
+		userID, _ := c.Locals("user_id").(string)
+		h.auditLogger.Log(c.RequestCtx(), userID, "contract_template", e.ID, id,
+			contractAdapter.ActionTemplateCopy, c.IP(), string(c.RequestCtx().UserAgent()),
+			map[string]any{"name": req.Name, "source_id": id},
+		)
+	}
+	return response.Created(c, toTemplateResponse(e))
+}
+
 func (h *ContractHandler) UpdateTemplate(c fiber.Ctx) error {
 	id, err := parseID(c)
 	if err != nil {

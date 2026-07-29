@@ -43,6 +43,10 @@ type CreateTemplateRequest struct {
 	Templates    TemplatePartialsRequest `json:"templates"`
 }
 
+type CopyTemplateRequest struct {
+	Name string `json:"name" validate:"required,min=1,max=255"`
+}
+
 type UpdateTemplateRequest struct {
 	Name         string                 `json:"name" validate:"required,min=1,max=255"`
 	ContractType string                 `json:"contract_type" validate:"required,oneof=PKWT PKWTT"`

@@ -160,6 +160,39 @@ func (uc *ContractUsecase) UpdateTemplate(ctx context.Context, input models.Upda
 	return e, nil
 }
 
+func (uc *ContractUsecase) CopyTemplate(ctx context.Context, input models.CopyTemplateInput) (*entity.ContractTemplate, error) {
+	source, err := uc.tmplRepo.FindByID(ctx, input.SourceID)
+	if err != nil {
+		return nil, fmt.Errorf("find source template: %w", err)
+	}
+	if source == nil {
+		return nil, errors.NewNotFound("contract template not found")
+	}
+
+	existing, err := uc.tmplRepo.FindByName(ctx, input.Name)
+	if err != nil {
+		return nil, fmt.Errorf("find template by name: %w", err)
+	}
+	if existing != nil {
+		return nil, errors.NewAlreadyExists("template with this name already exists")
+	}
+
+	e, err := entity.NewContractTemplate(
+		input.Name,
+		source.ContractType,
+		source.Description,
+		source.Data,
+		source.Templates,
+	)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+	if err := uc.tmplRepo.Create(ctx, e); err != nil {
+		return nil, fmt.Errorf("create copied template: %w", err)
+	}
+	return e, nil
+}
+
 func (uc *ContractUsecase) DeleteTemplate(ctx context.Context, id string) error {
 	existing, err := uc.tmplRepo.FindByID(ctx, id)
 	if err != nil {
