@@ -45,6 +45,7 @@ type SigningRepository interface {
 	CreateContractSigning(ctx context.Context, e *entity.ContractSigning) error
 	FindSigningsByContractID(ctx context.Context, contractID string) ([]*entity.ContractSigning, error)
 	FindSigningsByContractIDs(ctx context.Context, contractIDs []string) (map[string][]*entity.ContractSigning, error)
+	DeleteSigningsByContractID(ctx context.Context, contractID string) error
 }
 
 type DocumentRepository interface {

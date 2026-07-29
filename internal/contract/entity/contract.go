@@ -55,6 +55,17 @@ func (c *Contract) MarkActive() error {
 	return nil
 }
 
+// CancelSend reverts a sent contract back to draft status.
+func (c *Contract) CancelSend() error {
+	if c.Status != ContractStatusSent {
+		return fmt.Errorf("contract must be in sent status to cancel send")
+	}
+	c.Status = ContractStatusDraft
+	c.SentAt = nil
+	c.UpdatedAt = time.Now()
+	return nil
+}
+
 // CanSign reports whether the contract is in a status that allows the given
 // party to sign.  Returns nil when signing is permitted, or an error describing
 // why it is not.

@@ -29,5 +29,6 @@ func (h *ContractHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber.H
 	r.Post("/contracts/active", authMw, adminMw, h.CheckActiveContracts)
 	r.Post("/contracts/sign", authMw, adminMw, h.SignByFirstParty)
 	r.Post("/contracts/sign/second-party", authMw, h.SignBySecondParty)
+	r.Post("/contracts/:id/cancel-send", authMw, adminMw, h.CancelSendContract)
 	r.Delete("/contracts/:id", authMw, adminMw, h.DeleteContract)
 }

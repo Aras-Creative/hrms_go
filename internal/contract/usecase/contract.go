@@ -296,6 +296,30 @@ func (uc *ContractUsecase) DeleteContract(ctx context.Context, contractID string
 	return nil
 }
 
+func (uc *ContractUsecase) CancelSendContract(ctx context.Context, contractID string) (*entity.Contract, error) {
+	e, err := uc.contractRepo.FindContractByID(ctx, contractID)
+	if err != nil {
+		return nil, fmt.Errorf("find contract: %w", err)
+	}
+	if e == nil {
+		return nil, errors.NewNotFound("contract not found")
+	}
+
+	if err := e.CancelSend(); err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
+	if err := uc.contractRepo.UpdateContract(ctx, e); err != nil {
+		return nil, fmt.Errorf("update contract: %w", err)
+	}
+
+	if err := uc.signingRepo.DeleteSigningsByContractID(ctx, contractID); err != nil {
+		return nil, fmt.Errorf("delete signings: %w", err)
+	}
+
+	return e, nil
+}
+
 func (uc *ContractUsecase) UpdateDraftContract(ctx context.Context, input models.UpdateContractInput) (*entity.Contract, error) {
 	e, err := uc.contractRepo.FindContractByID(ctx, input.ID)
 	if err != nil {

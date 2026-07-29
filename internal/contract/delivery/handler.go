@@ -282,6 +282,39 @@ func (h *ContractHandler) DeleteContract(c fiber.Ctx) error {
 	return response.NoContent(c)
 }
 
+func (h *ContractHandler) CancelSendContract(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	e, err := h.uc.CancelSendContract(c.RequestCtx(), id)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		userID, _ := c.Locals("user_id").(string)
+		h.auditLogger.Log(c.RequestCtx(), userID, "contract", e.ID, "",
+			contractAdapter.ActionCancelSend, c.IP(), string(c.RequestCtx().UserAgent()),
+			map[string]any{
+				"contract_number": e.Number,
+				"status":          "draft",
+			},
+		)
+	}
+
+	if h.notifUC != nil {
+		empUserID, _ := h.uc.FindUserIDByEmployeeID(c.RequestCtx(), e.EmployeeID)
+		if empUserID != "" {
+			h.notifUC.Notify(c.RequestCtx(), empUserID, notifTypeEmployment,
+				"Pengiriman Kontrak Dibatalkan",
+				fmt.Sprintf("Pengiriman kontrak %s telah dibatalkan, menunggu tanda tangan pihak pertama kembali", e.Number),
+				"contract", e.ID,
+			)
+		}
+	}
+
+	return response.OK(c, toContractResponse(e))
+}
+
 func (h *ContractHandler) CheckActiveContracts(c fiber.Ctx) error {
 	var req CheckActiveContractRequest
 	if err := c.Bind().Body(&req); err != nil {

@@ -98,6 +98,14 @@ func (r *PostgresSigningRepo) FindSigningsByContractIDs(ctx context.Context, con
 	return result, rows.Err()
 }
 
+func (r *PostgresSigningRepo) DeleteSigningsByContractID(ctx context.Context, contractID string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM contract_signings WHERE contract_id = $1`, contractID)
+	if err != nil {
+		return fmt.Errorf("delete signings: %w", err)
+	}
+	return nil
+}
+
 func modelToContractSigning(m *ContractSigningModel) *entity.ContractSigning {
 	return entity.ReconstituteContractSigning(m.ID, m.Party, m.ContractID,
 		m.SignedBy, m.SignedByName, m.SignedByTitle, m.Place,

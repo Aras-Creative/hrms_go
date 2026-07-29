@@ -249,6 +249,8 @@ func buildRenderContext(c *entity.Contract, emp *entity.EmployeeRenderData, sign
 	if firstSig := findFirstSigning(signings); firstSig != nil {
 		renderCtx.Place = firstSig.Place
 		renderCtx.LegalDate = formatTime(&firstSig.SignedAt)
+		renderCtx.Signatory.Name = firstSig.SignedByName
+		renderCtx.Signatory.Designation = firstSig.SignedByTitle
 	}
 	if renderCtx.Place == "" {
 		renderCtx.Place = "...................................."

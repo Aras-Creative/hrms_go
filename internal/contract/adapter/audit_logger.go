@@ -13,6 +13,7 @@ const (
 	ActionSignFirstParty  = "contract.sign-first-party"
 	ActionSignSecondParty = "contract.sign-second-party"
 	ActionTerminate       = "contract.terminate"
+	ActionCancelSend      = "contract.cancel-send"
 	ActionTemplateCreate  = "contract.template.create"
 	ActionTemplateCopy    = "contract.template.copy"
 	ActionTemplateUpdate  = "contract.template.update"

@@ -251,18 +251,12 @@
                 <div class="party-row">
                   <div class="party-label">Nama</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">
-                    {{show $.Signatory.Name
-                    "...................................."}}
-                  </div>
+                  <div class="party-value">{{with $.FirstSig}}{{.SignedByName}}{{else}}....................................{{end}}</div>
                 </div>
                 <div class="party-row">
                   <div class="party-label">Jabatan</div>
                   <div class="party-colon">:</div>
-                  <div class="party-value">
-                    {{show $.Signatory.Designation
-                    "...................................."}}
-                  </div>
+                  <div class="party-value">{{with $.FirstSig}}{{.SignedByTitle}}{{else}}....................................{{end}}</div>
                 </div>
               </div>
               <p>
