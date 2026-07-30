@@ -290,6 +290,10 @@ func (uc *ContractUsecase) DeleteContract(ctx context.Context, contractID string
 		return errors.NewInvalidInput(err.Error())
 	}
 
+	if err := uc.signingRepo.DeleteSigningsByContractID(ctx, contractID); err != nil {
+		return fmt.Errorf("delete signings: %w", err)
+	}
+
 	if err := uc.contractRepo.DeleteContract(ctx, contractID); err != nil {
 		return fmt.Errorf("delete contract: %w", err)
 	}
