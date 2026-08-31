@@ -75,6 +75,13 @@ func (e *Employee) UpdateEmployeeNumber(num EmployeeNumber) {
 	e.UpdatedAt = time.Now()
 }
 
+// UpdateStatus changes the employee's status, keeping IsActive in sync, and touches UpdatedAt.
+func (e *Employee) UpdateStatus(status Status) {
+	e.Status = status
+	e.IsActive = status == StatusActive
+	e.UpdatedAt = time.Now()
+}
+
 // UpdateIdentityInfo replaces identity fields and touches UpdatedAt.
 func (e *Employee) UpdateIdentityInfo(fullName, placeOfBirth string, dateOfBirth *Date, gender Gender, education, address, nationalID string, religion Religion) {
 	e.FullName = fullName

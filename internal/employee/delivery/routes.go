@@ -18,5 +18,6 @@ func (h *EmployeeHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler) {
 	e.Put("/:id/bank", authMw, h.UpdateBank)
 	e.Put("/:id/employee-number", authMw, h.UpdateEmployeeNumber)
 	e.Patch("/:id/join-date", authMw, h.UpdateJoinDate)
+	e.Patch("/:id/status", authMw, h.ChangeStatus)
 	e.Get("/me/completion", authMw, h.MyProfileCompletion)
 }

@@ -321,6 +321,37 @@ func (h *EmployeeHandler) UpdateJoinDate(c fiber.Ctx) error {
 	return response.OK(c, toResponse(e))
 }
 
+func (h *EmployeeHandler) ChangeStatus(c fiber.Ctx) error {
+	id := c.Params("id")
+
+	var req ChangeStatusRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return err
+	}
+
+	input := models.UpdateStatusInput{
+		EmployeeID: id,
+		Status:     req.Status,
+	}
+
+	e, err := h.uc.ChangeStatus(c.RequestCtx(), input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		actorID := userIDFromCtx(c)
+		if actorID != nil {
+			h.auditLogger.Log(c.RequestCtx(), *actorID, id, "", emplAdapter.ActionUpdate,
+				c.IP(), string(c.RequestCtx().UserAgent()),
+				map[string]any{"section": "status", "status": req.Status},
+			)
+		}
+	}
+
+	return response.OK(c, toResponse(e))
+}
+
 func (h *EmployeeHandler) ChangeDesignation(c fiber.Ctx) error {
 	var req ChangeDesignationRequest
 	if err := c.Bind().Body(&req); err != nil {

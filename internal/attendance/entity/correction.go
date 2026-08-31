@@ -68,6 +68,8 @@ func ReconstituteAttendanceCorrection(
 		ClockIn: clockIn, ClockOut: clockOut, Status: status,
 		IsLate: isLate, IsEarlyLeave: isEarlyLeave,
 		Reason: reason, CorrectedBy: correctedBy, CreatedAt: createdAt,
+		HasClockIn:  clockIn != nil,
+		HasClockOut: clockOut != nil,
 	}
 }
 

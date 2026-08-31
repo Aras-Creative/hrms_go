@@ -101,6 +101,11 @@ type UpdateJoinDateInput struct {
 	JoinDate   *string
 }
 
+type UpdateStatusInput struct {
+	EmployeeID string
+	Status     string
+}
+
 type ChangeDesignationInput struct {
 	EmployeeIDs   []string
 	DesignationID *string

@@ -34,10 +34,10 @@ type AuditLogModel struct {
 	Resource   string          `db:"resource"`
 	ResourceID string          `db:"resource_id"`
 	TargetID   *string         `db:"target_id"`
-	Payload    json.RawMessage `db:"payload"`
-	IPAddress  string          `db:"ip_address"`
-	UserAgent  string          `db:"user_agent"`
-	CreatedAt  time.Time       `db:"created_at"`
+	Payload    *json.RawMessage `db:"payload"`
+	IPAddress  string           `db:"ip_address"`
+	UserAgent  string           `db:"user_agent"`
+	CreatedAt  time.Time        `db:"created_at"`
 }
 
 type PostgresAuditRepo struct {
@@ -146,8 +146,8 @@ func (r *PostgresAuditRepo) List(ctx context.Context, filter models.AuditFilter)
 
 func modelToEntry(m *AuditLogModel) *entity.AuditEntry {
 	var payload map[string]any
-	if len(m.Payload) > 0 {
-		json.Unmarshal(m.Payload, &payload)
+	if m.Payload != nil && len(*m.Payload) > 0 {
+		json.Unmarshal(*m.Payload, &payload)
 	}
 	return &entity.AuditEntry{
 		ID:         m.ID,
@@ -172,7 +172,7 @@ func (r *PostgresAuditRepo) ListByResourceWithActor(ctx context.Context, resourc
 		Resource   string          `db:"resource"`
 		ResourceID string          `db:"resource_id"`
 		TargetID   *string         `db:"target_id"`
-		Payload    json.RawMessage `db:"payload"`
+		Payload    *json.RawMessage `db:"payload"`
 		IPAddress  string          `db:"ip_address"`
 		UserAgent  string          `db:"user_agent"`
 		CreatedAt  time.Time       `db:"created_at"`
@@ -200,8 +200,8 @@ func (r *PostgresAuditRepo) ListByResourceWithActor(ctx context.Context, resourc
 			return nil, fmt.Errorf("scan audit log: %w", err)
 		}
 		var payload map[string]any
-		if len(r.Payload) > 0 {
-			json.Unmarshal(r.Payload, &payload)
+		if r.Payload != nil && len(*r.Payload) > 0 {
+			json.Unmarshal(*r.Payload, &payload)
 		}
 		list = append(list, &models.AuditEntryWithActor{
 			ID: r.ID, Action: r.Action, ActorID: r.ActorID, ActorName: r.ActorName,
@@ -221,7 +221,7 @@ func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Contex
 		Resource   string          `db:"resource"`
 		ResourceID string          `db:"resource_id"`
 		TargetID   *string         `db:"target_id"`
-		Payload    json.RawMessage `db:"payload"`
+		Payload    *json.RawMessage `db:"payload"`
 		IPAddress  string          `db:"ip_address"`
 		UserAgent  string          `db:"user_agent"`
 		CreatedAt  time.Time       `db:"created_at"`
@@ -264,8 +264,8 @@ func (r *PostgresAuditRepo) ListByResourceActionsAndDateRange(ctx context.Contex
 			return nil, fmt.Errorf("scan correction audit log: %w", err)
 		}
 		var payload map[string]any
-		if len(row.Payload) > 0 {
-			json.Unmarshal(row.Payload, &payload)
+		if row.Payload != nil && len(*row.Payload) > 0 {
+			json.Unmarshal(*row.Payload, &payload)
 		}
 		list = append(list, &models.AuditEntryWithActor{
 			ID: row.ID, Action: row.Action, ActorID: row.ActorID, ActorName: row.ActorName,

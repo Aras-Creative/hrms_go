@@ -65,3 +65,7 @@ type UpdateEmployeeNumberRequest struct {
 type UpdateJoinDateRequest struct {
 	JoinDate *string `json:"join_date"`
 }
+
+type ChangeStatusRequest struct {
+	Status string `json:"status" validate:"required,oneof=active inactive expired_contract pending_contract"`
+}

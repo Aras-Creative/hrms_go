@@ -270,6 +270,28 @@ func (uc *EmployeeUsecase) UpdateJoinDate(ctx context.Context, input models.Upda
 	return e, nil
 }
 
+func (uc *EmployeeUsecase) ChangeStatus(ctx context.Context, input models.UpdateStatusInput) (*entity.Employee, error) {
+	status, err := entity.ParseStatus(input.Status)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
+	e, err := uc.repo.FindByID(ctx, input.EmployeeID)
+	if err != nil {
+		return nil, fmt.Errorf("find employee: %w", err)
+	}
+	if e == nil {
+		return nil, errors.NewNotFound("employee not found")
+	}
+
+	e.UpdateStatus(status)
+
+	if err := uc.repo.Update(ctx, e); err != nil {
+		return nil, fmt.Errorf("update status: %w", err)
+	}
+	return e, nil
+}
+
 // ---- Read ----
 
 func (uc *EmployeeUsecase) List(ctx context.Context, input models.ListEmployeeInput) (*models.ListEmployeeResult, error) {
