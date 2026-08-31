@@ -22,7 +22,7 @@ func (a *CorrectionAuditFetcherAdapter) FetchCorrectionLogs(ctx context.Context,
 		ActionCorrectionUpdate,
 	}
 
-	logs, err := a.auditUC.ListByResourceActionsAndDateRange(ctx, "employee", employeeID, actions, from, to)
+	logs, err := a.auditUC.ListByResourceActions(ctx, "employee", employeeID, actions)
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +31,13 @@ func (a *CorrectionAuditFetcherAdapter) FetchCorrectionLogs(ctx context.Context,
 	for _, log := range logs {
 		dateStr, _ := log.Payload["date"].(string)
 		if dateStr == "" {
+			continue
+		}
+		corrDate, err := time.Parse("2006-01-02", dateStr)
+		if err != nil {
+			continue
+		}
+		if corrDate.Before(from) || corrDate.After(to) {
 			continue
 		}
 		if _, exists := result[dateStr]; !exists {

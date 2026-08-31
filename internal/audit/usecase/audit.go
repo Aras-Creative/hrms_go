@@ -62,3 +62,7 @@ func (uc *AuditUsecase) List(ctx context.Context, filter models.AuditFilter) ([]
 func (uc *AuditUsecase) ListByResourceActionsAndDateRange(ctx context.Context, resource, resourceID string, actions []string, from, to time.Time) ([]*models.AuditEntryWithActor, error) {
 	return uc.repo.ListByResourceActionsAndDateRange(ctx, resource, resourceID, actions, from, to)
 }
+
+func (uc *AuditUsecase) ListByResourceActions(ctx context.Context, resource, resourceID string, actions []string) ([]*models.AuditEntryWithActor, error) {
+	return uc.repo.ListByResourceActions(ctx, resource, resourceID, actions)
+}
