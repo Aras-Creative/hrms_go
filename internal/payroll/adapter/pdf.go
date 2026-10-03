@@ -8,6 +8,8 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 
+	"hrms/internal/pkg/browser"
+
 	payrollUc "hrms/internal/payroll/usecase"
 )
 
@@ -18,7 +20,13 @@ func NewChromedpRenderer() *ChromedpRenderer {
 }
 
 func (r *ChromedpRenderer) Render(ctx context.Context, htmlContent []byte) ([]byte, error) {
+	execPath, err := browser.Resolve()
+	if err != nil {
+		return nil, err
+	}
+
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx,
+		chromedp.ExecPath(execPath),
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
@@ -31,7 +39,7 @@ func (r *ChromedpRenderer) Render(ctx context.Context, htmlContent []byte) ([]by
 	dataURL := "data:text/html;base64," + base64.StdEncoding.EncodeToString(htmlContent)
 
 	var pdfBuf []byte
-	err := chromedp.Run(ctx2,
+	err = chromedp.Run(ctx2,
 		chromedp.Navigate(dataURL),
 		chromedp.WaitReady("body"),
 		chromedp.ActionFunc(func(ctx context.Context) error {

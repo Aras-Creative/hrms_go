@@ -26,6 +26,10 @@ var (
 	ErrInvalidCredentials = &DomainError{Code: "INVALID_CREDENTIALS", Message: "invalid credentials", HTTPStatus: http.StatusUnauthorized}
 	ErrSessionExpired     = &DomainError{Code: "SESSION_EXPIRED", Message: "session expired", HTTPStatus: http.StatusUnauthorized}
 	ErrDeviceRevoked      = &DomainError{Code: "DEVICE_REVOKED", Message: "device has been revoked by admin", HTTPStatus: http.StatusForbidden}
+	// ErrServiceUnavailable is for a capability the server cannot provide right now, such
+	// as rendering a PDF with no browser installed. It is deliberately not ErrInternal: the
+	// request itself was fine, so answering 500 sends the caller looking at their own code.
+	ErrServiceUnavailable = &DomainError{Code: "SERVICE_UNAVAILABLE", Message: "service temporarily unavailable", HTTPStatus: http.StatusServiceUnavailable}
 )
 
 func NewNotFound(msg string) *DomainError {
@@ -42,6 +46,10 @@ func NewInvalidInput(msg string) *DomainError {
 
 func NewInternal(msg string) *DomainError {
 	return &DomainError{Code: "INTERNAL", Message: msg, HTTPStatus: http.StatusInternalServerError}
+}
+
+func NewServiceUnavailable(msg string) *DomainError {
+	return &DomainError{Code: "SERVICE_UNAVAILABLE", Message: msg, HTTPStatus: http.StatusServiceUnavailable}
 }
 
 func NewUnauthorized(msg string) *DomainError {
