@@ -929,10 +929,12 @@ IncomeInputResponse:
       properties:
         label:
           type: string
+          enum: [Jumlah Sukses, Persentase RTS, Closing Bersih]
           description: >-
             Human name for the key, derived server-side from the same table the PDF uses.
             Render it as-is rather than mapping the key client-side, which would let the
-            screen and the printed slip disagree.
+            screen and the printed slip disagree. Closed because the keys are closed: a new
+            key is a code change, so a client can switch on these exhaustively.
 
 BreakdownItem:
   type: object
