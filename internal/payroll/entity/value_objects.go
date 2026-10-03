@@ -67,12 +67,34 @@ func NewPercentage(value float64) (Percentage, error) {
 	return Percentage{value: value}, nil
 }
 
+// PercentageFromDB rebuilds a percentage loaded from the database without validating it.
+//
+// The range check is deliberately not applied here: this reads rows that already exist,
+// and refusing to load one would turn a bad number into an unreadable payslip. Callers
+// that can still correct the value should use NewPercentage; arithmetic that consumes a
+// percentage must run it through ClampPercentage, since an unbounded percentage silently
+// turns into a deduction larger than the salary.
 func PercentageFromDB(value float64) Percentage {
 	return Percentage{value: value}
 }
 
 func (p Percentage) Value() float64 {
 	return p.value
+}
+
+// ClampPercentage bounds a percentage to 0..100 for use in money arithmetic.
+//
+// 100% of a salary is a real, payable case, and anything above it is not, so the ceiling
+// is the salary itself rather than an error: a legacy row that somehow holds 100000 keeps
+// producing a reviewable payslip instead of a net salary in the billions.
+func ClampPercentage(value float64) float64 {
+	if value < 0 {
+		return 0
+	}
+	if value > 100 {
+		return 100
+	}
+	return value
 }
 
 type ContributionType string

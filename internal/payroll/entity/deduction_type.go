@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -120,7 +121,7 @@ func ReconstituteDeductionType(
 func (dt *DeductionType) Calculate(c CalcContext) int64 {
 	switch dt.DeductionType {
 	case DeductionCalcPercentage:
-		return int64(math.Round(float64(c.BaseSalaryCents) * dt.DefaultValue / 100))
+		return int64(math.Round(float64(c.BaseSalaryCents) * ClampPercentage(dt.DefaultValue) / 100))
 	case DeductionCalcPerDay:
 		return int64(c.UnpaidAbsentDays) * dt.dailyRate(c)
 	default:
@@ -138,4 +139,27 @@ func (dt *DeductionType) dailyRate(c CalcContext) int64 {
 		return c.DailyRate()
 	}
 	return dt.UnitAmount.Cents()
+}
+
+// ValidateAssignmentValue checks a value being attached to an employee against the
+// deduction type it will be read as.
+//
+// The setup endpoint cannot apply the rule with struct tags alone, because the accepted
+// range depends on deduction_type, which lives on the master and is only known once the
+// deduction_type_id is resolved. Without this, an amount in rupiah written into a
+// percentage deduction is accepted silently and later deducted as a multiple of the
+// salary: a 100000 "rupiah" entry became a 100000% deduction, which is 1000x the pay.
+func (dt *DeductionType) ValidateAssignmentValue(value float64) error {
+	if value < 0 {
+		return fmt.Errorf("deduction value must be >= 0")
+	}
+	if dt.DeductionType != DeductionCalcPercentage {
+		return nil
+	}
+	if value > 100 {
+		return fmt.Errorf(
+			"deduction %q is a percentage, so value is a percent of base salary and must be between 0 and 100; got %g. To charge a flat amount, use a deduction type of 'fixed'",
+			dt.Name, value)
+	}
+	return nil
 }

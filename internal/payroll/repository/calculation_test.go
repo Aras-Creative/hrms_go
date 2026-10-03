@@ -169,3 +169,21 @@ func TestDeductionRowMatchesTypeCalculate(t *testing.T) {
 		}
 	}
 }
+
+// The payroll processor and the period overview must agree on the clamp. This row is read
+// straight from employee_deductions, so it is the path that actually produced the reported
+// negative payslip; clamping only the entity version would leave payroll itself unbounded.
+func TestCalcDedRowPercentageClamped(t *testing.T) {
+	base := int64(235_000_000) // Rp 2.350.000
+
+	legacy := CalcDedRow{Type: "percentage", Value: 100000}
+	got := legacy.CalculateCents(entity.CalcContext{BaseSalaryCents: base})
+	if got != base {
+		t.Errorf("CalculateCents() = %d, want %d: a 100000%% deduction must not exceed the salary", got, base)
+	}
+
+	sane := CalcDedRow{Type: "percentage", Value: 4}
+	if got := sane.CalculateCents(entity.CalcContext{BaseSalaryCents: base}); got != 9_400_000 {
+		t.Errorf("4%% of %d = %d, want 9400000", base, got)
+	}
+}

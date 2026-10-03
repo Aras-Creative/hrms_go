@@ -52,7 +52,10 @@ type CalcDedRow struct {
 func (d CalcDedRow) CalculateCents(ctx entity.CalcContext) int64 {
 	switch entity.DeductionCalcType(d.Type) {
 	case entity.DeductionCalcPercentage:
-		return int64(math.Round(float64(ctx.BaseSalaryCents) * d.Value / 100))
+		// Clamped for the same reason as DeductionType.Calculate: this row is read straight
+		// from employee_deductions, which predates any validation of the stored value. An
+		// unbounded percentage here would silently produce a net salary far below zero.
+		return int64(math.Round(float64(ctx.BaseSalaryCents) * entity.ClampPercentage(d.Value) / 100))
 	case entity.DeductionCalcPerDay:
 		return int64(ctx.UnpaidAbsentDays) * d.PerDayRateCents(ctx)
 	default:

@@ -94,6 +94,9 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 		return fmt.Errorf("delete deductions: %w", err)
 	}
 	for _, d := range input.Deductions {
+		if err := validateDeductionAssignment(ctx, tx, d.DeductionTypeID, d.Value); err != nil {
+			return err
+		}
 		unitAmount, err := optionalAmount(d.UnitAmount)
 		if err != nil {
 			return fmt.Errorf("invalid deduction unit_amount: %w", err)
