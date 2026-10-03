@@ -19,6 +19,7 @@ func (h *PayrollHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler, ad
 	periods := p.Group("/periods")
 	periods.Get("/", h.ListPeriods)
 	periods.Post("/", h.CreatePeriod)
+	periods.Delete("/:id", h.DeletePeriod)
 	periods.Post("/:id/process", h.ProcessPeriod)
 	periods.Post("/:id/close", h.ClosePeriod)
 	periods.Get("/:id/pay-slips", h.ListPaySlips)
@@ -27,6 +28,7 @@ func (h *PayrollHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler, ad
 
 	// Pay slips
 	p.Get("/pay-slips/:id", h.GetPaySlip)
+	p.Put("/pay-slips/:id", h.UpdatePaySlip)
 	p.Get("/pay-slips/:id/print", h.PrintPaySlip)
 
 	// Compensation items (master)
@@ -46,6 +48,9 @@ func (h *PayrollHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler, ad
 	ded.Get("/options", h.ListDeductionTypeOptions)
 	ded.Get("/", h.ListDeductionTypes)
 	ded.Post("/", h.CreateDeductionType)
+	ded.Get("/:id", h.GetDeductionType)
+	ded.Put("/:id", h.UpdateDeductionType)
+	ded.Delete("/:id", h.DeleteDeductionType)
 
 	// Employee payroll components
 	p.Get("/employees/:id/components", h.GetEmployeeComponents)

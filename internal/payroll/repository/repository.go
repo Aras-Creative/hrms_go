@@ -86,10 +86,13 @@ type PayrollPeriodRepository interface {
 
 type PaySlipRepository interface {
 	Upsert(ctx context.Context, ps *entity.PaySlip) error
+	UpsertIfNotManual(ctx context.Context, ps *entity.PaySlip) (skipped bool, err error)
+	Update(ctx context.Context, ps *entity.PaySlip) error
 	FindByPeriodID(ctx context.Context, periodID string) ([]*entity.PaySlip, error)
 	FindByID(ctx context.Context, id string) (*entity.PaySlip, error)
 	FindByEmployeeID(ctx context.Context, employeeID string) ([]*entity.PaySlip, error)
 	FindByEmployeeAndPeriod(ctx context.Context, employeeID, periodID string) (*entity.PaySlip, error)
+	CountByPeriodID(ctx context.Context, periodID string) (int64, error)
 	DeleteByPeriodID(ctx context.Context, periodID string) error
 }
 
@@ -97,6 +100,7 @@ type PayrollCalculationRepository interface {
 	QueryActiveSalaries(ctx context.Context, startDate, endDate time.Time) ([]CalcSalaryRow, error)
 	QueryActiveSalariesByIDs(ctx context.Context, startDate, endDate time.Time, employeeIDs []string) ([]CalcSalaryRow, error)
 	QueryAbsentDays(ctx context.Context, employeeID string, startDate, endDate time.Time) (int, error)
+	QueryAttendanceDayCounts(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]PerDay, error)
 	QueryEmployeeCompensations(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcCompRow, error)
 	QueryEmployeeDeductions(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcDedRow, error)
 	QueryEmployeeWorkingDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]int, error)
@@ -104,9 +108,8 @@ type PayrollCalculationRepository interface {
 
 type OverviewRepository interface {
 	QueryEmployees(ctx context.Context, startDate, endDate interface{}) ([]OverviewEmployee, error)
-	QueryTotalCompensationsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string]float64, error)
-	QueryTotalDeductionsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}, salaryCentsMap map[string]int64) (map[string]float64, error)
-	QueryAbsentDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string]int, error)
+	QueryCompensationRowsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string][]CalcCompRow, error)
+	QueryDeductionRowsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string][]CalcDedRow, error)
 }
 
 type CompItemFilter struct {
@@ -134,10 +137,10 @@ type EmpBenefitFilter struct {
 }
 
 type DeductionTypeFilter struct {
-	IsActive   *bool
+	IsActive    *bool
 	IsMandatory *bool
-	Page       int
-	PerPage    int
+	Page        int
+	PerPage     int
 }
 
 type EmpDeductionFilter struct {

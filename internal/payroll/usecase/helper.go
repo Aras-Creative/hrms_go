@@ -30,9 +30,9 @@ func deleteEmployeeCompensationsTx(ctx context.Context, tx *sqlx.Tx, employeeID 
 
 func insertEmpCompTx(ctx context.Context, tx *sqlx.Tx, ec *entity.EmployeeCompensation) error {
 	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, effective_date, end_date, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-		ec.ID, ec.EmployeeID, ec.CompensationItemID, ec.Amount.Cents(), string(ec.Frequency), ec.EffectiveDate, ec.EndDate, ec.CreatedAt, ec.UpdatedAt)
+		INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_type, effective_date, end_date, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+		ec.ID, ec.EmployeeID, ec.CompensationItemID, ec.Amount.Cents(), string(ec.Frequency), string(ec.CalcType), ec.EffectiveDate, ec.EndDate, ec.CreatedAt, ec.UpdatedAt)
 	return err
 }
 
@@ -56,8 +56,9 @@ func deleteEmployeeDeductionsTx(ctx context.Context, tx *sqlx.Tx, employeeID str
 
 func insertEmpDeductionTx(ctx context.Context, tx *sqlx.Tx, ed *entity.EmployeeDeduction) error {
 	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, effective_date, end_date, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.EffectiveDate, ed.EndDate, ed.CreatedAt, ed.UpdatedAt)
+		INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, effective_date, end_date, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
+		ed.EffectiveDate, ed.EndDate, ed.CreatedAt, ed.UpdatedAt)
 	return err
 }

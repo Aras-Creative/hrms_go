@@ -14,10 +14,41 @@ type DeductionType struct {
 	Description   string
 	DeductionType DeductionCalcType
 	DefaultValue  float64
+	ValueSource   ValueSource
+	UnitAmount    Amount
 	IsActive      bool
 	IsMandatory   bool
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+// CalcContext carries the per-employee figures a payroll calculation depends on.
+type CalcContext struct {
+	BaseSalaryCents  int64
+	WorkingDays      int
+	UnpaidAbsentDays int
+	AttendedDays     int
+}
+
+// DefaultWorkingDays mirrors the processor fallback when a work pattern yields no days.
+const DefaultWorkingDays = 20
+
+// DailyRate is the employee's salary spread over their working days. It is the
+// value_source = daily_wage rate, and the fallback when no work pattern is defined.
+func (c CalcContext) DailyRate() int64 {
+	days := c.WorkingDays
+	if days <= 0 {
+		days = DefaultWorkingDays
+	}
+	return c.BaseSalaryCents / int64(days)
+}
+
+// EffectiveWorkingDays resolves the working-day divisor, guarding against division by zero.
+func (c CalcContext) EffectiveWorkingDays() int {
+	if c.WorkingDays <= 0 {
+		return DefaultWorkingDays
+	}
+	return c.WorkingDays
 }
 
 func NewDeductionType(
@@ -26,6 +57,8 @@ func NewDeductionType(
 	description string,
 	deductionType DeductionCalcType,
 	defaultValue float64,
+	valueSource ValueSource,
+	unitAmount Amount,
 	isMandatory bool,
 ) *DeductionType {
 	now := time.Now()
@@ -36,6 +69,8 @@ func NewDeductionType(
 		Description:   description,
 		DeductionType: deductionType,
 		DefaultValue:  defaultValue,
+		ValueSource:   valueSource,
+		UnitAmount:    unitAmount,
 		IsActive:      true,
 		IsMandatory:   isMandatory,
 		CreatedAt:     now,
@@ -50,6 +85,8 @@ func ReconstituteDeductionType(
 	description string,
 	deductionType string,
 	defaultValue float64,
+	valueSource string,
+	unitAmountCents int64,
 	isActive bool,
 	isMandatory bool,
 	createdAt time.Time,
@@ -62,6 +99,8 @@ func ReconstituteDeductionType(
 		Description:   description,
 		DeductionType: DeductionCalcType(deductionType),
 		DefaultValue:  defaultValue,
+		ValueSource:   ValueSource(valueSource),
+		UnitAmount:    AmountFromCents(unitAmountCents),
 		IsActive:      isActive,
 		IsMandatory:   isMandatory,
 		CreatedAt:     createdAt,
@@ -69,13 +108,34 @@ func ReconstituteDeductionType(
 	}
 }
 
-// Calculate returns deduction amount in cents.
-// For percentage: salaryCents * rate / 100
-// For fixed (absent): absentDays * dailyRate * rate / 100, where dailyRate = salaryCents / workingDays
-func (dt *DeductionType) Calculate(salaryCents int64, absentDays int, workingDays int) int64 {
-	if dt.DeductionType == DeductionCalcPercentage {
-		return int64(math.Round(float64(salaryCents) * dt.DefaultValue / 100))
+// Calculate returns the deduction in cents. It is the authoritative formula shared by
+// the payroll processor and the period overview, so a payslip always matches the
+// summary shown before it is approved.
+//
+//	percentage : baseSalary * defaultValue / 100
+//	fixed      : defaultValue, a flat amount for the whole period
+//	per_day    : unpaidAbsentDays * dailyRate, where dailyRate comes from
+//	             value_source = fixed      -> unitAmount
+//	             value_source = daily_wage -> baseSalary / workingDays
+func (dt *DeductionType) Calculate(c CalcContext) int64 {
+	switch dt.DeductionType {
+	case DeductionCalcPercentage:
+		return int64(math.Round(float64(c.BaseSalaryCents) * dt.DefaultValue / 100))
+	case DeductionCalcPerDay:
+		return int64(c.UnpaidAbsentDays) * dt.dailyRate(c)
+	default:
+		return int64(math.Round(dt.DefaultValue * 100))
 	}
-	dailyRate := float64(salaryCents) / float64(workingDays)
-	return int64(math.Round(float64(absentDays) * dailyRate * dt.DefaultValue / 100))
+}
+
+// PerDayRateCents exposes the resolved daily rate, used for payslip breakdowns.
+func (dt *DeductionType) PerDayRateCents(c CalcContext) int64 {
+	return dt.dailyRate(c)
+}
+
+func (dt *DeductionType) dailyRate(c CalcContext) int64 {
+	if dt.ValueSource == ValueSourceDailyWage {
+		return c.DailyRate()
+	}
+	return dt.UnitAmount.Cents()
 }

@@ -3,15 +3,15 @@ package repository
 import "time"
 
 type EmployeeBaseSalaryModel struct {
-	ID            string    `db:"id"`
-	EmployeeID    string    `db:"employee_id"`
-	Amount        int64     `db:"amount"`
-	Currency      string    `db:"currency"`
-	EffectiveDate time.Time `db:"effective_date"`
+	ID            string     `db:"id"`
+	EmployeeID    string     `db:"employee_id"`
+	Amount        int64      `db:"amount"`
+	Currency      string     `db:"currency"`
+	EffectiveDate time.Time  `db:"effective_date"`
 	EndDate       *time.Time `db:"end_date"`
-	Notes         string    `db:"notes"`
-	CreatedAt     time.Time `db:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"`
+	Notes         string     `db:"notes"`
+	CreatedAt     time.Time  `db:"created_at"`
+	UpdatedAt     time.Time  `db:"updated_at"`
 }
 
 type CompensationItemModel struct {
@@ -31,6 +31,7 @@ type EmployeeCompensationModel struct {
 	CompensationItemID string     `db:"compensation_item_id"`
 	Amount             int64      `db:"amount"`
 	Frequency          string     `db:"frequency"`
+	CalcType           string     `db:"calc_type"`
 	EffectiveDate      time.Time  `db:"effective_date"`
 	EndDate            *time.Time `db:"end_date"`
 	CreatedAt          time.Time  `db:"created_at"`
@@ -68,6 +69,8 @@ type DeductionTypeModel struct {
 	Description   string    `db:"description"`
 	DeductionType string    `db:"deduction_type"`
 	DefaultValue  float64   `db:"default_value"`
+	ValueSource   string    `db:"value_source"`
+	UnitAmount    int64     `db:"unit_amount"`
 	IsActive      bool      `db:"is_active"`
 	IsMandatory   bool      `db:"is_mandatory"`
 	CreatedAt     time.Time `db:"created_at"`
@@ -75,12 +78,16 @@ type DeductionTypeModel struct {
 }
 
 type EmployeeDeductionModel struct {
-	ID              string     `db:"id"`
-	EmployeeID      string     `db:"employee_id"`
-	DeductionTypeID string     `db:"deduction_type_id"`
-	Value           *float64   `db:"value"`
-	EffectiveDate   time.Time  `db:"effective_date"`
-	EndDate         *time.Time `db:"end_date"`
-	CreatedAt       time.Time  `db:"created_at"`
-	UpdatedAt       time.Time  `db:"updated_at"`
+	ID                string     `db:"id"`
+	EmployeeID        string     `db:"employee_id"`
+	DeductionTypeID   string     `db:"deduction_type_id"`
+	Value             *float64   `db:"value"`
+	UnitAmount        *int64     `db:"unit_amount"`
+	EffectiveDate     time.Time  `db:"effective_date"`
+	EndDate           *time.Time `db:"end_date"`
+	CreatedAt         time.Time  `db:"created_at"`
+	UpdatedAt         time.Time  `db:"updated_at"`
+	DeductionType     string     `db:"deduction_type"`
+	DeductionTypeName string     `db:"deduction_type_name"`
+	ValueSource       string     `db:"value_source"`
 }

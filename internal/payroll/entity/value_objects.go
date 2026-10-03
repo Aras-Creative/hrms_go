@@ -111,11 +111,13 @@ type DeductionCalcType string
 const (
 	DeductionCalcPercentage DeductionCalcType = "percentage"
 	DeductionCalcFixed      DeductionCalcType = "fixed"
+	DeductionCalcPerDay     DeductionCalcType = "per_day"
 )
 
 var validDeductionCalcTypes = []DeductionCalcType{
 	DeductionCalcPercentage,
 	DeductionCalcFixed,
+	DeductionCalcPerDay,
 }
 
 func ParseDeductionCalcType(s string) (DeductionCalcType, error) {
@@ -125,7 +127,41 @@ func ParseDeductionCalcType(s string) (DeductionCalcType, error) {
 			return dct, nil
 		}
 	}
-	return "", fmt.Errorf("invalid deduction type: %s (must be percentage or fixed)", s)
+	return "", fmt.Errorf("invalid deduction type: %s (must be percentage, fixed or per_day)", s)
+}
+
+// ValueSource determines where the daily rate of a per_day component comes from.
+type ValueSource string
+
+const (
+	// ValueSourceFixed uses an explicit rupiah amount stored on the component.
+	ValueSourceFixed ValueSource = "fixed"
+	// ValueSourceDailyWage derives the rate as base salary / working days.
+	ValueSourceDailyWage ValueSource = "daily_wage"
+)
+
+var validValueSources = []ValueSource{
+	ValueSourceFixed,
+	ValueSourceDailyWage,
+}
+
+func ParseValueSource(s string) (ValueSource, error) {
+	vs := ValueSource(strings.ToLower(strings.TrimSpace(s)))
+	for _, v := range validValueSources {
+		if vs == v {
+			return vs, nil
+		}
+	}
+	return "", fmt.Errorf("invalid value source: %s (must be fixed or daily_wage)", s)
+}
+
+func (vs ValueSource) IsValid() bool {
+	for _, v := range validValueSources {
+		if vs == v {
+			return true
+		}
+	}
+	return false
 }
 
 func (dct DeductionCalcType) IsValid() bool {
@@ -137,6 +173,9 @@ func (dct DeductionCalcType) IsValid() bool {
 	return false
 }
 
+// Frequency answers only "how often is this paid". How the amount is derived is a
+// separate axis, CompensationCalcType, mirroring deduction_types which splits the same
+// two questions across deduction_type and value_source.
 type Frequency string
 
 const (
@@ -158,7 +197,44 @@ func ParseFrequency(s string) (Frequency, error) {
 			return f, nil
 		}
 	}
-	return "", fmt.Errorf("invalid frequency: %s (must be monthly, yearly, or one_time)", s)
+	return "", fmt.Errorf("invalid frequency: %s (must be monthly, yearly or one_time)", s)
+}
+
+// CompensationCalcType answers "how is the amount derived". It is the counterpart of
+// DeductionCalcType on the deduction side; naming it after the calculation rather than
+// after "deduction" keeps the two axes legible from either table.
+type CompensationCalcType string
+
+const (
+	// CompensationCalcFixed pays Amount once for the period.
+	CompensationCalcFixed CompensationCalcType = "fixed"
+	// CompensationCalcPerAttendedDay treats Amount as a daily rate and multiplies it by
+	// the days the employee was actually present.
+	CompensationCalcPerAttendedDay CompensationCalcType = "per_attended_day"
+)
+
+var validCompensationCalcTypes = []CompensationCalcType{
+	CompensationCalcFixed,
+	CompensationCalcPerAttendedDay,
+}
+
+func ParseCompensationCalcType(s string) (CompensationCalcType, error) {
+	c := CompensationCalcType(strings.ToLower(strings.TrimSpace(s)))
+	for _, v := range validCompensationCalcTypes {
+		if c == v {
+			return c, nil
+		}
+	}
+	return "", fmt.Errorf("invalid calc_type: %s (must be fixed or per_attended_day)", s)
+}
+
+func (c CompensationCalcType) IsValid() bool {
+	for _, v := range validCompensationCalcTypes {
+		if c == v {
+			return true
+		}
+	}
+	return false
 }
 
 func (f Frequency) IsValid() bool {

@@ -35,6 +35,7 @@ type EmployeeCompensationResponse struct {
 	CompensationItemID string     `json:"compensation_item_id"`
 	Amount             float64    `json:"amount"`
 	Frequency          string     `json:"frequency"`
+	CalcType           string     `json:"calc_type"`
 	EffectiveDate      time.Time  `json:"effective_date"`
 	EndDate            *time.Time `json:"end_date"`
 	CreatedAt          time.Time  `json:"created_at"`
@@ -72,6 +73,8 @@ type DeductionTypeResponse struct {
 	Description   string    `json:"description"`
 	DeductionType string    `json:"deduction_type"`
 	DefaultValue  float64   `json:"default_value"`
+	ValueSource   string    `json:"value_source"`
+	UnitAmount    float64   `json:"unit_amount"`
 	IsActive      bool      `json:"is_active"`
 	IsMandatory   bool      `json:"is_mandatory"`
 	CreatedAt     time.Time `json:"created_at"`
@@ -93,7 +96,7 @@ type PayrollPeriodResponse struct {
 // --- Period Overview ---
 
 type PeriodOverviewResponse struct {
-	Period    *PayrollPeriodResponse   `json:"period"`
+	Period    *PayrollPeriodResponse    `json:"period"`
 	Employees []*PeriodOverviewEmployee `json:"employees"`
 }
 
@@ -122,10 +125,10 @@ type EmployeeComponentsResponse struct {
 // --- Pay Slip ---
 
 type BreakdownItem struct {
-	DeductionTypeID     string  `json:"deduction_type_id,omitempty"`
-	CompensationItemID  string  `json:"compensation_item_id,omitempty"`
-	Name                string  `json:"name"`
-	Amount              float64 `json:"amount"`
+	DeductionTypeID    string  `json:"deduction_type_id,omitempty"`
+	CompensationItemID string  `json:"compensation_item_id,omitempty"`
+	Name               string  `json:"name"`
+	Amount             float64 `json:"amount"`
 }
 
 type PaySlipResponse struct {
@@ -151,14 +154,18 @@ type PaySlipResponse struct {
 }
 
 type EmployeeDeductionResponse struct {
-	ID              string     `json:"id"`
-	EmployeeID      string     `json:"employee_id"`
-	DeductionTypeID string     `json:"deduction_type_id"`
-	Value           *float64   `json:"value"`
-	EffectiveDate   time.Time  `json:"effective_date"`
-	EndDate         *time.Time `json:"end_date"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID                string     `json:"id"`
+	EmployeeID        string     `json:"employee_id"`
+	DeductionTypeID   string     `json:"deduction_type_id"`
+	DeductionType     string     `json:"deduction_type"`
+	DeductionTypeName string     `json:"deduction_type_name"`
+	ValueSource       string     `json:"value_source"`
+	Value             *float64   `json:"value"`
+	UnitAmount        *float64   `json:"unit_amount"`
+	EffectiveDate     time.Time  `json:"effective_date"`
+	EndDate           *time.Time `json:"end_date"`
+	CreatedAt         time.Time  `json:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at"`
 }
 
 // --- converters ---
@@ -213,6 +220,7 @@ func empCompToResponse(ec *entity.EmployeeCompensation) *EmployeeCompensationRes
 		CompensationItemID: ec.CompensationItemID,
 		Amount:             ec.Amount.Float(),
 		Frequency:          string(ec.Frequency),
+		CalcType:           string(ec.CalcType),
 		EffectiveDate:      ec.EffectiveDate,
 		EndDate:            ec.EndDate,
 		CreatedAt:          ec.CreatedAt,
@@ -279,6 +287,8 @@ func deductionTypeToResponse(dt *entity.DeductionType) *DeductionTypeResponse {
 		Slug:          dt.Slug,
 		Description:   dt.Description,
 		DeductionType: string(dt.DeductionType),
+		ValueSource:   string(dt.ValueSource),
+		UnitAmount:    dt.UnitAmount.Float(),
 		DefaultValue:  dt.DefaultValue,
 		IsActive:      dt.IsActive,
 		IsMandatory:   dt.IsMandatory,
@@ -297,14 +307,18 @@ func deductionTypesToResponse(dts []*entity.DeductionType) []*DeductionTypeRespo
 
 func empDeductionToResponse(ed *entity.EmployeeDeduction) *EmployeeDeductionResponse {
 	return &EmployeeDeductionResponse{
-		ID:              ed.ID,
-		EmployeeID:      ed.EmployeeID,
-		DeductionTypeID: ed.DeductionTypeID,
-		Value:           ed.Value,
-		EffectiveDate:   ed.EffectiveDate,
-		EndDate:         ed.EndDate,
-		CreatedAt:       ed.CreatedAt,
-		UpdatedAt:       ed.UpdatedAt,
+		ID:                ed.ID,
+		EmployeeID:        ed.EmployeeID,
+		DeductionTypeID:   ed.DeductionTypeID,
+		DeductionType:     string(ed.DeductionType),
+		DeductionTypeName: ed.DeductionTypeName,
+		ValueSource:       string(ed.ValueSource),
+		Value:             ed.Value,
+		UnitAmount:        centsToFlexPtr(ed.UnitAmount),
+		EffectiveDate:     ed.EffectiveDate,
+		EndDate:           ed.EndDate,
+		CreatedAt:         ed.CreatedAt,
+		UpdatedAt:         ed.UpdatedAt,
 	}
 }
 
@@ -345,33 +359,33 @@ func paySlipToResponse(ps *entity.PaySlip) *PaySlipResponse {
 	for _, c := range ps.CompensationsBreakdown {
 		compB = append(compB, BreakdownItem{
 			CompensationItemID: c.CompensationItemID,
-			Name:   c.Name,
-			Amount: c.Amount,
+			Name:               c.Name,
+			Amount:             c.Amount,
 		})
 	}
 	var dedB []BreakdownItem
 	for _, d := range ps.DeductionsBreakdown {
 		dedB = append(dedB, BreakdownItem{
 			DeductionTypeID: d.DeductionTypeID,
-			Name:   d.Name,
-			Amount: d.Amount,
+			Name:            d.Name,
+			Amount:          d.Amount,
 		})
 	}
 	return &PaySlipResponse{
-		ID:                   ps.ID,
-		PeriodID:             ps.PeriodID,
-		EmployeeID:           ps.EmployeeID,
-		BaseSalary:           ps.BaseSalary.Float(),
-		TotalCompensations:   ps.TotalCompensations.Float(),
-		TotalDeductions:      ps.TotalDeductions.Float(),
-		AbsentDays:           ps.AbsentDays,
-		NetSalary:            ps.NetSalary.Float(),
-		Currency:             ps.Currency.String(),
-		Source:               string(ps.Source),
+		ID:                     ps.ID,
+		PeriodID:               ps.PeriodID,
+		EmployeeID:             ps.EmployeeID,
+		BaseSalary:             ps.BaseSalary.Float(),
+		TotalCompensations:     ps.TotalCompensations.Float(),
+		TotalDeductions:        ps.TotalDeductions.Float(),
+		AbsentDays:             ps.AbsentDays,
+		NetSalary:              ps.NetSalary.Float(),
+		Currency:               ps.Currency.String(),
+		Source:                 string(ps.Source),
 		CompensationsBreakdown: compB,
 		DeductionsBreakdown:    dedB,
-		CreatedAt:            ps.CreatedAt,
-		UpdatedAt:            ps.UpdatedAt,
+		CreatedAt:              ps.CreatedAt,
+		UpdatedAt:              ps.UpdatedAt,
 	}
 }
 
@@ -405,4 +419,14 @@ func collectPeriodIDsFromPaySlips(resps []*PaySlipResponse) []string {
 		}
 	}
 	return ids
+}
+
+// centsToFlexPtr renders a nullable cents amount as a major-unit response value,
+// preserving null so clients can tell "inherit from type" from "set to zero".
+func centsToFlexPtr(cents *int64) *float64 {
+	if cents == nil {
+		return nil
+	}
+	v := float64(*cents) / 100
+	return &v
 }

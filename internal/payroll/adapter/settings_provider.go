@@ -3,8 +3,8 @@ package adapter
 import (
 	"context"
 
-	settingUc "hrms/internal/setting/usecase"
 	payrollUc "hrms/internal/payroll/usecase"
+	settingUc "hrms/internal/setting/usecase"
 )
 
 type CompanySettingsProviderAdapter struct {

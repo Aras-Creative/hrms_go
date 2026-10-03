@@ -9,9 +9,9 @@ import (
 	attendanceDelivery "hrms/internal/attendance/delivery"
 	attendanceRepo "hrms/internal/attendance/repository"
 	attendanceUc "hrms/internal/attendance/usecase"
+	auditDelivery "hrms/internal/audit/delivery"
 	auditRepo "hrms/internal/audit/repository"
 	auditUc "hrms/internal/audit/usecase"
-	auditDelivery "hrms/internal/audit/delivery"
 	authAdapter "hrms/internal/auth/adapter"
 	authdelivery "hrms/internal/auth/delivery"
 	authrepo "hrms/internal/auth/repository"
@@ -280,9 +280,9 @@ func Run(cfgPath string) {
 	deductionUc := payrollUc.NewDeductionUsecase(payrollDeductionTypeRepo, payrollEmpDeductionRepo, payrollEmployeeFetcher)
 	periodUc := payrollUc.NewPeriodUsecase(payrollPeriodRepo, payrollPaySlipRepo, payrollEmployeeFetcher)
 	procUc := payrollUc.NewProcessorUsecase(payrollPeriodRepo, payrollProc)
-	payrollOverviewUc := payrollUc.NewOverviewUsecase(payrollPeriodRepo, payrollSalaryRepo, payrollOverviewRepo, payrollDeductionTypeRepo, payrollCalcRepo, photoResolver)
+	payrollOverviewUc := payrollUc.NewOverviewUsecase(payrollPeriodRepo, payrollSalaryRepo, payrollOverviewRepo, payrollCalcRepo, photoResolver)
 	setupUc := payrollUc.NewSetupUsecase(db, payrollEmployeeFetcher)
-	manualPayslipUc := payrollUc.NewManualPaySlipUsecase(payrollPeriodRepo, payrollPaySlipRepo, payrollCompItemRepo, payrollDeductionTypeRepo)
+	manualPayslipUc := payrollUc.NewManualPaySlipUsecase(payrollPeriodRepo, payrollPaySlipRepo, payrollCompItemRepo, payrollDeductionTypeRepo, payrollCalcRepo)
 	payslipEmpFetcher := payrollAdapter.NewPayslipEmployeeFetcherAdapter(emplRepo, designationRepo)
 	pdfRenderer := payrollAdapter.NewChromedpRenderer()
 	companySettings := payrollAdapter.NewCompanySettingsProviderAdapter(settingUC)

@@ -40,12 +40,21 @@ func (r *PostgresOverviewRepo) QueryEmployees(ctx context.Context, startDate, en
 	return employees, nil
 }
 
-func (r *PostgresOverviewRepo) QueryTotalCompensationsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string]float64, error) {
+// QueryCompensationRowsBatch returns the compensation rows per employee rather than a
+// pre-summed total, so the caller can apply the shared per-row calculation (which
+// attendance-derived allowances need) instead of a second, divergent formula.
+func (r *PostgresOverviewRepo) QueryCompensationRowsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string][]CalcCompRow, error) {
+	result := make(map[string][]CalcCompRow, len(employeeIDs))
+	if len(employeeIDs) == 0 {
+		return result, nil
+	}
 	query, args, err := sqlx.In(`
-		SELECT employee_id, COALESCE(SUM(amount), 0) AS total FROM employee_compensations
-		WHERE employee_id IN (?) AND frequency IN ('monthly', 'yearly')
-		  AND effective_date <= ? AND (end_date IS NULL OR end_date >= ?)
-		GROUP BY employee_id
+		SELECT ec.employee_id, ci.id, ci.name, ec.amount, ec.frequency, ec.calc_type
+		FROM employee_compensations ec
+		JOIN compensation_items ci ON ci.id = ec.compensation_item_id
+		WHERE ec.employee_id IN (?)
+		  AND ec.frequency IN ('monthly', 'yearly')
+		  AND ec.effective_date <= ? AND (ec.end_date IS NULL OR ec.end_date >= ?)
 	`, employeeIDs, endDate, startDate)
 	if err != nil {
 		return nil, fmt.Errorf("build compensations batch query: %w", err)
@@ -53,29 +62,42 @@ func (r *PostgresOverviewRepo) QueryTotalCompensationsBatch(ctx context.Context,
 	query = r.db.Rebind(query)
 
 	var rows []struct {
-		EmployeeID string  `db:"employee_id"`
-		Total      float64 `db:"total"`
+		EmployeeID string `db:"employee_id"`
+		ID         string `db:"id"`
+		Name       string `db:"name"`
+		Amount     int64  `db:"amount"`
+		Frequency  string `db:"frequency"`
+		CalcType   string `db:"calc_type"`
 	}
 	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, fmt.Errorf("query compensations batch: %w", err)
 	}
-	result := make(map[string]float64, len(rows))
 	for _, row := range rows {
-		result[row.EmployeeID] = row.Total / 100
+		result[row.EmployeeID] = append(result[row.EmployeeID], CalcCompRow{
+			ID: row.ID, Name: row.Name, Amount: row.Amount, CalcType: row.CalcType,
+		})
 	}
 	return result, nil
 }
 
-func (r *PostgresOverviewRepo) QueryTotalDeductionsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}, salaryCentsMap map[string]int64) (map[string]float64, error) {
+// QueryDeductionRowsBatch returns deduction rows per employee, mirroring
+// QueryCompensationRowsBatch so the caller shares the processor's formula.
+func (r *PostgresOverviewRepo) QueryDeductionRowsBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string][]CalcDedRow, error) {
+	result := make(map[string][]CalcDedRow, len(employeeIDs))
+	if len(employeeIDs) == 0 {
+		return result, nil
+	}
 	query, args, err := sqlx.In(`
-		SELECT ed.employee_id,
-			dt.deduction_type,
-			COALESCE(ed.value, dt.default_value) AS ded_value
+		SELECT ed.employee_id, dt.id, dt.name, dt.deduction_type,
+			COALESCE(ed.value, dt.default_value) AS value,
+			dt.value_source,
+			COALESCE(ed.unit_amount, dt.unit_amount) AS unit_amount,
+			(ed.unit_amount IS NOT NULL) AS unit_amount_overridden
 		FROM employee_deductions ed
 		JOIN deduction_types dt ON dt.id = ed.deduction_type_id
 		WHERE ed.employee_id IN (?)
 		  AND ed.effective_date <= ? AND (ed.end_date IS NULL OR ed.end_date >= ?)
-		  AND dt.is_active = true AND (dt.slug IS NULL OR dt.slug != 'absent')
+		  AND dt.is_active = true
 	`, employeeIDs, endDate, startDate)
 	if err != nil {
 		return nil, fmt.Errorf("build deductions batch query: %w", err)
@@ -84,58 +106,23 @@ func (r *PostgresOverviewRepo) QueryTotalDeductionsBatch(ctx context.Context, em
 
 	var rows []struct {
 		EmployeeID   string  `db:"employee_id"`
-		DeductionType string `db:"deduction_type"`
-		DedValue     float64 `db:"ded_value"`
+		ID           string  `db:"id"`
+		Name         string  `db:"name"`
+		DeductionTyp string  `db:"deduction_type"`
+		Value        float64 `db:"value"`
+		ValueSource  string  `db:"value_source"`
+		UnitAmount   int64   `db:"unit_amount"`
+		Overridden   bool    `db:"unit_amount_overridden"`
 	}
 	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
 		return nil, fmt.Errorf("query deductions batch: %w", err)
 	}
-	totals := make(map[string]float64, len(salaryCentsMap))
 	for _, row := range rows {
-		var amount float64
-		if row.DeductionType == "percentage" {
-			amount = float64(salaryCentsMap[row.EmployeeID]) * row.DedValue / 100
-		} else {
-			amount = row.DedValue * 100
-		}
-		totals[row.EmployeeID] += amount
-	}
-	result := make(map[string]float64, len(salaryCentsMap))
-	for empID, total := range totals {
-		result[empID] = total / 100
-	}
-	return result, nil
-}
-
-func (r *PostgresOverviewRepo) QueryAbsentDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate interface{}) (map[string]int, error) {
-	if len(employeeIDs) == 0 {
-		return make(map[string]int), nil
-	}
-	query, args, err := sqlx.In(`
-		SELECT da.employee_id, COUNT(*)::int AS absent_days
-		FROM daily_attendances da
-		LEFT JOIN leave_submissions ls ON ls.id = da.leave_submission_id AND ls.status = 'approved'
-		LEFT JOIN leave_types lt ON lt.id = ls.leave_type_id
-		WHERE da.employee_id IN (?)
-		  AND da.date >= ?::date AND da.date <= ?::date
-		  AND (da.status = 'absent' OR (da.status = 'on_leave' AND lt.is_paid = false))
-		GROUP BY da.employee_id
-	`, employeeIDs, startDate, endDate)
-	if err != nil {
-		return nil, fmt.Errorf("build absent days batch query: %w", err)
-	}
-	query = r.db.Rebind(query)
-
-	var rows []struct {
-		EmployeeID string `db:"employee_id"`
-		AbsentDays int    `db:"absent_days"`
-	}
-	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
-		return nil, fmt.Errorf("query absent days batch: %w", err)
-	}
-	result := make(map[string]int, len(rows))
-	for _, row := range rows {
-		result[row.EmployeeID] = row.AbsentDays
+		result[row.EmployeeID] = append(result[row.EmployeeID], CalcDedRow{
+			ID: row.ID, Name: row.Name, Type: row.DeductionTyp,
+			Value: row.Value, ValueSource: row.ValueSource, UnitAmount: row.UnitAmount,
+			UnitAmountOverridden: row.Overridden,
+		})
 	}
 	return result, nil
 }

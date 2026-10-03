@@ -68,3 +68,14 @@ func (p *PayrollPeriod) MarkClosed() error {
 	p.UpdatedAt = time.Now()
 	return nil
 }
+
+// EnsureDeletable reports whether the period may be hard-deleted.
+// Deleting is restricted to draft periods: processed and closed periods carry
+// payslips that are either already reviewed or paid out, and pay_slips rows are
+// removed by ON DELETE CASCADE, so deletion would silently destroy that record.
+func (p *PayrollPeriod) EnsureDeletable() error {
+	if p.Status != PeriodStatusDraft {
+		return fmt.Errorf("cannot delete period in %s status: only draft periods can be deleted", p.Status)
+	}
+	return nil
+}

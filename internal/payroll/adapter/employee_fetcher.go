@@ -3,14 +3,14 @@ package adapter
 import (
 	"context"
 
-	emplRepo "hrms/internal/employee/repository"
 	designationRepo "hrms/internal/designation/repository"
+	emplRepo "hrms/internal/employee/repository"
 	payrollModels "hrms/internal/payroll/models"
 	payrollUc "hrms/internal/payroll/usecase"
 )
 
 type EmployeeFetcherAdapter struct {
-	repo    emplRepo.EmployeeRepository
+	repo     emplRepo.EmployeeRepository
 	desgRepo designationRepo.DesignationRepository
 }
 

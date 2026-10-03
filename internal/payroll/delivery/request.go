@@ -27,11 +27,12 @@ func (f *FlexFloat64) UnmarshalJSON(data []byte) error {
 }
 
 type SetupCompensationRequest struct {
-	CompensationItemID string      `json:"compensation_item_id" validate:"required,uuid"`
+	CompensationItemID string       `json:"compensation_item_id" validate:"required,uuid"`
 	Amount             *FlexFloat64 `json:"amount,omitempty"`
-	Frequency          string      `json:"frequency,omitempty"`
-	EffectiveDate      string      `json:"effective_date" validate:"required"`
-	EndDate            *string     `json:"end_date,omitempty"`
+	Frequency          string       `json:"frequency,omitempty" validate:"omitempty,oneof=monthly yearly one_time"`
+	CalcType           string       `json:"calc_type,omitempty" validate:"omitempty,oneof=fixed per_attended_day"`
+	EffectiveDate      string       `json:"effective_date" validate:"required"`
+	EndDate            *string      `json:"end_date,omitempty"`
 }
 
 type SetupBenefitRequest struct {
@@ -42,10 +43,11 @@ type SetupBenefitRequest struct {
 }
 
 type SetupDeductionRequest struct {
-	DeductionTypeID string      `json:"deduction_type_id" validate:"required,uuid"`
+	DeductionTypeID string       `json:"deduction_type_id" validate:"required,uuid"`
 	Value           *FlexFloat64 `json:"value,omitempty"`
-	EffectiveDate   string      `json:"effective_date" validate:"required"`
-	EndDate         *string     `json:"end_date,omitempty"`
+	UnitAmount      *FlexFloat64 `json:"unit_amount,omitempty"`
+	EffectiveDate   string       `json:"effective_date" validate:"required"`
+	EndDate         *string      `json:"end_date,omitempty"`
 }
 
 type SetupBaseSalaryRequest struct {
@@ -57,28 +59,28 @@ type SetupBaseSalaryRequest struct {
 }
 
 type SetupEmployeePayrollRequest struct {
-	EmployeeID    string                    `json:"employee_id" validate:"required,uuid"`
-	BaseSalary    *SetupBaseSalaryRequest   `json:"base_salary,omitempty"`
+	EmployeeID    string                     `json:"employee_id" validate:"required,uuid"`
+	BaseSalary    *SetupBaseSalaryRequest    `json:"base_salary,omitempty"`
 	Compensations []SetupCompensationRequest `json:"compensations,omitempty"`
-	Benefits      []SetupBenefitRequest     `json:"benefits,omitempty"`
-	Deductions    []SetupDeductionRequest   `json:"deductions,omitempty"`
+	Benefits      []SetupBenefitRequest      `json:"benefits,omitempty"`
+	Deductions    []SetupDeductionRequest    `json:"deductions,omitempty"`
 }
 
 type CreateBaseSalaryRequest struct {
-	EmployeeID    string     `json:"employee_id" validate:"required,uuid"`
+	EmployeeID    string      `json:"employee_id" validate:"required,uuid"`
 	Amount        FlexFloat64 `json:"amount" validate:"required"`
-	Currency      string     `json:"currency" validate:"omitempty,len=3"`
-	EffectiveDate string     `json:"effective_date" validate:"required"`
-	EndDate       *string    `json:"end_date" validate:"omitempty"`
-	Notes         string     `json:"notes"`
+	Currency      string      `json:"currency" validate:"omitempty,len=3"`
+	EffectiveDate string      `json:"effective_date" validate:"required"`
+	EndDate       *string     `json:"end_date" validate:"omitempty"`
+	Notes         string      `json:"notes"`
 }
 
 type UpdateBaseSalaryRequest struct {
 	Amount        FlexFloat64 `json:"amount" validate:"required"`
-	Currency      string     `json:"currency" validate:"omitempty,len=3"`
-	EffectiveDate string     `json:"effective_date" validate:"required"`
-	EndDate       *string    `json:"end_date" validate:"omitempty"`
-	Notes         string     `json:"notes"`
+	Currency      string      `json:"currency" validate:"omitempty,len=3"`
+	EffectiveDate string      `json:"effective_date" validate:"required"`
+	EndDate       *string     `json:"end_date" validate:"omitempty"`
+	Notes         string      `json:"notes"`
 }
 
 type CreateCompensationItemRequest struct {
@@ -97,39 +99,44 @@ type UpdateCompensationItemRequest struct {
 }
 
 type CreateBenefitTypeRequest struct {
-	Name                      string     `json:"name" validate:"required,min=1,max=255"`
-	Description               string     `json:"description"`
-	EmployerContributionType  string     `json:"employer_contribution_type" validate:"required,oneof=percentage fixed"`
+	Name                      string      `json:"name" validate:"required,min=1,max=255"`
+	Description               string      `json:"description"`
+	EmployerContributionType  string      `json:"employer_contribution_type" validate:"required,oneof=percentage fixed"`
 	EmployerContributionValue FlexFloat64 `json:"employer_contribution_value"`
-	EmployeeContributionType  string     `json:"employee_contribution_type" validate:"required,oneof=percentage fixed"`
+	EmployeeContributionType  string      `json:"employee_contribution_type" validate:"required,oneof=percentage fixed"`
 	EmployeeContributionValue FlexFloat64 `json:"employee_contribution_value"`
 }
 
 type UpdateBenefitTypeRequest struct {
-	Name                      string     `json:"name" validate:"required,min=1,max=255"`
-	Description               string     `json:"description"`
-	EmployerContributionType  string     `json:"employer_contribution_type" validate:"required,oneof=percentage fixed"`
+	Name                      string      `json:"name" validate:"required,min=1,max=255"`
+	Description               string      `json:"description"`
+	EmployerContributionType  string      `json:"employer_contribution_type" validate:"required,oneof=percentage fixed"`
 	EmployerContributionValue FlexFloat64 `json:"employer_contribution_value"`
-	EmployeeContributionType  string     `json:"employee_contribution_type" validate:"required,oneof=percentage fixed"`
+	EmployeeContributionType  string      `json:"employee_contribution_type" validate:"required,oneof=percentage fixed"`
 	EmployeeContributionValue FlexFloat64 `json:"employee_contribution_value"`
-	IsActive                  *bool      `json:"is_active"`
+	IsActive                  *bool       `json:"is_active"`
 }
 
 type CreateDeductionTypeRequest struct {
 	Name          string      `json:"name" validate:"required,min=1,max=255"`
 	Description   string      `json:"description"`
-	DeductionType string      `json:"deduction_type" validate:"required,oneof=percentage fixed"`
+	DeductionType string      `json:"deduction_type" validate:"required,oneof=percentage fixed per_day"`
+	ValueSource   string      `json:"value_source" validate:"omitempty,oneof=fixed daily_wage"`
+	UnitAmount    float64     `json:"unit_amount"`
 	DefaultValue  FlexFloat64 `json:"default_value"`
 	IsMandatory   bool        `json:"is_mandatory"`
 }
 
 type UpdateDeductionTypeRequest struct {
-	Name          string      `json:"name" validate:"required,min=1,max=255"`
-	Description   string      `json:"description"`
-	DeductionType string      `json:"deduction_type" validate:"required,oneof=percentage fixed"`
-	DefaultValue  FlexFloat64 `json:"default_value"`
-	IsActive      *bool       `json:"is_active"`
-	IsMandatory   *bool       `json:"is_mandatory"`
+	Name          *string      `json:"name" validate:"omitempty,min=1,max=255"`
+	Slug          *string      `json:"slug" validate:"omitempty,min=1,max=255"`
+	Description   *string      `json:"description"`
+	DeductionType *string      `json:"deduction_type" validate:"omitempty,oneof=percentage fixed per_day"`
+	ValueSource   *string      `json:"value_source" validate:"omitempty,oneof=fixed daily_wage"`
+	DefaultValue  *FlexFloat64 `json:"default_value"`
+	UnitAmount    *FlexFloat64 `json:"unit_amount"`
+	IsActive      *bool        `json:"is_active"`
+	IsMandatory   *bool        `json:"is_mandatory"`
 }
 
 // --- Period ---
@@ -159,11 +166,21 @@ type ManualDeductionRequest struct {
 }
 
 type CreateManualPaySlipRequest struct {
-	EmployeeID      string                     `json:"employee_id" validate:"required,uuid"`
-	BaseSalary      FlexFloat64                `json:"base_salary" validate:"required"`
-	Currency        string                     `json:"currency"`
-	Compensations   []ManualCompensationRequest `json:"compensations,omitempty"`
-	Deductions      []ManualDeductionRequest    `json:"deductions,omitempty"`
-	AbsentDeduction FlexFloat64                `json:"absent_deduction"`
-	AbsentDays      int                        `json:"absent_days"`
+	EmployeeID    string                      `json:"employee_id" validate:"required,uuid"`
+	BaseSalary    FlexFloat64                 `json:"base_salary" validate:"required"`
+	Currency      string                      `json:"currency"`
+	Compensations []ManualCompensationRequest `json:"compensations,omitempty"`
+	Deductions    []ManualDeductionRequest    `json:"deductions,omitempty"`
+	AbsentDays    int                         `json:"absent_days"`
+}
+
+// UpdatePaySlipRequest uses pointer fields so an omitted key keeps the stored value
+// while an explicit empty array clears the breakdown. Without this distinction a
+// partial edit would silently zero out compensations or deductions.
+type UpdatePaySlipRequest struct {
+	BaseSalary    *FlexFloat64                 `json:"base_salary"`
+	Compensations *[]ManualCompensationRequest `json:"compensations"`
+	Deductions    *[]ManualDeductionRequest    `json:"deductions"`
+	AbsentDays    *int                         `json:"absent_days"`
+	Recalculate   bool                         `json:"recalculate"`
 }

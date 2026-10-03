@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+
+	"hrms/internal/payroll/entity"
 )
 
 type CalcSalaryRow struct {
@@ -16,27 +18,70 @@ type CalcSalaryRow struct {
 }
 
 type CalcCompRow struct {
-	ID     string `db:"id"`
-	Name   string `db:"name"`
-	Amount int64  `db:"amount"`
+	ID       string `db:"id"`
+	Name     string `db:"name"`
+	Amount   int64  `db:"amount"`
+	CalcType string `db:"calc_type"`
+}
+
+// CalculateCents returns the allowance in cents. calc_type decides the derivation, not
+// the cadence: for per_attended_day allowances amount is the daily rate and is
+// multiplied by days actually present, while fixed pays amount once for the period.
+func (c CalcCompRow) CalculateCents(ctx entity.CalcContext) int64 {
+	if entity.CompensationCalcType(c.CalcType) == entity.CompensationCalcPerAttendedDay {
+		return c.Amount * int64(ctx.AttendedDays)
+	}
+	return c.Amount
 }
 
 type CalcDedRow struct {
-	ID    string  `db:"id"`
-	Name  string  `db:"name"`
-	Type  string  `db:"deduction_type"`
-	Value float64 `db:"value"`
+	ID          string  `db:"id"`
+	Name        string  `db:"name"`
+	Type        string  `db:"deduction_type"`
+	Value       float64 `db:"value"`
+	ValueSource string  `db:"value_source"`
+	UnitAmount  int64   `db:"unit_amount"`
+	// UnitAmountOverridden records that employee_deductions.unit_amount was set
+	// explicitly, as opposed to falling back to the master. COALESCE hides that
+	// distinction, so the queries carry it as a separate column.
+	UnitAmountOverridden bool `db:"unit_amount_overridden"`
 }
 
-func (d CalcDedRow) CalculateCents(salaryCents int64) int64 {
-	if d.Type == "percentage" {
-		return int64(math.Round(float64(salaryCents) * d.Value / 100))
+// CalculateCents applies the authoritative deduction formula. It mirrors
+// entity.DeductionType.Calculate so the payslip and the period overview agree.
+func (d CalcDedRow) CalculateCents(ctx entity.CalcContext) int64 {
+	switch entity.DeductionCalcType(d.Type) {
+	case entity.DeductionCalcPercentage:
+		return int64(math.Round(float64(ctx.BaseSalaryCents) * d.Value / 100))
+	case entity.DeductionCalcPerDay:
+		return int64(ctx.UnpaidAbsentDays) * d.PerDayRateCents(ctx)
+	default:
+		return int64(math.Round(d.Value * 100))
 	}
-	return int64(math.Round(d.Value * 100))
 }
 
-type CalcAbsentResult struct {
-	AbsentDays int `db:"absent_days"`
+// PerDayRateCents resolves the daily rate for per_day deductions.
+//
+// An employee_deductions.unit_amount set explicitly always wins, whatever the master's
+// value_source says. Before this rule the override was silently discarded whenever the
+// master used daily_wage: the row validated, the number persisted, and the payslip paid
+// the derived rate anyway. daily_wage is therefore the master default, not a veto.
+//
+// This mirrors how value already resolves through COALESCE(ed.value, dt.default_value):
+// the employee row overrides the master, and NULL means "inherit".
+func (d CalcDedRow) PerDayRateCents(ctx entity.CalcContext) int64 {
+	if d.UnitAmountOverridden {
+		return d.UnitAmount
+	}
+	if entity.ValueSource(d.ValueSource) == entity.ValueSourceDailyWage {
+		return ctx.DailyRate()
+	}
+	return d.UnitAmount
+}
+
+// RequiresAttendance reports whether the row's amount depends on attendance.
+func (d CalcDedRow) RequiresAttendance() bool {
+	return entity.DeductionCalcType(d.Type) == entity.DeductionCalcPerDay
 }
 
 type PostgresCalculationRepo struct {
@@ -52,17 +97,16 @@ const qryCalcActiveSalaries = `
 	WHERE effective_date <= $2::date AND (end_date IS NULL OR end_date >= $1::date)
 `
 
-const qryCalcAbsentDays = `
-	SELECT COUNT(*) AS absent_days FROM daily_attendances da
-	LEFT JOIN leave_submissions ls ON ls.id = da.leave_submission_id AND ls.status = 'approved'
-	LEFT JOIN leave_types lt ON lt.id = ls.leave_type_id
-	WHERE da.employee_id = $1
-	  AND da.date >= $2::date AND da.date <= $3::date
-	  AND (da.status = 'absent' OR (da.status = 'on_leave' AND lt.is_paid = false))
-`
+// PerDay is an attendance-derived day count used by payroll calculation.
+type PerDay struct {
+	// UnpaidAbsent is absent days plus unpaid leave (leave_types.is_paid = false).
+	UnpaidAbsent int
+	// Attended is days actually present, regardless of lateness or early leave.
+	Attended int
+}
 
 const qryCalcCompensations = `
-	SELECT ci.id, ci.name, ec.amount FROM employee_compensations ec
+	SELECT ci.id, ci.name, ec.amount, ec.calc_type FROM employee_compensations ec
 	JOIN compensation_items ci ON ci.id = ec.compensation_item_id
 	WHERE ec.employee_id = $1
 	  AND ec.frequency IN ('monthly', 'yearly')
@@ -71,12 +115,36 @@ const qryCalcCompensations = `
 
 const qryCalcDeductions = `
 	SELECT dt.id, dt.name, dt.deduction_type,
-		COALESCE(ed.value, dt.default_value) AS value
+		COALESCE(ed.value, dt.default_value) AS value,
+		dt.value_source,
+		COALESCE(ed.unit_amount, dt.unit_amount) AS unit_amount,
+		(ed.unit_amount IS NOT NULL) AS unit_amount_overridden
 	FROM employee_deductions ed
 	JOIN deduction_types dt ON dt.id = ed.deduction_type_id
 	WHERE ed.employee_id = $1
 	  AND ed.effective_date <= $3::date AND (ed.end_date IS NULL OR ed.end_date >= $2::date)
-	  AND dt.is_active = true AND (dt.slug IS NULL OR dt.slug != 'absent')
+	  AND dt.is_active = true
+`
+
+// qryCalcAttendanceDayCounts derives both day counts in one pass. Attended counts
+// status = 'present' only; lateness and early leave do not disqualify a day.
+//
+// The placeholders must stay in ? form: this query is expanded by sqlx.In, which
+// counts ? to size the bind list. A postgres-style $1 placeholder makes sqlx.In see
+// zero bind vars and fail with "number of bindVars less than number arguments".
+const qryCalcAttendanceDayCounts = `
+	SELECT da.employee_id,
+		COUNT(*) FILTER (
+			WHERE da.status = 'absent'
+			   OR (da.status = 'on_leave' AND COALESCE(lt.is_paid, true) = false)
+		)::int AS unpaid_absent,
+		COUNT(*) FILTER (WHERE da.status = 'present')::int AS attended
+	FROM daily_attendances da
+	LEFT JOIN leave_submissions ls ON ls.id = da.leave_submission_id AND ls.status = 'approved'
+	LEFT JOIN leave_types lt ON lt.id = ls.leave_type_id
+	WHERE da.employee_id IN (?)
+	  AND da.date >= ?::date AND da.date <= ?::date
+	GROUP BY da.employee_id
 `
 
 func (r *PostgresCalculationRepo) QueryActiveSalaries(ctx context.Context, startDate, endDate time.Time) ([]CalcSalaryRow, error) {
@@ -108,12 +176,43 @@ func (r *PostgresCalculationRepo) QueryActiveSalariesByIDs(ctx context.Context, 
 }
 
 func (r *PostgresCalculationRepo) QueryAbsentDays(ctx context.Context, employeeID string, startDate, endDate time.Time) (int, error) {
-	var result CalcAbsentResult
-	err := r.db.GetContext(ctx, &result, qryCalcAbsentDays, employeeID, startDate, endDate)
+	counts, err := r.QueryAttendanceDayCounts(ctx, []string{employeeID}, startDate, endDate)
 	if err != nil {
-		return 0, fmt.Errorf("count absent days: %w", err)
+		return 0, err
 	}
-	return result.AbsentDays, nil
+	return counts[employeeID].UnpaidAbsent, nil
+}
+
+// QueryAttendanceDayCounts batch-resolves the attendance-derived day counts needed
+// by per_day deductions and per_attended_day allowances.
+func (r *PostgresCalculationRepo) QueryAttendanceDayCounts(
+	ctx context.Context,
+	employeeIDs []string,
+	startDate, endDate time.Time,
+) (map[string]PerDay, error) {
+	result := make(map[string]PerDay, len(employeeIDs))
+	if len(employeeIDs) == 0 {
+		return result, nil
+	}
+
+	query, args, err := sqlx.In(qryCalcAttendanceDayCounts, employeeIDs, startDate, endDate)
+	if err != nil {
+		return nil, fmt.Errorf("build attendance day counts query: %w", err)
+	}
+	query = r.db.Rebind(query)
+
+	var rows []struct {
+		EmployeeID   string `db:"employee_id"`
+		UnpaidAbsent int    `db:"unpaid_absent"`
+		Attended     int    `db:"attended"`
+	}
+	if err := r.db.SelectContext(ctx, &rows, query, args...); err != nil {
+		return nil, fmt.Errorf("query attendance day counts: %w", err)
+	}
+	for _, row := range rows {
+		result[row.EmployeeID] = PerDay{UnpaidAbsent: row.UnpaidAbsent, Attended: row.Attended}
+	}
+	return result, nil
 }
 
 func (r *PostgresCalculationRepo) QueryEmployeeCompensations(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcCompRow, error) {
@@ -134,12 +233,11 @@ func (r *PostgresCalculationRepo) QueryEmployeeDeductions(ctx context.Context, e
 	return rows, nil
 }
 
-func (r *PostgresCalculationRepo) QueryEmployeeWorkingDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]int, error) {
-	if len(employeeIDs) == 0 {
-		return nil, nil
-	}
-
-	query, args, err := sqlx.In(`
+// qryEmployeeWorkingDaysBatch resolves each employee's working-day count for the period
+// from their active work pattern, then adjusts for individual schedule overrides.
+//
+// Placeholders must stay in ? form for the same reason as qryCalcAttendanceDayCounts.
+const qryEmployeeWorkingDaysBatch = `
 		WITH ewp AS (
 			SELECT ewp2.employee_id, ewp2.work_pattern_id
 			FROM employee_work_patterns ewp2
@@ -191,7 +289,14 @@ func (r *PostgresCalculationRepo) QueryEmployeeWorkingDaysBatch(ctx context.Cont
 				- COALESCE(oa.removed, 0) AS working_days
 		FROM base_days bd
 		FULL OUTER JOIN override_adjustments oa ON oa.employee_id = bd.employee_id
-	`, employeeIDs, startDate, endDate, employeeIDs, startDate, endDate, startDate, endDate, startDate, endDate)
+	`
+
+func (r *PostgresCalculationRepo) QueryEmployeeWorkingDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]int, error) {
+	if len(employeeIDs) == 0 {
+		return nil, nil
+	}
+
+	query, args, err := sqlx.In(qryEmployeeWorkingDaysBatch, employeeIDs, startDate, endDate, employeeIDs, startDate, endDate, startDate, endDate, startDate, endDate)
 	if err != nil {
 		return nil, fmt.Errorf("build working days batch query: %w", err)
 	}

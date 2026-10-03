@@ -36,14 +36,14 @@ func (r *ChromedpRenderer) Render(ctx context.Context, htmlContent []byte) ([]by
 		chromedp.WaitReady("body"),
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
-		pdfBuf, _, err = page.PrintToPDF().
-			WithPrintBackground(true).
-			WithMarginTop(0).
-			WithMarginBottom(0).
-			WithMarginLeft(0).
-			WithMarginRight(0).
-			WithPreferCSSPageSize(true).
-			Do(ctx)
+			pdfBuf, _, err = page.PrintToPDF().
+				WithPrintBackground(true).
+				WithMarginTop(0).
+				WithMarginBottom(0).
+				WithMarginLeft(0).
+				WithMarginRight(0).
+				WithPreferCSSPageSize(true).
+				Do(ctx)
 			return err
 		}),
 	)

@@ -77,7 +77,23 @@ SetupEmployeePayrollItem:
       minimum: 0
     frequency:
       type: string
+      description: How often the allowance is paid. Says nothing about how the amount is derived.
       enum: [monthly, yearly, one_time]
+    calc_type:
+      type: string
+      description: >-
+        How the allowance is derived. `fixed` pays amount once per period; `per_attended_day`
+        treats amount as a daily rate and multiplies it by days actually present.
+        Defaults to `fixed` when omitted.
+      enum: [fixed, per_attended_day]
+    unit_amount:
+      type: number
+      nullable: true
+      minimum: 0
+      description: >-
+        Per-employee daily rate for a `per_day` deduction, in major units. Set it to pin the
+        rate at a flat amount even when the deduction type derives from `daily_wage`; omit it
+        to inherit the type default. `0` disables the deduction for this employee.
     value:
       type: number
       nullable: true
@@ -254,6 +270,7 @@ EmployeeCompensationResponse:
     - compensation_item_id
     - amount
     - frequency
+    - calc_type
     - effective_date
     - created_at
     - updated_at
@@ -273,6 +290,9 @@ EmployeeCompensationResponse:
     frequency:
       type: string
       enum: [monthly, yearly, one_time]
+    calc_type:
+      type: string
+      enum: [fixed, per_attended_day]
     effective_date:
       type: string
       format: date
@@ -552,10 +572,22 @@ DeductionTypeResponse:
       type: string
     deduction_type:
       type: string
-      enum: [percentage, fixed]
+      enum: [percentage, fixed, per_day]
     default_value:
       type: number
       format: float
+    value_source:
+      type: string
+      enum: [fixed, daily_wage]
+      description: >-
+        Where the daily rate of a per_day deduction comes from. `fixed` uses
+        `unit_amount`; `daily_wage` derives base_salary / working_days.
+    unit_amount:
+      type: number
+      description: >-
+        Flat amount in rupiah for one day when deduction_type is `per_day` and
+        value_source is `fixed`. Employees can override it per assignment to pin a flat
+        rate even when this type derives from `daily_wage`.
     is_active:
       type: boolean
     is_mandatory:
@@ -581,10 +613,21 @@ CreateDeductionTypeRequest:
       type: string
     deduction_type:
       type: string
-      enum: [percentage, fixed]
+      enum: [percentage, fixed, per_day]
     default_value:
       type: number
       minimum: 0
+    value_source:
+      type: string
+      enum: [fixed, daily_wage]
+      default: fixed
+      description: Only used when deduction_type is `per_day`.
+    unit_amount:
+      type: number
+      minimum: 0
+      description: >-
+        Required and greater than 0 when deduction_type is `per_day` and
+        value_source is `fixed`.
     is_mandatory:
       type: boolean
       default: false
@@ -603,8 +646,15 @@ UpdateDeductionTypeRequest:
       type: string
     deduction_type:
       type: string
-      enum: [percentage, fixed]
+      enum: [percentage, fixed, per_day]
     default_value:
+      type: number
+      minimum: 0
+    value_source:
+      type: string
+      enum: [fixed, daily_wage]
+      default: fixed
+    unit_amount:
       type: number
       minimum: 0
     is_active:
@@ -622,6 +672,9 @@ EmployeeDeductionResponse:
     - id
     - employee_id
     - deduction_type_id
+    - deduction_type
+    - deduction_type_name
+    - value_source
     - effective_date
     - created_at
     - updated_at
@@ -635,11 +688,36 @@ EmployeeDeductionResponse:
     deduction_type_id:
       type: string
       format: uuid
+    deduction_type:
+      type: string
+      enum: [percentage, fixed, per_day]
+      description: >-
+        Basis copied from the deduction type. Present so a client can decide which input
+        to render without fetching every deduction type: show the percentage or flat
+        amount for `percentage`/`fixed`, and only the daily rate for `per_day`.
+    deduction_type_name:
+      type: string
+      description: Name of the deduction type, so labels match the payslip breakdown.
+    value_source:
+      type: string
+      enum: [fixed, daily_wage]
+      description: >-
+        How the deduction type derives its rate. Only meaningful when deduction_type is
+        `per_day`.
     value:
       type: number
       format: float
       nullable: true
-      description: Null if using default from deduction_type
+      description: >-
+        Null if using the default from deduction_type. Ignored by the calculation when
+        deduction_type is `per_day`.
+    unit_amount:
+      type: number
+      nullable: true
+      description: >-
+        Per-employee daily rate in major units, overriding deduction_types.unit_amount.
+        Only meaningful when deduction_type is `per_day`; null falls back to the type,
+        while 0 pins the rate at zero and disables the charge for this employee.
     effective_date:
       type: string
       format: date
@@ -748,10 +826,10 @@ PaySlipResponse:
     - base_salary
     - total_compensations
     - total_deductions
-    - absent_deduction
     - absent_days
     - net_salary
     - currency
+    - source
     - compensations_breakdown
     - deductions_breakdown
     - created_at
@@ -775,11 +853,15 @@ PaySlipResponse:
     total_deductions:
       type: number
       format: float
-    absent_deduction:
-      type: number
-      format: float
+    source:
+      type: string
+      enum: [auto, manual]
+      description: >-
+        `manual` means the slip carries a deliberate human correction. The processor
+        preserves manual slips when re-running a period.
     absent_days:
       type: integer
+      description: Unpaid absence days recorded for reporting; the amount deducted comes from a per_day deduction type
     net_salary:
       type: number
       format: float
@@ -816,6 +898,87 @@ BreakdownItem:
       format: float
 
 # (end of schemas)
+
+# ---------------------------------------------------------------------------
+# Pay Slip Correction
+# ---------------------------------------------------------------------------
+
+# ManualPaySlipBreakdownItem is one line of a hand-entered breakdown. The item id is
+# carried alongside the amount so the PDF keeps the name that was current at the time the
+# correction was made, even if the master item is renamed later.
+ManualPaySlipBreakdownItem:
+  type: object
+  required:
+    - amount
+  properties:
+    compensation_item_id:
+      type: string
+      format: uuid
+      description: Compensation item id. Mutually exclusive with deduction_type_id.
+    deduction_type_id:
+      type: string
+      format: uuid
+      description: Deduction type id. Mutually exclusive with compensation_item_id.
+    amount:
+      type: number
+      format: float
+      minimum: 0
+
+UpdatePaySlipRequest:
+  type: object
+  description: |-
+    Partial correction of a single pay slip. Only the keys present in the body change;
+    an omitted key keeps its stored value. An explicit empty array clears the breakdown.
+
+    The breakdown is authoritative by default: changing base_salary adjusts the headline
+    figure but does not silently re-derive the compensations and deductions that an admin
+    has already reviewed. Set `recalculate: true` to rebuild the breakdown from master
+    components and the period's attendance data instead, using the base salary in this
+    request when supplied.
+
+    `recalculate` cannot be combined with compensations, deductions or absent_days,
+    because the intent would be ambiguous. To recalculate and then adjust, send two
+    requests.
+  properties:
+    base_salary:
+      type: number
+      format: float
+      minimum: 0
+    compensations:
+      type: array
+      items:
+        $ref: "#/ManualPaySlipBreakdownItem"
+    deductions:
+      type: array
+      items:
+        $ref: "#/ManualPaySlipBreakdownItem"
+    absent_days:
+      type: integer
+      minimum: 0
+    recalculate:
+      type: boolean
+      default: false
+      description: Rebuild compensations_breakdown and deductions_breakdown from master data.
+
+ProcessPeriodResult:
+  type: object
+  description: |-
+    Outcome of processing a payroll period. `skipped_employees` lists the payslips that
+    were left untouched because they carry a manual correction; `generated` counts the
+    payslips that were written.
+  properties:
+    generated:
+      type: integer
+      minimum: 0
+    skipped:
+      type: integer
+      minimum: 0
+    skipped_employees:
+      type: array
+      items:
+        type: string
+        format: uuid
+      description: Employee ids whose manual payslip was preserved and not recalculated.
 
 # ---------------------------------------------------------------------------
 # Period Overview

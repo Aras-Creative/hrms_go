@@ -10,8 +10,8 @@ type EmployeeFetcher interface {
 }
 
 type EmployeeBrief struct {
-	FullName       string
-	EmployeeNumber string
+	FullName        string
+	EmployeeNumber  string
 	DesignationName string
-	ProfilePhotoID *string
+	ProfilePhotoID  *string
 }

@@ -1,0 +1,13 @@
+# Seed data for local development only.
+#
+# This directory holds real credentials and hand-written attendance fixtures, so it
+# must never reach a commit. Regenerate with scripts/seed_local/generate.py.
+#
+# Usage:
+#   go run ./cmd/seed_account_employee -file scripts/seed_local/accounts.json
+#   go run ./cmd/seed_daily_attendance -dir  scripts/seed_local/attendance
+/scripts/seed_local/
+
+# Local binaries
+/bin/
+*.exe

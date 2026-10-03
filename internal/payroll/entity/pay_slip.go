@@ -143,6 +143,30 @@ func (ps *PaySlip) CalculateNetSalary() Amount {
 	return AmountFromCents(netCents)
 }
 
+// RecalculateTotals recomputes the stored totals from the breakdowns. Call it after
+// mutating any breakdown slice so the summary columns never drift from the detail.
+func (ps *PaySlip) RecalculateTotals() {
+	var compCents, dedCents int64
+	for _, c := range ps.CompensationsBreakdown {
+		compCents += int64(c.Amount * 100)
+	}
+	for _, d := range ps.DeductionsBreakdown {
+		dedCents += int64(d.Amount * 100)
+	}
+	ps.TotalCompensations = AmountFromCents(compCents)
+	ps.TotalDeductions = AmountFromCents(dedCents)
+	ps.NetSalary = ps.CalculateNetSalary()
+}
+
+// MarkManual flags the slip as a deliberate human override and recomputes its totals.
+// The processor refuses to overwrite manual slips, so this is what preserves a
+// correction across a later re-process.
+func (ps *PaySlip) MarkManual() {
+	ps.Source = PaySlipSourceManual
+	ps.RecalculateTotals()
+	ps.UpdatedAt = time.Now()
+}
+
 func (b *PaySlipBuilder) Build() *PaySlip {
 	var totalCompCents int64
 	for _, c := range b.comps {

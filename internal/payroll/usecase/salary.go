@@ -8,7 +8,7 @@ import (
 )
 
 type SalaryUsecase struct {
-	salaryRepo     repository.EmployeeBaseSalaryRepository
+	salaryRepo      repository.EmployeeBaseSalaryRepository
 	employeeFetcher EmployeeFetcher
 }
 

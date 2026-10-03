@@ -72,6 +72,38 @@ func (uc *PeriodUsecase) ClosePeriod(ctx context.Context, id string) (*entity.Pa
 	return p, nil
 }
 
+// DeletePeriod hard-deletes a draft period that has no payslips yet.
+// Processed and closed periods are rejected: their payslips are removed by
+// ON DELETE CASCADE, so deleting would erase already-reviewed or paid records.
+func (uc *PeriodUsecase) DeletePeriod(ctx context.Context, id string) error {
+	p, err := uc.periodRepo.FindByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("find period: %w", err)
+	}
+	if p == nil {
+		return errors.NewNotFound("period not found")
+	}
+	if err := p.EnsureDeletable(); err != nil {
+		return errors.NewInvalidInput(err.Error())
+	}
+
+	count, err := uc.paySlipRepo.CountByPeriodID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("count pay slips: %w", err)
+	}
+	if count > 0 {
+		return errors.NewInvalidInput(fmt.Sprintf(
+			"cannot delete period %q: %d pay slip(s) already exist, reset the period to draft or delete the payslips first",
+			p.Name, count,
+		))
+	}
+
+	if err := uc.periodRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("delete period: %w", err)
+	}
+	return nil
+}
+
 func (uc *PeriodUsecase) ListPaySlips(ctx context.Context, periodID string) ([]*entity.PaySlip, error) {
 	return uc.paySlipRepo.FindByPeriodID(ctx, periodID)
 }

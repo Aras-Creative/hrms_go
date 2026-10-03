@@ -30,7 +30,6 @@ type OverviewUsecase struct {
 	periodRepo    repository.PayrollPeriodRepository
 	salaryRepo    repository.EmployeeBaseSalaryRepository
 	ovRepo        repository.OverviewRepository
-	dedTypeRepo   repository.DeductionTypeRepository
 	calcRepo      repository.PayrollCalculationRepository
 	photoResolver PhotoResolver
 }
@@ -39,7 +38,6 @@ func NewOverviewUsecase(
 	periodRepo repository.PayrollPeriodRepository,
 	salaryRepo repository.EmployeeBaseSalaryRepository,
 	ovRepo repository.OverviewRepository,
-	dedTypeRepo repository.DeductionTypeRepository,
 	calcRepo repository.PayrollCalculationRepository,
 	photoResolver PhotoResolver,
 ) *OverviewUsecase {
@@ -47,7 +45,6 @@ func NewOverviewUsecase(
 		periodRepo:    periodRepo,
 		salaryRepo:    salaryRepo,
 		ovRepo:        ovRepo,
-		dedTypeRepo:   dedTypeRepo,
 		calcRepo:      calcRepo,
 		photoResolver: photoResolver,
 	}
@@ -77,11 +74,6 @@ func (uc *OverviewUsecase) GetPeriodOverview(ctx context.Context, periodID strin
 		return nil, fmt.Errorf("find salaries: %w", err)
 	}
 
-	compMap, err := uc.ovRepo.QueryTotalCompensationsBatch(ctx, employeeIDs, period.StartDate, period.EndDate)
-	if err != nil {
-		return nil, fmt.Errorf("query compensations: %w", err)
-	}
-
 	salaryCentsMap := make(map[string]int64, len(salaryMap))
 	for empID, s := range salaryMap {
 		if s != nil {
@@ -89,14 +81,19 @@ func (uc *OverviewUsecase) GetPeriodOverview(ctx context.Context, periodID strin
 		}
 	}
 
-	dedMap, err := uc.ovRepo.QueryTotalDeductionsBatch(ctx, employeeIDs, period.StartDate, period.EndDate, salaryCentsMap)
+	compRows, err := uc.ovRepo.QueryCompensationRowsBatch(ctx, employeeIDs, period.StartDate, period.EndDate)
+	if err != nil {
+		return nil, fmt.Errorf("query compensations: %w", err)
+	}
+
+	dedRows, err := uc.ovRepo.QueryDeductionRowsBatch(ctx, employeeIDs, period.StartDate, period.EndDate)
 	if err != nil {
 		return nil, fmt.Errorf("query deductions: %w", err)
 	}
 
-	absentDaysMap, err := uc.ovRepo.QueryAbsentDaysBatch(ctx, employeeIDs, period.StartDate, period.EndDate)
+	attendanceMap, err := uc.calcRepo.QueryAttendanceDayCounts(ctx, employeeIDs, period.StartDate, period.EndDate)
 	if err != nil {
-		return nil, fmt.Errorf("query absent days: %w", err)
+		return nil, fmt.Errorf("query attendance day counts: %w", err)
 	}
 
 	workingDaysMap, err := uc.calcRepo.QueryEmployeeWorkingDaysBatch(ctx, employeeIDs, period.StartDate, period.EndDate)
@@ -104,24 +101,32 @@ func (uc *OverviewUsecase) GetPeriodOverview(ctx context.Context, periodID strin
 		return nil, fmt.Errorf("query working days: %w", err)
 	}
 
-	absentDT, err := uc.dedTypeRepo.FindBySlug(ctx, "absent")
-	if err != nil {
-		return nil, fmt.Errorf("find absent deduction type: %w", err)
-	}
-	if absentDT != nil && absentDT.IsActive {
-		for _, empID := range employeeIDs {
-			absentDays := absentDaysMap[empID]
-			if absentDays <= 0 {
-				continue
-			}
-			wd := workingDaysMap[empID]
-			if wd <= 0 {
-				wd = 20
-			}
-			salaryCents := salaryCentsMap[empID]
-			absentCents := absentDT.Calculate(salaryCents, absentDays, wd)
-			dedMap[empID] += float64(absentCents) / 100
+	// Totals are derived with the same row-level calculation the processor uses, so
+	// the overview always agrees with the payslips that were generated from it.
+	compMap := make(map[string]float64, len(employeeIDs))
+	dedMap := make(map[string]float64, len(employeeIDs))
+	absentDaysMap := make(map[string]int, len(employeeIDs))
+	for _, empID := range employeeIDs {
+		attendance := attendanceMap[empID]
+		calcCtx := entity.CalcContext{
+			BaseSalaryCents:  salaryCentsMap[empID],
+			WorkingDays:      workingDaysMap[empID],
+			UnpaidAbsentDays: attendance.UnpaidAbsent,
+			AttendedDays:     attendance.Attended,
 		}
+		absentDaysMap[empID] = attendance.UnpaidAbsent
+
+		var compCents int64
+		for _, c := range compRows[empID] {
+			compCents += c.CalculateCents(calcCtx)
+		}
+		compMap[empID] = float64(compCents) / 100
+
+		var dedCents int64
+		for _, d := range dedRows[empID] {
+			dedCents += d.CalculateCents(calcCtx)
+		}
+		dedMap[empID] = float64(dedCents) / 100
 	}
 
 	result := make([]*EmployeePeriodOverview, 0, len(employees))

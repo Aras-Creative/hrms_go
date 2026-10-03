@@ -1722,7 +1722,13 @@ paths:
 
     delete:
       tags: [Payroll]
-      summary: Delete a payroll period (draft only)
+      summary: Delete a payroll period (draft only, and only when it has no payslips)
+      description: >-
+        Hard-deletes a payroll period. Allowed only while the period is still in `draft`
+        status and no pay slips have been generated for it. Processed and closed periods
+        are rejected because their pay slips are removed by `ON DELETE CASCADE`, which would
+        destroy already-reviewed or paid records. Periods that need correction should be
+        reverted to draft and re-processed instead of deleted.
       security:
         - BearerAuth: []
         - CookieAuth: []
@@ -1734,8 +1740,10 @@ paths:
             type: string
             format: uuid
       responses:
-        "200":
+        "204":
           description: Period deleted
+        "400":
+          $ref: "#/components/responses/CommonError"
         "401":
           $ref: "#/components/responses/CommonError"
         "404":
@@ -1747,6 +1755,11 @@ paths:
     post:
       tags: [Payroll]
       summary: Run payroll processor for period
+      description: >-
+        Regenerates payslips for the period, resetting a `processed` period back to draft
+        first. Payslips already carrying `source = manual` are preserved and reported in
+        `skipped_employees` instead of being recomputed away; delete or re-edit those
+        slips first if they should be recalculated.
       security:
         - BearerAuth: []
         - CookieAuth: []
@@ -1763,7 +1776,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "schemas/common.yaml#/SuccessResponse"
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  message:
+                    type: string
+                    description: Present when one or more manual payslips were skipped
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/ProcessPeriodResult"
         "400":
           $ref: "#/components/responses/CommonError"
         "401":
@@ -1846,6 +1868,54 @@ paths:
           $ref: "#/components/responses/CommonError"
 
   /api/v1/payroll/pay-slips/{id}:
+    put:
+      tags: [Payroll]
+      summary: Correct a pay slip (partial update, scoped to its own period)
+      description: >-
+        Applies a partial correction to a single pay slip. Omitted fields keep their
+        stored value; sending an empty array clears that breakdown. The slip is marked
+        `source = manual` so a later re-process preserves the correction. Master payroll
+        data (base salary, employee compensations, deduction types) is never modified,
+        so subsequent periods still recalculate from the unchanged components. Rejected
+        while the owning period is `closed`.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/UpdatePaySlipRequest"
+      responses:
+        "200":
+          description: Pay slip updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PaySlipResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
     get:
       tags: [Payroll]
       summary: Get a pay slip by ID

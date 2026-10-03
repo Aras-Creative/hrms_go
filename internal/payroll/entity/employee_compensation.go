@@ -12,6 +12,7 @@ type EmployeeCompensation struct {
 	CompensationItemID string
 	Amount             Amount
 	Frequency          Frequency
+	CalcType           CompensationCalcType
 	EffectiveDate      time.Time
 	EndDate            *time.Time
 	CreatedAt          time.Time
@@ -23,6 +24,7 @@ func NewEmployeeCompensation(
 	compensationItemID string,
 	amount Amount,
 	frequency Frequency,
+	calcType CompensationCalcType,
 	effectiveDate time.Time,
 	endDate *time.Time,
 ) *EmployeeCompensation {
@@ -33,6 +35,7 @@ func NewEmployeeCompensation(
 		CompensationItemID: compensationItemID,
 		Amount:             amount,
 		Frequency:          frequency,
+		CalcType:           calcType,
 		EffectiveDate:      effectiveDate,
 		EndDate:            endDate,
 		CreatedAt:          now,
@@ -46,6 +49,7 @@ func ReconstituteEmployeeCompensation(
 	compensationItemID string,
 	amountCents int64,
 	frequency string,
+	calcType string,
 	effectiveDate time.Time,
 	endDate *time.Time,
 	createdAt time.Time,
@@ -57,6 +61,7 @@ func ReconstituteEmployeeCompensation(
 		CompensationItemID: compensationItemID,
 		Amount:             AmountFromCents(amountCents),
 		Frequency:          Frequency(frequency),
+		CalcType:           CompensationCalcType(calcType),
 		EffectiveDate:      effectiveDate,
 		EndDate:            endDate,
 		CreatedAt:          createdAt,

@@ -65,7 +65,16 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 		if err != nil {
 			return errors.WrapInvalidInput(fmt.Sprintf("compensation %s", c.CompensationItemID), err)
 		}
-		ec := entity.NewEmployeeCompensation(input.EmployeeID, c.CompensationItemID, amount, freq, c.EffectiveDate, c.EndDate)
+		// calc_type is optional on the wire so existing callers keep working; an omitted
+		// value means the flat per-period allowance.
+		calcType := entity.CompensationCalcFixed
+		if c.CalcType != "" {
+			calcType, err = entity.ParseCompensationCalcType(c.CalcType)
+			if err != nil {
+				return errors.WrapInvalidInput(fmt.Sprintf("compensation %s", c.CompensationItemID), err)
+			}
+		}
+		ec := entity.NewEmployeeCompensation(input.EmployeeID, c.CompensationItemID, amount, freq, calcType, c.EffectiveDate, c.EndDate)
 		if err := insertEmpCompTx(ctx, tx, ec); err != nil {
 			return fmt.Errorf("insert compensation: %w", err)
 		}
@@ -85,11 +94,32 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 		return fmt.Errorf("delete deductions: %w", err)
 	}
 	for _, d := range input.Deductions {
-		ed := entity.NewEmployeeDeduction(input.EmployeeID, d.DeductionTypeID, d.Value, d.EffectiveDate, d.EndDate)
+		unitAmount, err := optionalAmount(d.UnitAmount)
+		if err != nil {
+			return fmt.Errorf("invalid deduction unit_amount: %w", err)
+		}
+		ed := entity.NewEmployeeDeduction(input.EmployeeID, d.DeductionTypeID, d.Value, unitAmount, d.EffectiveDate, d.EndDate)
 		if err := insertEmpDeductionTx(ctx, tx, ed); err != nil {
 			return fmt.Errorf("insert deduction: %w", err)
 		}
 	}
 
 	return tx.Commit()
+}
+
+// optionalAmount converts a major-unit amount to a cents pointer. A nil input stays
+// nil, which means "fall back to the deduction type's unit_amount" for per_day bases.
+func optionalAmount(v *float64) (*int64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	amount, err := entity.NewAmount(*v)
+	if err != nil {
+		return nil, err
+	}
+	cents := amount.Cents()
+	if cents < 0 {
+		return nil, fmt.Errorf("amount must be >= 0")
+	}
+	return &cents, nil
 }

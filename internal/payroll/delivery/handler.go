@@ -3,6 +3,7 @@ package delivery
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -24,20 +25,20 @@ type Notifier interface {
 const notifTypePayroll = "payroll"
 
 type PayrollHandler struct {
-	salaryUc         *usecase.SalaryUsecase
-	compUc           *usecase.CompensationUsecase
-	benefitUc        *usecase.BenefitUsecase
-	deductionUc      *usecase.DeductionUsecase
-	periodUc         *usecase.PeriodUsecase
-	procUc           *usecase.ProcessorUsecase
-	overviewUc       *usecase.OverviewUsecase
-	setupUc          *usecase.SetupUsecase
-	manualPayslipUc  *usecase.ManualPaySlipUsecase
-	renderUc         *usecase.RenderUsecase
-	auditLogger      *payrollAdapter.AuditLogger
-	notifUC          Notifier
-	empFetcher       usecase.EmployeeFetcher
-	photoResolver    overviewPhotoResolver
+	salaryUc        *usecase.SalaryUsecase
+	compUc          *usecase.CompensationUsecase
+	benefitUc       *usecase.BenefitUsecase
+	deductionUc     *usecase.DeductionUsecase
+	periodUc        *usecase.PeriodUsecase
+	procUc          *usecase.ProcessorUsecase
+	overviewUc      *usecase.OverviewUsecase
+	setupUc         *usecase.SetupUsecase
+	manualPayslipUc *usecase.ManualPaySlipUsecase
+	renderUc        *usecase.RenderUsecase
+	auditLogger     *payrollAdapter.AuditLogger
+	notifUC         Notifier
+	empFetcher      usecase.EmployeeFetcher
+	photoResolver   overviewPhotoResolver
 }
 
 type overviewPhotoResolver interface {
@@ -204,6 +205,8 @@ func (h *PayrollHandler) CreateDeductionType(c fiber.Ctx) error {
 		Description:   req.Description,
 		DeductionType: req.DeductionType,
 		DefaultValue:  float64(req.DefaultValue),
+		ValueSource:   req.ValueSource,
+		UnitAmount:    req.UnitAmount,
 		IsMandatory:   req.IsMandatory,
 	})
 	if err != nil {
@@ -307,6 +310,7 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 			CompensationItemID: ci.CompensationItemID,
 			Amount:             amount,
 			Frequency:          ci.Frequency,
+			CalcType:           ci.CalcType,
 			EffectiveDate:      effDate,
 			EndDate:            endDate,
 		})
@@ -354,9 +358,21 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 			v := float64(*di.Value)
 			val = &v
 		}
+		var unitAmount *float64
+		if di.UnitAmount != nil {
+			// 0 is a deliberate value: it pins the per-day rate at zero so the deduction
+			// stays visible but never charges. Omitting the field (nil) is what inherits
+			// the master rate, so 0 must not be treated as "unset" here.
+			if float64(*di.UnitAmount) < 0 {
+				return response.Error(c, errors.NewInvalidInput("deduction unit_amount must be >= 0"))
+			}
+			ua := float64(*di.UnitAmount)
+			unitAmount = &ua
+		}
 		input.Deductions = append(input.Deductions, models.SetupDeductionItem{
 			DeductionTypeID: di.DeductionTypeID,
 			Value:           val,
+			UnitAmount:      unitAmount,
 			EffectiveDate:   effDate,
 			EndDate:         endDate,
 		})
@@ -376,14 +392,14 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 		actorID := userIDFromCtx(c)
 		if actorID != nil {
 			payload := map[string]any{
-				"employee_id":             req.EmployeeID,
-				"old_salary_count":        len(beforeSalary),
-				"old_compensation_count":  len(beforeComps),
-				"old_benefit_count":       len(beforeBenefits),
-				"old_deduction_count":     len(beforeDeductions),
-				"new_compensation_count":  len(req.Compensations),
-				"new_benefit_count":       len(req.Benefits),
-				"new_deduction_count":     len(req.Deductions),
+				"employee_id":            req.EmployeeID,
+				"old_salary_count":       len(beforeSalary),
+				"old_compensation_count": len(beforeComps),
+				"old_benefit_count":      len(beforeBenefits),
+				"old_deduction_count":    len(beforeDeductions),
+				"new_compensation_count": len(req.Compensations),
+				"new_benefit_count":      len(req.Benefits),
+				"new_deduction_count":    len(req.Deductions),
 			}
 			if req.BaseSalary != nil {
 				payload["new_salary_amount"] = float64(req.BaseSalary.Amount)
@@ -572,6 +588,37 @@ func (h *PayrollHandler) CreatePeriod(c fiber.Ctx) error {
 	return response.Created(c, periodToResponse(p))
 }
 
+func (h *PayrollHandler) DeletePeriod(c fiber.Ctx) error {
+	id, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
+	}
+	p, err := h.periodUc.GetPeriod(c.RequestCtx(), id)
+	if err != nil {
+		return response.Error(c, err)
+	}
+	if err := h.periodUc.DeletePeriod(c.RequestCtx(), id); err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		actorID := userIDFromCtx(c)
+		if actorID != nil {
+			h.auditLogger.Log(c.RequestCtx(), *actorID, "payroll_period", id, "",
+				payrollAdapter.ActionPeriodDelete, c.IP(), string(c.RequestCtx().UserAgent()),
+				map[string]any{
+					"name":       p.Name,
+					"status":     string(p.Status),
+					"start_date": p.StartDate.Format(dateFormat),
+					"end_date":   p.EndDate.Format(dateFormat),
+				},
+			)
+		}
+	}
+
+	return response.NoContent(c)
+}
+
 func (h *PayrollHandler) ListPeriods(c fiber.Ctx) error {
 	page, perPage := parsePagination(c)
 	periods, total, err := h.periodUc.ListPeriods(c.RequestCtx(), page, perPage)
@@ -586,7 +633,8 @@ func (h *PayrollHandler) ProcessPeriod(c fiber.Ctx) error {
 	if err != nil {
 		return response.Error(c, err)
 	}
-	if err := h.procUc.ProcessPeriod(c.RequestCtx(), id); err != nil {
+	result, err := h.procUc.ProcessPeriod(c.RequestCtx(), id)
+	if err != nil {
 		return response.Error(c, err)
 	}
 
@@ -595,7 +643,11 @@ func (h *PayrollHandler) ProcessPeriod(c fiber.Ctx) error {
 		if actorID != nil {
 			h.auditLogger.Log(c.RequestCtx(), *actorID, "payroll_period", id, "",
 				payrollAdapter.ActionPeriodProcess, c.IP(), string(c.RequestCtx().UserAgent()),
-				nil,
+				map[string]any{
+					"generated":         result.Generated,
+					"skipped":           result.Skipped,
+					"skipped_employees": result.SkippedEmployees,
+				},
 			)
 		}
 	}
@@ -619,7 +671,12 @@ func (h *PayrollHandler) ProcessPeriod(c fiber.Ctx) error {
 		}
 	}
 
-	return response.NoContent(c)
+	if result.Skipped > 0 {
+		return response.OKWithMessage(c, result,
+			fmt.Sprintf("%d slip gaji manual dipertahankan dan tidak dihitung ulang", result.Skipped),
+		)
+	}
+	return response.OK(c, result)
 }
 
 func (h *PayrollHandler) ClosePeriod(c fiber.Ctx) error {
@@ -690,6 +747,108 @@ func (h *PayrollHandler) GetPaySlip(c fiber.Ctx) error {
 	return response.OK(c, resp)
 }
 
+// UpdatePaySlip applies a partial correction to one payslip. Only the keys present in
+// the body change; omitted keys keep their stored value. The slip becomes source =
+// manual so a later re-process preserves the correction.
+func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
+	payslipID, err := response.ParseParamID(c, "id")
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	var req UpdatePaySlipRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
+	}
+	if req.Recalculate {
+		// recalculate rebuilds the breakdown from master data, so accepting explicit
+		// breakdowns or absent_days in the same call would leave the intent ambiguous.
+		if req.Compensations != nil || req.Deductions != nil || req.AbsentDays != nil {
+			return response.Error(c, errors.NewInvalidInput("recalculate cannot be combined with compensations, deductions or absent_days"))
+		}
+	} else if req.BaseSalary == nil && req.Compensations == nil && req.Deductions == nil && req.AbsentDays == nil {
+		return response.Error(c, errors.NewInvalidInput("no updatable field supplied"))
+	}
+	if req.BaseSalary != nil && float64(*req.BaseSalary) < 0 {
+		return response.Error(c, errors.NewInvalidInput("base_salary must be >= 0"))
+	}
+	if req.AbsentDays != nil && *req.AbsentDays < 0 {
+		return response.Error(c, errors.NewInvalidInput("absent_days must be >= 0"))
+	}
+
+	input := models.UpdatePaySlipInput{
+		PaySlipID:   payslipID,
+		AbsentDays:  req.AbsentDays,
+		Recalculate: req.Recalculate,
+	}
+	if req.BaseSalary != nil {
+		baseSalary := float64(*req.BaseSalary)
+		input.BaseSalary = &baseSalary
+	}
+
+	if req.Compensations != nil {
+		comps := make([]models.ManualCompensationInput, 0, len(*req.Compensations))
+		for _, item := range *req.Compensations {
+			if item.CompensationItemID == "" {
+				return response.Error(c, errors.NewInvalidInput("compensations[].compensation_item_id is required"))
+			}
+			comps = append(comps, models.ManualCompensationInput{
+				CompensationItemID: item.CompensationItemID,
+				Amount:             float64(item.Amount),
+			})
+		}
+		input.Compensations = &comps
+	}
+	if req.Deductions != nil {
+		deds := make([]models.ManualDeductionInput, 0, len(*req.Deductions))
+		for _, item := range *req.Deductions {
+			if item.DeductionTypeID == "" {
+				return response.Error(c, errors.NewInvalidInput("deductions[].deduction_type_id is required"))
+			}
+			deds = append(deds, models.ManualDeductionInput{
+				DeductionTypeID: item.DeductionTypeID,
+				Amount:          float64(item.Amount),
+			})
+		}
+		input.Deductions = &deds
+	}
+
+	ps, err := h.manualPayslipUc.UpdatePaySlip(c.RequestCtx(), input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+
+	if h.auditLogger != nil {
+		actorID := userIDFromCtx(c)
+		if actorID != nil {
+			payload := map[string]any{
+				"period_id":   ps.PeriodID,
+				"employee_id": ps.EmployeeID,
+				"source":      string(ps.Source),
+				"net_salary":  ps.NetSalary.Float(),
+				"base_salary": ps.BaseSalary.Float(),
+				"absent_days": ps.AbsentDays,
+			}
+			if input.Compensations != nil {
+				payload["compensations"] = len(*input.Compensations)
+			}
+			if input.Deductions != nil {
+				payload["deductions"] = len(*input.Deductions)
+			}
+			h.auditLogger.Log(c.RequestCtx(), *actorID, "pay_slip", ps.ID, "",
+				payrollAdapter.ActionPayslipUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
+				payload,
+			)
+		}
+	}
+
+	resp := paySlipToResponse(ps)
+	periodMap := h.buildPeriodNameMap(c.RequestCtx(), []string{ps.PeriodID})
+	enrichPaySlipWithPeriodName(resp, periodMap)
+	h.enrichPaySlipWithEmployee(c.RequestCtx(), resp)
+	return response.OK(c, resp)
+}
+
 func (h *PayrollHandler) PrintPaySlip(c fiber.Ctx) error {
 	pdfBytes, err := h.renderUc.PrintPayslip(c.RequestCtx(), c.Params("id"))
 	if err != nil {
@@ -711,17 +870,12 @@ func (h *PayrollHandler) CreateManualPaySlip(c fiber.Ctx) error {
 	if float64(req.BaseSalary) < 0 {
 		return response.Error(c, errors.NewInvalidInput("base_salary must be >= 0"))
 	}
-	if float64(req.AbsentDeduction) < 0 {
-		return response.Error(c, errors.NewInvalidInput("absent_deduction must be >= 0"))
-	}
-
 	input := models.ManualPaySlipInput{
-		PeriodID:        periodID,
-		EmployeeID:      req.EmployeeID,
-		BaseSalary:      float64(req.BaseSalary),
-		Currency:        req.Currency,
-		AbsentDeduction: float64(req.AbsentDeduction),
-		AbsentDays:      req.AbsentDays,
+		PeriodID:   periodID,
+		EmployeeID: req.EmployeeID,
+		BaseSalary: float64(req.BaseSalary),
+		Currency:   req.Currency,
+		AbsentDays: req.AbsentDays,
 	}
 	for _, c := range req.Compensations {
 		input.Compensations = append(input.Compensations, models.ManualCompensationInput{
@@ -891,4 +1045,69 @@ func (h *PayrollHandler) PrintMyPaySlip(c fiber.Ctx) error {
 	c.Set("Content-Type", "application/pdf")
 	c.Set("Content-Disposition", "inline; filename=payslip.pdf")
 	return c.SendStream(bytes.NewReader(pdfBytes))
+}
+
+func (h *PayrollHandler) UpdateDeductionType(c fiber.Ctx) error {
+	id := c.Params("id")
+	var req UpdateDeductionTypeRequest
+	if err := c.Bind().Body(&req); err != nil {
+		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
+	}
+	input := models.UpdateDeductionTypeInput{}
+	if req.Name != nil {
+		input.Name = req.Name
+	}
+	if req.Slug != nil {
+		input.Slug = req.Slug
+	}
+	if req.Description != nil {
+		input.Description = req.Description
+	}
+	if req.DeductionType != nil {
+		v := *req.DeductionType
+		input.DeductionType = &v
+	}
+	if req.ValueSource != nil {
+		v := *req.ValueSource
+		input.ValueSource = &v
+	}
+	if req.IsActive != nil {
+		input.IsActive = req.IsActive
+	}
+	if req.IsMandatory != nil {
+		input.IsMandatory = req.IsMandatory
+	}
+	if req.DefaultValue != nil {
+		f := float64(*req.DefaultValue)
+		input.DefaultValue = &f
+	}
+	if req.UnitAmount != nil {
+		f := float64(*req.UnitAmount)
+		input.UnitAmount = &f
+	}
+	dt, err := h.deductionUc.UpdateType(c.RequestCtx(), id, input)
+	if err != nil {
+		return response.Error(c, err)
+	}
+	return response.OK(c, deductionTypeToResponse(dt))
+}
+
+func (h *PayrollHandler) GetDeductionType(c fiber.Ctx) error {
+	id := c.Params("id")
+	dt, err := h.deductionUc.GetTypeByID(c.RequestCtx(), id)
+	if err != nil {
+		return response.Error(c, err)
+	}
+	if dt == nil {
+		return response.Error(c, errors.NewNotFound("deduction type not found"))
+	}
+	return response.OK(c, deductionTypeToResponse(dt))
+}
+
+func (h *PayrollHandler) DeleteDeductionType(c fiber.Ctx) error {
+	id := c.Params("id")
+	if err := h.deductionUc.DeleteType(c.RequestCtx(), id); err != nil {
+		return response.Error(c, err)
+	}
+	return response.OK(c, map[string]any{"success": true})
 }

@@ -45,6 +45,7 @@ type CreateEmployeeCompensationInput struct {
 	CompensationItemID string
 	Amount             float64
 	Frequency          string
+	CalcType           string
 	EffectiveDate      time.Time
 	EndDate            *time.Time
 }
@@ -53,6 +54,7 @@ type UpdateEmployeeCompensationInput struct {
 	CompensationItemID string
 	Amount             float64
 	Frequency          string
+	CalcType           string
 	EffectiveDate      time.Time
 	EndDate            *time.Time
 }
@@ -103,14 +105,19 @@ type CreateDeductionTypeInput struct {
 	Description   string
 	DeductionType string
 	DefaultValue  float64
+	ValueSource   string
+	UnitAmount    float64
 	IsMandatory   bool
 }
 
 type UpdateDeductionTypeInput struct {
-	Name          string
-	Description   string
-	DeductionType string
-	DefaultValue  float64
+	Name          *string
+	Slug          *string
+	Description   *string
+	DeductionType *string
+	DefaultValue  *float64
+	ValueSource   *string
+	UnitAmount    *float64
 	IsActive      *bool
 	IsMandatory   *bool
 }
@@ -121,6 +128,7 @@ type CreateEmployeeDeductionInput struct {
 	EmployeeID      string
 	DeductionTypeID string
 	Value           *float64
+	UnitAmount      *float64
 	EffectiveDate   time.Time
 	EndDate         *time.Time
 }
@@ -128,6 +136,7 @@ type CreateEmployeeDeductionInput struct {
 type UpdateEmployeeDeductionInput struct {
 	DeductionTypeID string
 	Value           *float64
+	UnitAmount      *float64
 	EffectiveDate   time.Time
 	EndDate         *time.Time
 }
@@ -135,24 +144,26 @@ type UpdateEmployeeDeductionInput struct {
 // --- Setup ---
 
 type SetupCompensationItem struct {
-	CompensationItemID string    `json:"compensation_item_id"`
-	Amount             float64   `json:"amount"`
-	Frequency          string    `json:"frequency"`
-	EffectiveDate      time.Time `json:"effective_date"`
+	CompensationItemID string     `json:"compensation_item_id"`
+	Amount             float64    `json:"amount"`
+	Frequency          string     `json:"frequency"`
+	CalcType           string     `json:"calc_type,omitempty"`
+	EffectiveDate      time.Time  `json:"effective_date"`
 	EndDate            *time.Time `json:"end_date,omitempty"`
 }
 
 type SetupBenefitItem struct {
-	BenefitTypeID     string    `json:"benefit_type_id"`
-	ParticipantNumber string    `json:"participant_number"`
-	EffectiveDate     time.Time `json:"effective_date"`
+	BenefitTypeID     string     `json:"benefit_type_id"`
+	ParticipantNumber string     `json:"participant_number"`
+	EffectiveDate     time.Time  `json:"effective_date"`
 	EndDate           *time.Time `json:"end_date,omitempty"`
 }
 
 type SetupDeductionItem struct {
-	DeductionTypeID string    `json:"deduction_type_id"`
+	DeductionTypeID string     `json:"deduction_type_id"`
 	Value           *float64   `json:"value,omitempty"`
-	EffectiveDate   time.Time `json:"effective_date"`
+	UnitAmount      *float64   `json:"unit_amount,omitempty"`
+	EffectiveDate   time.Time  `json:"effective_date"`
 	EndDate         *time.Time `json:"end_date,omitempty"`
 }
 
@@ -187,14 +198,24 @@ type UpdatePeriodInput struct {
 }
 
 type ManualPaySlipInput struct {
-	PeriodID        string
-	EmployeeID      string
-	BaseSalary      float64
-	Currency        string
-	Compensations   []ManualCompensationInput
-	Deductions      []ManualDeductionInput
-	AbsentDeduction float64
-	AbsentDays      int
+	PeriodID      string
+	EmployeeID    string
+	BaseSalary    float64
+	Currency      string
+	Compensations []ManualCompensationInput
+	Deductions    []ManualDeductionInput
+	AbsentDays    int
+}
+
+// UpdatePaySlipInput is a partial edit: a nil slice pointer means "leave unchanged",
+// a non-nil (possibly empty) slice means "replace with exactly this".
+type UpdatePaySlipInput struct {
+	PaySlipID     string
+	BaseSalary    *float64
+	Compensations *[]ManualCompensationInput
+	Deductions    *[]ManualDeductionInput
+	AbsentDays    *int
+	Recalculate   bool
 }
 
 type ManualCompensationInput struct {

@@ -11,8 +11,8 @@ import (
 )
 
 type CompensationUsecase struct {
-	compItemRepo   repository.CompensationItemRepository
-	empCompRepo    repository.EmployeeCompensationRepository
+	compItemRepo    repository.CompensationItemRepository
+	empCompRepo     repository.EmployeeCompensationRepository
 	employeeFetcher EmployeeFetcher
 }
 

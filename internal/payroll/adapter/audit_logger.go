@@ -14,8 +14,10 @@ const (
 	ActionPeriodCreate    = "payroll.period.create"
 	ActionPeriodProcess   = "payroll.period.process"
 	ActionPeriodClose     = "payroll.period.close"
+	ActionPeriodDelete    = "payroll.period.delete"
 	ActionSetup           = "payroll.setup"
 	ActionPayslipCreate   = "payroll.payslip.create"
+	ActionPayslipUpdate   = "payroll.payslip.update"
 )
 
 type AuditLogger struct {

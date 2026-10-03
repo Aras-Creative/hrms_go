@@ -167,6 +167,44 @@ const qryUpsertPaySlip = `
 		updated_at = EXCLUDED.updated_at
 `
 
+// qryUpsertPaySlipIfNotManual is the processor's upsert. The WHERE clause on the DO
+// UPDATE turns the conflict into a no-op when a manual override already exists, so
+// re-processing a period cannot silently revert a deliberate human correction.
+// RowsAffected == 0 therefore means "skipped, manual override preserved".
+const qryUpsertPaySlipIfNotManual = `
+	INSERT INTO pay_slips (id, period_id, employee_id, base_salary, total_compensations, total_deductions,
+		absent_days, net_salary, currency, source, compensations_breakdown, deductions_breakdown, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+	ON CONFLICT (period_id, employee_id) DO UPDATE SET
+		base_salary = EXCLUDED.base_salary,
+		total_compensations = EXCLUDED.total_compensations,
+		total_deductions = EXCLUDED.total_deductions,
+		absent_days = EXCLUDED.absent_days,
+		net_salary = EXCLUDED.net_salary,
+		currency = EXCLUDED.currency,
+		source = EXCLUDED.source,
+		compensations_breakdown = EXCLUDED.compensations_breakdown,
+		deductions_breakdown = EXCLUDED.deductions_breakdown,
+		updated_at = EXCLUDED.updated_at
+	WHERE pay_slips.source <> 'manual'
+`
+
+// qryUpdatePaySlip persists an in-place edit of an existing slip by primary key.
+const qryUpdatePaySlip = `
+	UPDATE pay_slips SET
+		base_salary = $2,
+		total_compensations = $3,
+		total_deductions = $4,
+		absent_days = $5,
+		net_salary = $6,
+		currency = $7,
+		source = $8,
+		compensations_breakdown = $9,
+		deductions_breakdown = $10,
+		updated_at = $11
+	WHERE id = $1
+`
+
 const qrySelectPaySlip = `
 	SELECT id, period_id, employee_id, base_salary, total_compensations, total_deductions,
 		absent_days, net_salary, currency, source, compensations_breakdown, deductions_breakdown, created_at, updated_at
@@ -185,6 +223,51 @@ func (r *PostgresPaySlipRepo) Upsert(ctx context.Context, ps *entity.PaySlip) er
 	)
 	if err != nil {
 		return fmt.Errorf("upsert pay slip: %w", err)
+	}
+	return nil
+}
+
+func (r *PostgresPaySlipRepo) UpsertIfNotManual(ctx context.Context, ps *entity.PaySlip) (bool, error) {
+	compJSON, _ := json.Marshal(ps.CompensationsBreakdown)
+	dedJSON, _ := json.Marshal(ps.DeductionsBreakdown)
+
+	res, err := r.db.ExecContext(ctx, qryUpsertPaySlipIfNotManual,
+		ps.ID, ps.PeriodID, ps.EmployeeID,
+		ps.BaseSalary.Cents(), ps.TotalCompensations.Cents(), ps.TotalDeductions.Cents(),
+		ps.AbsentDays, ps.NetSalary.Cents(), ps.Currency.String(), string(ps.Source),
+		compJSON, dedJSON, ps.CreatedAt, ps.UpdatedAt,
+	)
+	if err != nil {
+		return false, fmt.Errorf("upsert pay slip: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	return n == 0, nil
+}
+
+// Update replaces an existing payslip in place, keyed by its primary key. Unlike
+// Upsert it never touches the (period_id, employee_id) identity of the slip.
+func (r *PostgresPaySlipRepo) Update(ctx context.Context, ps *entity.PaySlip) error {
+	compJSON, _ := json.Marshal(ps.CompensationsBreakdown)
+	dedJSON, _ := json.Marshal(ps.DeductionsBreakdown)
+
+	res, err := r.db.ExecContext(ctx, qryUpdatePaySlip,
+		ps.ID,
+		ps.BaseSalary.Cents(), ps.TotalCompensations.Cents(), ps.TotalDeductions.Cents(),
+		ps.AbsentDays, ps.NetSalary.Cents(), ps.Currency.String(), string(ps.Source),
+		compJSON, dedJSON, ps.UpdatedAt,
+	)
+	if err != nil {
+		return fmt.Errorf("update pay slip: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if n == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -236,6 +319,14 @@ func (r *PostgresPaySlipRepo) FindByEmployeeAndPeriod(ctx context.Context, emplo
 		return nil, fmt.Errorf("find pay slip by employee and period: %w", err)
 	}
 	return paySlipModelToEntity(&m), nil
+}
+
+func (r *PostgresPaySlipRepo) CountByPeriodID(ctx context.Context, periodID string) (int64, error) {
+	var n int64
+	if err := r.db.GetContext(ctx, &n, `SELECT COUNT(*) FROM pay_slips WHERE period_id = $1`, periodID); err != nil {
+		return 0, fmt.Errorf("count pay slips by period: %w", err)
+	}
+	return n, nil
 }
 
 func (r *PostgresPaySlipRepo) DeleteByPeriodID(ctx context.Context, periodID string) error {

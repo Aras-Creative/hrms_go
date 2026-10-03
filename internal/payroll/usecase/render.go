@@ -9,8 +9,8 @@ import (
 
 	"hrms/internal/payroll/models"
 	"hrms/internal/payroll/repository"
-	"hrms/internal/pkg/fmtutil"
 	errors "hrms/internal/pkg/apperror"
+	"hrms/internal/pkg/fmtutil"
 
 	"hrms/internal/payroll/entity"
 )
@@ -112,7 +112,7 @@ func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPe
 	currency := ps.Currency.String()
 
 	data := &models.PayslipRenderData{
-		LogoURL:         logoURL,
+		LogoURL:        logoURL,
 		CompanyName:    companyName,
 		CompanyAddress: companyAddress,
 		DocNumber:      fmt.Sprintf("SG/%s/%s", p.Name, ps.ID[:8]),

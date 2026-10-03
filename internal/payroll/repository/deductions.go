@@ -23,20 +23,21 @@ func NewPostgresDeductionTypeRepo(db *sqlx.DB) *PostgresDeductionTypeRepo {
 }
 
 const qryInsertDeductionType = `
-	INSERT INTO deduction_types (id, name, slug, description, deduction_type, default_value, is_active, is_mandatory, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	INSERT INTO deduction_types (id, name, slug, description, deduction_type, default_value, value_source, unit_amount, is_active, is_mandatory, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 `
 
 const qrySelectDeductionType = `
-	SELECT id, name, slug, description, deduction_type, default_value, is_active, is_mandatory, created_at, updated_at
+	SELECT id, name, slug, description, deduction_type, default_value, value_source, unit_amount, is_active, is_mandatory, created_at, updated_at
 	FROM deduction_types
 `
 
 const qryUpdateDeductionType = `
 	UPDATE deduction_types SET
 		name = $1, slug = $2, description = $3, deduction_type = $4,
-		default_value = $5, is_active = $6, is_mandatory = $7, updated_at = $8
-	WHERE id = $9
+		default_value = $5, value_source = $6, unit_amount = $7,
+		is_active = $8, is_mandatory = $9, updated_at = $10
+	WHERE id = $11
 `
 
 const qryDeleteDeductionType = `DELETE FROM deduction_types WHERE id = $1`
@@ -44,7 +45,8 @@ const qryDeleteDeductionType = `DELETE FROM deduction_types WHERE id = $1`
 func (r *PostgresDeductionTypeRepo) Create(ctx context.Context, dt *entity.DeductionType) error {
 	_, err := r.db.ExecContext(ctx, qryInsertDeductionType,
 		dt.ID, dt.Name, dt.Slug, dt.Description, string(dt.DeductionType),
-		dt.DefaultValue, dt.IsActive, dt.IsMandatory, dt.CreatedAt, dt.UpdatedAt,
+		dt.DefaultValue, string(dt.ValueSource), dt.UnitAmount.Cents(),
+		dt.IsActive, dt.IsMandatory, dt.CreatedAt, dt.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert deduction type: %w", err)
@@ -141,7 +143,8 @@ func (r *PostgresDeductionTypeRepo) FindAll(ctx context.Context, filter Deductio
 func (r *PostgresDeductionTypeRepo) Update(ctx context.Context, dt *entity.DeductionType) error {
 	res, err := r.db.ExecContext(ctx, qryUpdateDeductionType,
 		dt.Name, dt.Slug, dt.Description, string(dt.DeductionType),
-		dt.DefaultValue, dt.IsActive, dt.IsMandatory, dt.UpdatedAt, dt.ID,
+		dt.DefaultValue, string(dt.ValueSource), dt.UnitAmount.Cents(),
+		dt.IsActive, dt.IsMandatory, dt.UpdatedAt, dt.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update deduction type: %w", err)
@@ -174,8 +177,8 @@ func (r *PostgresDeductionTypeRepo) Delete(ctx context.Context, id string) error
 func deductionTypeModelToEntity(m *DeductionTypeModel) *entity.DeductionType {
 	return entity.ReconstituteDeductionType(
 		m.ID, m.Name, m.Slug, m.Description,
-		m.DeductionType, m.DefaultValue, m.IsActive, m.IsMandatory,
-		m.CreatedAt, m.UpdatedAt,
+		m.DeductionType, m.DefaultValue, m.ValueSource, m.UnitAmount,
+		m.IsActive, m.IsMandatory, m.CreatedAt, m.UpdatedAt,
 	)
 }
 
@@ -201,27 +204,35 @@ func NewPostgresEmployeeDeductionRepo(db *sqlx.DB) *PostgresEmployeeDeductionRep
 }
 
 const qryInsertEmpDeduction = `
-	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, effective_date, end_date, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, effective_date, end_date, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
+// qrySelectEmpDeduction joins the deduction type so the basis (deduction_type,
+// value_source) travels with the assignment. Callers otherwise have to fetch every
+// type separately just to know whether value or unit_amount is meaningful.
 const qrySelectEmpDeduction = `
-	SELECT id, employee_id, deduction_type_id, value, effective_date, end_date, created_at, updated_at
-	FROM employee_deductions
+	SELECT ed.id, ed.employee_id, ed.deduction_type_id, ed.value, ed.unit_amount,
+		ed.effective_date, ed.end_date, ed.created_at, ed.updated_at,
+		dt.deduction_type AS deduction_type,
+		dt.name AS deduction_type_name,
+		dt.value_source AS value_source
+	FROM employee_deductions ed
+	JOIN deduction_types dt ON dt.id = ed.deduction_type_id
 `
 
 const qryUpdateEmpDeduction = `
 	UPDATE employee_deductions SET
-		employee_id = $1, deduction_type_id = $2, value = $3,
-		effective_date = $4, end_date = $5, updated_at = $6
-	WHERE id = $7
+		employee_id = $1, deduction_type_id = $2, value = $3, unit_amount = $4,
+		effective_date = $5, end_date = $6, updated_at = $7
+	WHERE id = $8
 `
 
 const qryDeleteEmpDeduction = `DELETE FROM employee_deductions WHERE id = $1`
 
 func (r *PostgresEmployeeDeductionRepo) Create(ctx context.Context, ed *entity.EmployeeDeduction) error {
 	_, err := r.db.ExecContext(ctx, qryInsertEmpDeduction,
-		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value,
+		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
 		ed.EffectiveDate, ed.EndDate, ed.CreatedAt, ed.UpdatedAt,
 	)
 	if err != nil {
@@ -232,7 +243,7 @@ func (r *PostgresEmployeeDeductionRepo) Create(ctx context.Context, ed *entity.E
 
 func (r *PostgresEmployeeDeductionRepo) FindByID(ctx context.Context, id string) (*entity.EmployeeDeduction, error) {
 	var m EmployeeDeductionModel
-	err := r.db.QueryRowxContext(ctx, qrySelectEmpDeduction+` WHERE id = $1`, id).StructScan(&m)
+	err := r.db.QueryRowxContext(ctx, qrySelectEmpDeduction+` WHERE ed.id = $1`, id).StructScan(&m)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -244,7 +255,7 @@ func (r *PostgresEmployeeDeductionRepo) FindByID(ctx context.Context, id string)
 
 func (r *PostgresEmployeeDeductionRepo) FindByEmployeeID(ctx context.Context, employeeID string) ([]*entity.EmployeeDeduction, error) {
 	var models []EmployeeDeductionModel
-	err := r.db.SelectContext(ctx, &models, qrySelectEmpDeduction+` WHERE employee_id = $1 ORDER BY effective_date DESC`, employeeID)
+	err := r.db.SelectContext(ctx, &models, qrySelectEmpDeduction+` WHERE ed.employee_id = $1 ORDER BY ed.effective_date DESC`, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("find employee deductions by employee: %w", err)
 	}
@@ -261,13 +272,13 @@ func (r *PostgresEmployeeDeductionRepo) FindAll(ctx context.Context, filter EmpD
 	argIdx := 1
 
 	if filter.EmployeeID != "" {
-		where = fmt.Sprintf(" WHERE employee_id = $%d", argIdx)
+		where = fmt.Sprintf(" WHERE ed.employee_id = $%d", argIdx)
 		args = append(args, filter.EmployeeID)
 		argIdx++
 	}
 
 	var total int64
-	countQry := "SELECT COUNT(*) FROM employee_deductions" + where
+	countQry := "SELECT COUNT(*) FROM employee_deductions ed" + where
 	if err := r.db.GetContext(ctx, &total, countQry, args...); err != nil {
 		return nil, 0, fmt.Errorf("count employee deductions: %w", err)
 	}
@@ -284,7 +295,7 @@ func (r *PostgresEmployeeDeductionRepo) FindAll(ctx context.Context, filter EmpD
 	}
 	offset := (page - 1) * perPage
 
-	orderQry := qrySelectEmpDeduction + where + " ORDER BY effective_date DESC"
+	orderQry := qrySelectEmpDeduction + where + " ORDER BY ed.effective_date DESC"
 	orderQry += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 
@@ -302,7 +313,7 @@ func (r *PostgresEmployeeDeductionRepo) FindAll(ctx context.Context, filter EmpD
 
 func (r *PostgresEmployeeDeductionRepo) Update(ctx context.Context, ed *entity.EmployeeDeduction) error {
 	res, err := r.db.ExecContext(ctx, qryUpdateEmpDeduction,
-		ed.EmployeeID, ed.DeductionTypeID, ed.Value,
+		ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
 		ed.EffectiveDate, ed.EndDate, ed.UpdatedAt, ed.ID,
 	)
 	if err != nil {
@@ -335,8 +346,9 @@ func (r *PostgresEmployeeDeductionRepo) Delete(ctx context.Context, id string) e
 
 func empDeductionModelToEntity(m *EmployeeDeductionModel) *entity.EmployeeDeduction {
 	return entity.ReconstituteEmployeeDeduction(
-		m.ID, m.EmployeeID, m.DeductionTypeID, m.Value,
+		m.ID, m.EmployeeID, m.DeductionTypeID, m.Value, m.UnitAmount,
 		m.EffectiveDate, m.EndDate, m.CreatedAt, m.UpdatedAt,
+		entity.DeductionCalcType(m.DeductionType), m.DeductionTypeName, entity.ValueSource(m.ValueSource),
 	)
 }
 
