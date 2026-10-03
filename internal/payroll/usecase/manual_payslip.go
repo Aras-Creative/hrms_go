@@ -95,12 +95,35 @@ func (uc *ManualPaySlipUsecase) CreateManualPaySlip(ctx context.Context, input m
 	// absent_deduction amount to enter by hand (its column was dropped in migration 000039).
 	builder.WithAbsentDays(input.AbsentDays)
 
+	// Validated before the build so a bad figure aborts before anything is written.
+	incomeInputs, err := entity.ValidateIncomeInputs(input.IncomeInputs)
+	if err != nil {
+		return nil, errors.NewInvalidInput(err.Error())
+	}
+
 	ps := builder.Build()
+	ps.IncomeInputs = incomeInputs
 
 	if err := uc.paySlipRepo.Upsert(ctx, ps); err != nil {
 		return nil, fmt.Errorf("upsert manual payslip: %w", err)
 	}
-	return ps, nil
+
+	// Upsert is INSERT ... ON CONFLICT (period_id, employee_id) DO UPDATE, and the DO
+	// UPDATE list deliberately leaves id alone. So when the employee already had a slip in
+	// this period the row kept its original primary key while ps still carries the one the
+	// builder just generated. Returning ps would hand the caller an ID that does not exist,
+	// and every later PUT against it would 404. Reading the row back returns the ID that is
+	// actually stored.
+	// Looked up by the pair that Upsert conflicts on, not by ps.ID: on a conflict that ID
+	// is precisely the one that was not used.
+	stored, err := uc.paySlipRepo.FindByEmployeeAndPeriod(ctx, input.EmployeeID, input.PeriodID)
+	if err != nil {
+		return nil, fmt.Errorf("read back payslip: %w", err)
+	}
+	if stored == nil {
+		return nil, errors.NewNotFound("pay slip not found after upsert")
+	}
+	return stored, nil
 }
 
 // UpdatePaySlip applies a partial correction to an existing payslip. Omitted fields are
@@ -159,6 +182,16 @@ func (uc *ManualPaySlipUsecase) UpdatePaySlip(ctx context.Context, input models.
 			return nil, errors.NewInvalidInput("absent_days must be >= 0")
 		}
 		ps.AbsentDays = *input.AbsentDays
+	}
+
+	// Independent of the money above: assigning to the slice cannot move a total, and it is
+	// skipped by recalculate, which has no source for a hand-typed figure.
+	if input.IncomeInputs != nil {
+		incomeInputs, err := entity.ValidateIncomeInputs(*input.IncomeInputs)
+		if err != nil {
+			return nil, errors.NewInvalidInput(err.Error())
+		}
+		ps.IncomeInputs = incomeInputs
 	}
 
 	// recalculate is opt-in because the default behaviour is deliberately additive: a

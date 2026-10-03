@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"hrms/internal/payroll/entity"
+)
 
 // --- Base Salary ---
 
@@ -197,6 +201,7 @@ type UpdatePeriodInput struct {
 	EndDate   time.Time
 }
 
+// ManualPaySlipInput carries the figures for a hand-written slip.
 type ManualPaySlipInput struct {
 	PeriodID      string
 	EmployeeID    string
@@ -205,6 +210,9 @@ type ManualPaySlipInput struct {
 	Compensations []ManualCompensationInput
 	Deductions    []ManualDeductionInput
 	AbsentDays    int
+	// IncomeInputs are the descriptive, non-money figures typed onto the slip. They are
+	// never summed into any total; see entity.IncomeInput for why.
+	IncomeInputs []entity.IncomeInput
 }
 
 // UpdatePaySlipInput is a partial edit: a nil slice pointer means "leave unchanged",
@@ -216,6 +224,10 @@ type UpdatePaySlipInput struct {
 	Deductions    *[]ManualDeductionInput
 	AbsentDays    *int
 	Recalculate   bool
+	// IncomeInputs follows the same nil-means-unchanged rule as the breakdowns: nil leaves
+	// the stored figures alone, a non-nil slice replaces the whole set so an omitted key
+	// clears the figure rather than lingering on the slip.
+	IncomeInputs *[]entity.IncomeInput
 }
 
 type ManualCompensationInput struct {

@@ -210,6 +210,41 @@
         color: var(--accent);
       }
 
+      /* Descriptive figures, rendered below the net pay.
+         A separate block with its own muted styling on purpose: these numbers are counts
+         and percentages, and putting them in the income or deduction table would read as
+         money and invite the reader to add them to the figures above. */
+      .calc-notes {
+        margin: 0 40px 28px;
+        border: 1px dashed var(--line);
+        border-radius: 4px;
+        padding: 14px 18px;
+      }
+      .calc-notes .section-title {
+        margin-bottom: 8px;
+      }
+      .calc-notes table td {
+        padding: 5px 0;
+        border-bottom: none;
+        font-size: 12px;
+      }
+      .calc-notes table td.val {
+        text-align: right;
+        font-family: var(--mono);
+        font-variant-numeric: tabular-nums;
+      }
+      .calc-notes table td.hint {
+        color: var(--ink-soft);
+        font-size: 10.5px;
+        padding-left: 14px;
+      }
+      .calc-notes .caption {
+        margin-top: 10px;
+        font-size: 10px;
+        color: var(--ink-soft);
+        font-style: italic;
+      }
+
       /* Footer note */
       .note {
         padding: 16px 40px 28px;
@@ -335,6 +370,27 @@
         <div class="amount">{{.NetSalary}}</div>
       </div>
 
+      {{if .IncomeNotes}}
+      <div class="calc-notes">
+        <div class="section-title">Catatan Perhitungan</div>
+        <table>
+          {{range .IncomeNotes}}
+          <tr>
+            <td>{{.Label}}</td>
+            <td class="val">{{.Value}}</td>
+          </tr>
+          {{if .Notes}}
+          <tr>
+            <td></td>
+            <td class="hint">{{.Notes}}</td>
+          </tr>
+          {{end}} {{end}}
+        </table>
+        <div class="caption">
+          Angka catatan ini tidak termasuk dalam perhitungan gaji bersih di atas.
+        </div>
+      </div>
+      {{end}}
       <div class="note">
         Dokumen ini diterbitkan secara resmi dan sah oleh sistem penggajian
         perusahaan tanpa memerlukan tanda tangan basah maupun cap fisik.

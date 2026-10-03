@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	payrollAdapter "hrms/internal/payroll/adapter"
+	"hrms/internal/payroll/entity"
 	"hrms/internal/payroll/models"
 	"hrms/internal/payroll/usecase"
 	response "hrms/internal/pkg/api"
@@ -77,6 +78,31 @@ func NewPayrollHandler(
 		empFetcher:      empFetcher,
 		photoResolver:   photoResolver,
 	}
+}
+
+func incomeInputsToEntity(reqs []IncomeInputRequest) []entity.IncomeInput {
+	out := make([]entity.IncomeInput, 0, len(reqs))
+	for _, r := range reqs {
+		out = append(out, r.toEntity())
+	}
+	return out
+}
+
+// incomeInputsForAudit trims each figure down to what an auditor needs. The validated
+// entity is logged rather than the raw request, so a key that was trimmed or a unit that
+// was defaulted is recorded as it was actually stored.
+func incomeInputsForAudit(inputs []entity.IncomeInput) []map[string]any {
+	out := make([]map[string]any, 0, len(inputs))
+	for _, in := range inputs {
+		out = append(out, map[string]any{
+			"key":   in.Key,
+			"label": entity.IncomeInputLabel(in.Key),
+			"value": in.Value,
+			"unit":  string(in.Unit),
+			"notes": in.Notes,
+		})
+	}
+	return out
 }
 
 func userIDFromCtx(c fiber.Ctx) *string {
@@ -766,7 +792,7 @@ func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
 		if req.Compensations != nil || req.Deductions != nil || req.AbsentDays != nil {
 			return response.Error(c, errors.NewInvalidInput("recalculate cannot be combined with compensations, deductions or absent_days"))
 		}
-	} else if req.BaseSalary == nil && req.Compensations == nil && req.Deductions == nil && req.AbsentDays == nil {
+	} else if req.BaseSalary == nil && req.Compensations == nil && req.Deductions == nil && req.AbsentDays == nil && req.IncomeInputs == nil {
 		return response.Error(c, errors.NewInvalidInput("no updatable field supplied"))
 	}
 	if req.BaseSalary != nil && float64(*req.BaseSalary) < 0 {
@@ -812,6 +838,10 @@ func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
 		}
 		input.Deductions = &deds
 	}
+	if req.IncomeInputs != nil {
+		inputs := incomeInputsToEntity(*req.IncomeInputs)
+		input.IncomeInputs = &inputs
+	}
 
 	ps, err := h.manualPayslipUc.UpdatePaySlip(c.RequestCtx(), input)
 	if err != nil {
@@ -834,6 +864,9 @@ func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
 			}
 			if input.Deductions != nil {
 				payload["deductions"] = len(*input.Deductions)
+			}
+			if req.IncomeInputs != nil {
+				payload["income_inputs"] = incomeInputsForAudit(incomeInputsToEntity(*req.IncomeInputs))
 			}
 			h.auditLogger.Log(c.RequestCtx(), *actorID, "pay_slip", ps.ID, "",
 				payrollAdapter.ActionPayslipUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
@@ -889,6 +922,7 @@ func (h *PayrollHandler) CreateManualPaySlip(c fiber.Ctx) error {
 			Amount:          float64(d.Amount),
 		})
 	}
+	input.IncomeInputs = incomeInputsToEntity(req.IncomeInputs)
 
 	ps, err := h.manualPayslipUc.CreateManualPaySlip(c.RequestCtx(), input)
 	if err != nil {
@@ -898,9 +932,20 @@ func (h *PayrollHandler) CreateManualPaySlip(c fiber.Ctx) error {
 	if h.auditLogger != nil {
 		actorID := userIDFromCtx(c)
 		if actorID != nil {
+			// The figures themselves, not just a count: they are the reason the slip was
+			// written by hand, and a log that only says "3 inputs" cannot answer what the
+			// bonus was based on after the fact.
+			payload := map[string]any{
+				"period_id":   periodID,
+				"employee_id": req.EmployeeID,
+				"source":      "manual",
+			}
+			if len(req.IncomeInputs) > 0 {
+				payload["income_inputs"] = incomeInputsForAudit(incomeInputsToEntity(req.IncomeInputs))
+			}
 			h.auditLogger.Log(c.RequestCtx(), *actorID, "pay_slip", ps.ID, "",
 				payrollAdapter.ActionPayslipCreate, c.IP(), string(c.RequestCtx().UserAgent()),
-				map[string]any{"period_id": periodID, "employee_id": req.EmployeeID, "source": "manual"},
+				payload,
 			)
 		}
 	}
@@ -1111,3 +1156,9 @@ func (h *PayrollHandler) DeleteDeductionType(c fiber.Ctx) error {
 	}
 	return response.OK(c, map[string]any{"success": true})
 }
+
+// --- Income calculation inputs ---
+//
+// Non-money figures HR records per employee per period (jumlah_sukses, persentase_rts,
+// closing_bersih). They are stored so a payslip can explain a bonus, and are excluded
+// from every payslip total by design.

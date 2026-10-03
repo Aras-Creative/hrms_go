@@ -6,6 +6,7 @@ import (
 	_ "embed"
 	"fmt"
 	"html/template"
+	"strconv"
 
 	"hrms/internal/payroll/models"
 	"hrms/internal/payroll/repository"
@@ -115,7 +116,7 @@ func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPe
 		LogoURL:        logoURL,
 		CompanyName:    companyName,
 		CompanyAddress: companyAddress,
-		DocNumber:      fmt.Sprintf("SG/%s/%s", p.Name, ps.ID[:8]),
+		DocNumber:      fmt.Sprintf("SG/%s/%s", p.Name, docNumberSuffix(ps.ID)),
 		PeriodName:     p.Name,
 		PeriodRange:    fmt.Sprintf("%s – %s", p.StartDate.Format("02 Jan 2006"), p.EndDate.Format("02 Jan 2006")),
 
@@ -149,5 +150,43 @@ func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPe
 		})
 	}
 
+	// Formatted with strconv rather than fmtutil: these are counts and percentages, not
+	// money. Routing them through FormatMoneyFloat would print "10 closings" as "Rp 10",
+	// which is exactly the misreading the separate section exists to prevent.
+	for _, in := range ps.IncomeInputs {
+		data.IncomeNotes = append(data.IncomeNotes, models.IncomeNoteRow{
+			Label: entity.IncomeInputLabel(in.Key),
+			Value: formatIncomeInputValue(in),
+			Notes: in.Notes,
+		})
+	}
+
 	return data
+}
+
+// docNumberSuffix takes the short form of the slip ID for the printed document number.
+// Sliced defensively: the column is a UUID today, but an eight-byte slice on a shorter
+// value panics, and this runs while rendering a document an employee is waiting for.
+func docNumberSuffix(id string) string {
+	if len(id) <= 8 {
+		return id
+	}
+	return id[:8]
+}
+
+// formatIncomeInputValue renders a figure plus its unit. The value itself is printed
+// unformatted so 12345.6 does not become "12,345.60" and read as money; a percent carries
+// its sign so the reader does not have to know the unit.
+func formatIncomeInputValue(in entity.IncomeInput) string {
+	value := strconv.FormatFloat(in.Value, 'f', -1, 64)
+	switch in.Unit {
+	case entity.IncomeInputUnitPercent:
+		return value + "%"
+	case entity.IncomeInputUnitCurrency:
+		return fmtutil.FormatMoneyFloat(in.Value, "IDR")
+	case entity.IncomeInputUnitDays:
+		return value + " hari"
+	default:
+		return value
+	}
 }

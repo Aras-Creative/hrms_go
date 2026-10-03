@@ -75,6 +75,10 @@ type EmployeeDeductionRepository interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// IncomeInputRepository stores the non-money figures HR records per employee per period
+// ("jumlah_sukses", "persentase_rts", "closing_bersih"). Nothing here feeds a payslip
+// total; the separation is the whole point of the table.
+
 type PayrollPeriodRepository interface {
 	Create(ctx context.Context, p *entity.PayrollPeriod) error
 	FindByID(ctx context.Context, id string) (*entity.PayrollPeriod, error)

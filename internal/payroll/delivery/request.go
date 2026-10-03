@@ -3,6 +3,8 @@ package delivery
 import (
 	"encoding/json"
 	"strconv"
+
+	"hrms/internal/payroll/entity"
 )
 
 // FlexFloat64 accepts both JSON number and JSON string for float64 fields.
@@ -165,6 +167,31 @@ type ManualDeductionRequest struct {
 	Amount          FlexFloat64 `json:"amount" validate:"required"`
 }
 
+// IncomeInputRequest is one non-money figure HR records. Keys are limited to
+// jumlah_sukses, persentase_rts and closing_bersih; anything else is rejected so a
+// typo cannot create an input that silently never appears on the slip.
+type IncomeInputRequest struct {
+	Key   string      `json:"key" validate:"required"`
+	Value FlexFloat64 `json:"value"`
+	Unit  string      `json:"unit" validate:"omitempty,oneof=number percent currency days text"`
+	Notes string      `json:"notes"`
+}
+
+type UpsertIncomeInputsRequest struct {
+	Inputs []IncomeInputRequest `json:"inputs" validate:"required,dive"`
+}
+
+// toEntity leaves the key and unit as typed so entity validation can report the caller's
+// own wording back to them instead of a normalised one.
+func (r IncomeInputRequest) toEntity() entity.IncomeInput {
+	return entity.IncomeInput{
+		Key:   r.Key,
+		Value: float64(r.Value),
+		Unit:  entity.IncomeInputUnit(r.Unit),
+		Notes: r.Notes,
+	}
+}
+
 type CreateManualPaySlipRequest struct {
 	EmployeeID    string                      `json:"employee_id" validate:"required,uuid"`
 	BaseSalary    FlexFloat64                 `json:"base_salary" validate:"required"`
@@ -172,6 +199,9 @@ type CreateManualPaySlipRequest struct {
 	Compensations []ManualCompensationRequest `json:"compensations,omitempty"`
 	Deductions    []ManualDeductionRequest    `json:"deductions,omitempty"`
 	AbsentDays    int                         `json:"absent_days"`
+	// IncomeInputs are the descriptive, non-money figures for this slip. Optional: a slip
+	// without them is valid, and they never affect net salary.
+	IncomeInputs []IncomeInputRequest `json:"income_inputs,omitempty"`
 }
 
 // UpdatePaySlipRequest uses pointer fields so an omitted key keeps the stored value
@@ -183,4 +213,8 @@ type UpdatePaySlipRequest struct {
 	Deductions    *[]ManualDeductionRequest    `json:"deductions"`
 	AbsentDays    *int                         `json:"absent_days"`
 	Recalculate   bool                         `json:"recalculate"`
+	// IncomeInputs holds the non-money figures for this slip, e.g. how many closings a
+	// salesperson made. Sending the field replaces the whole set, so an omitted key clears
+	// the figure. None of these values affect net salary.
+	IncomeInputs *[]IncomeInputRequest `json:"income_inputs"`
 }

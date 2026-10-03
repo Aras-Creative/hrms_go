@@ -54,4 +54,6 @@ func (h *PayrollHandler) RegisterRoutes(r fiber.Router, authMw fiber.Handler, ad
 
 	// Employee payroll components
 	p.Get("/employees/:id/components", h.GetEmployeeComponents)
+
+	// Income calculation inputs (non-money figures recorded by HR, excluded from totals)
 }

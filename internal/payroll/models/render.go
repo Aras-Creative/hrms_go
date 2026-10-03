@@ -30,6 +30,20 @@ type PayslipRenderData struct {
 	TotalDeductions string
 	AbsentDays      int
 	NetSalary       string
+
+	// IncomeNotes are the descriptive figures an admin recorded on this slip. They sit
+	// outside every total on purpose, which is why they render below the net-pay block
+	// instead of inside the income or deduction table.
+	IncomeNotes []IncomeNoteRow
+}
+
+// IncomeNoteRow is one rendered line of the descriptive-figures section. Value is already
+// formatted for display, unit and all, because the unit is a display hint that no
+// calculation reads.
+type IncomeNoteRow struct {
+	Label string
+	Value string
+	Notes string
 }
 
 type BreakdownRow struct {

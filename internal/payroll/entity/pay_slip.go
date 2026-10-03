@@ -65,8 +65,13 @@ type PaySlip struct {
 	Source                 PaySlipSource
 	CompensationsBreakdown []CompensationBreakdown
 	DeductionsBreakdown    []DeductionBreakdown
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
+	// IncomeInputs are the descriptive, non-money figures an admin typed onto this slip.
+	// They are stored here rather than in payroll setup, which only carries financial
+	// components, and they are excluded from every total on this struct by construction:
+	// the totals above are Amounts fixed at build time and nothing sums this slice.
+	IncomeInputs []IncomeInput
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // --- PaySlipBuilder ---
@@ -208,7 +213,7 @@ func ReconstitutePaySlip(
 	netSalaryCents int64,
 	currency string,
 	source string,
-	compJSON, dedJSON []byte,
+	compJSON, dedJSON, incomeInputsJSON []byte,
 	createdAt, updatedAt time.Time,
 ) *PaySlip {
 	var compB []CompensationBreakdown
@@ -218,6 +223,24 @@ func ReconstitutePaySlip(
 	var dedB []DeductionBreakdown
 	if len(dedJSON) > 0 {
 		json.Unmarshal(dedJSON, &dedB)
+	}
+	// Nothing recorded reads as an empty slice: the column defaults to '[]', an admin who
+	// cleared the figures writes '[]', and a slip predating the column has whatever the
+	// default gave it. "null" would unmarshal to a nil slice, so the nil is re-guarded and
+	// callers never have to wonder whether they are looking at stored data or nothing.
+	//
+	// A decode failure also lands here, and is deliberately not fatal: Reconstitute has no
+	// error return, and a slip whose figures will not parse should still show its salary.
+	// The writer only ever emits validated, normalised figures, so reaching this branch means
+	// the column was written by something other than this code.
+	incomeInputs := []IncomeInput{}
+	if len(incomeInputsJSON) > 0 {
+		if err := json.Unmarshal(incomeInputsJSON, &incomeInputs); err != nil {
+			incomeInputs = []IncomeInput{}
+		}
+	}
+	if incomeInputs == nil {
+		incomeInputs = []IncomeInput{}
 	}
 	return &PaySlip{
 		ID:                     id,
@@ -232,6 +255,7 @@ func ReconstitutePaySlip(
 		Source:                 PaySlipSource(source),
 		CompensationsBreakdown: compB,
 		DeductionsBreakdown:    dedB,
+		IncomeInputs:           incomeInputs,
 		CreatedAt:              createdAt,
 		UpdatedAt:              updatedAt,
 	}

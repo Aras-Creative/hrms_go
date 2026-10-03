@@ -149,8 +149,24 @@ type PaySlipResponse struct {
 	Source                 string          `json:"source"`
 	CompensationsBreakdown []BreakdownItem `json:"compensations_breakdown"`
 	DeductionsBreakdown    []BreakdownItem `json:"deductions_breakdown"`
-	CreatedAt              time.Time       `json:"created_at"`
-	UpdatedAt              time.Time       `json:"updated_at"`
+	// IncomeInputs carries the non-money figures HR recorded for this period. It is
+	// informational only: none of these values are summed into any total above.
+	IncomeInputs []IncomeInputResponse `json:"income_inputs"`
+	CreatedAt    time.Time             `json:"created_at"`
+	UpdatedAt    time.Time             `json:"updated_at"`
+}
+
+// IncomeInputResponse is a non-money figure recorded for the period. It is deliberately
+// absent from every total: these values explain a payslip, they do not feed it.
+type IncomeInputResponse struct {
+	Key   string  `json:"key"`
+	Value float64 `json:"value"`
+	Unit  string  `json:"unit"`
+	Notes string  `json:"notes"`
+	// Label is the human name for the key, derived server-side from the same table the PDF
+	// uses. Clients render it as-is instead of hardcoding a mapping that would then drift
+	// from the printed slip.
+	Label string `json:"label"`
 }
 
 type EmployeeDeductionResponse struct {
@@ -384,6 +400,7 @@ func paySlipToResponse(ps *entity.PaySlip) *PaySlipResponse {
 		Source:                 string(ps.Source),
 		CompensationsBreakdown: compB,
 		DeductionsBreakdown:    dedB,
+		IncomeInputs:           incomeInputsToResponse(ps.IncomeInputs),
 		CreatedAt:              ps.CreatedAt,
 		UpdatedAt:              ps.UpdatedAt,
 	}
@@ -429,4 +446,18 @@ func centsToFlexPtr(cents *int64) *float64 {
 	}
 	v := float64(*cents) / 100
 	return &v
+}
+
+func incomeInputsToResponse(inputs []entity.IncomeInput) []IncomeInputResponse {
+	out := make([]IncomeInputResponse, len(inputs))
+	for i, in := range inputs {
+		out[i] = IncomeInputResponse{
+			Key:   in.Key,
+			Value: in.Value,
+			Unit:  string(in.Unit),
+			Notes: in.Notes,
+			Label: entity.IncomeInputLabel(in.Key),
+		}
+	}
+	return out
 }

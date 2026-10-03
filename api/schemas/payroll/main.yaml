@@ -875,12 +875,64 @@ PaySlipResponse:
       type: array
       items:
         $ref: "#/BreakdownItem"
+    income_inputs:
+      type: array
+      description: >-
+        Descriptive figures recorded on this slip. Informational only: none of these values
+        are included in total_compensations, total_deductions or net_salary.
+      items:
+        $ref: "#/IncomeInputResponse"
     created_at:
       type: string
       format: date-time
     updated_at:
       type: string
       format: date-time
+
+# IncomeInputItem is one descriptive, non-money figure typed onto a pay slip by hand, such
+# as how many closings a salesperson made or the rate that applied.
+#
+# It lives on the slip rather than in payroll setup, which carries only financial
+# components, and it is excluded from every total by design: a "10 closings" line inside
+# compensations_breakdown would be summed into net salary, because breakdown lines are
+# money by construction.
+IncomeInputItem:
+  type: object
+  required:
+    - key
+  properties:
+    key:
+      type: string
+      enum: [jumlah_sukses, persentase_rts, closing_bersih]
+      description: >-
+        Stable machine key. Unknown keys are rejected so a typo cannot create an input that
+        never renders on the slip.
+    value:
+      type: number
+      format: float
+    unit:
+      type: string
+      enum: [number, percent, currency, days, text]
+      default: number
+      description: Display hint only. No calculation reads it.
+    notes:
+      type: string
+
+# Served alongside the stored figures on a pay slip. Only the response carries it: the
+# request must not accept one, or a client could store a label that contradicts the key.
+IncomeInputResponse:
+  allOf:
+    - $ref: "#/IncomeInputItem"
+    - type: object
+      required:
+        - label
+      properties:
+        label:
+          type: string
+          description: >-
+            Human name for the key, derived server-side from the same table the PDF uses.
+            Render it as-is rather than mapping the key client-side, which would let the
+            screen and the printed slip disagree.
 
 BreakdownItem:
   type: object
@@ -906,6 +958,46 @@ BreakdownItem:
 # ManualPaySlipBreakdownItem is one line of a hand-entered breakdown. The item id is
 # carried alongside the amount so the PDF keeps the name that was current at the time the
 # correction was made, even if the master item is renamed later.
+# CreateManualPaySlipRequest writes a pay slip by hand for one employee in a period.
+# Upserting by (period_id, employee_id): posting again for the same pair corrects the
+# existing slip rather than creating a second one.
+CreateManualPaySlipRequest:
+  type: object
+  required:
+    - employee_id
+    - base_salary
+  properties:
+    employee_id:
+      type: string
+      format: uuid
+    base_salary:
+      type: number
+      format: float
+      minimum: 0
+      description: Major units, not cents.
+    currency:
+      type: string
+      default: IDR
+    compensations:
+      type: array
+      items:
+        $ref: "#/ManualPaySlipBreakdownItem"
+    deductions:
+      type: array
+      items:
+        $ref: "#/ManualPaySlipBreakdownItem"
+    absent_days:
+      type: integer
+      minimum: 0
+    income_inputs:
+      type: array
+      description: |-
+        Descriptive figures for this slip, such as how many closings a salesperson made.
+        Optional. They never affect base salary, compensations, deductions or net salary.
+      items:
+        $ref: "#/IncomeInputItem"
+
+
 ManualPaySlipBreakdownItem:
   type: object
   required:
@@ -959,6 +1051,14 @@ UpdatePaySlipRequest:
       type: boolean
       default: false
       description: Rebuild compensations_breakdown and deductions_breakdown from master data.
+    income_inputs:
+      type: array
+      description: |-
+        Descriptive figures for this slip. Present in the body it replaces the stored set,
+        so an omitted key clears the figure; absent from the body the stored set is left
+        untouched. Never affects net salary.
+      items:
+        $ref: "#/IncomeInputItem"
 
 ProcessPeriodResult:
   type: object
@@ -1023,9 +1123,4 @@ PeriodOverviewEmployee:
         $ref: "#/EmployeeDeductionResponse"
     absent_days:
       type: integer
-    late_minutes:
-      type: integer
-      items:
-        $ref: "#/EmployeeDeductionResponse"
-    absent_days:
-      type: integer
+      description: Days absent or on unpaid leave in the period, as counted by the calculation query.

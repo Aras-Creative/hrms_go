@@ -1867,6 +1867,55 @@ paths:
         "500":
           $ref: "#/components/responses/CommonError"
 
+    post:
+      tags: [Payroll]
+      summary: Create or replace a hand-written pay slip for one employee in the period
+      description: >-
+        Writes the slip by hand instead of deriving it from master data. Posting again for
+        the same employee in the same period corrects the existing slip rather than creating
+        a second one, and the response carries the ID that is actually stored.
+
+        `income_inputs` records the descriptive, non-money figures on the slip, such as how
+        many closings a salesperson made. Payroll setup holds only financial components, so
+        these live here and are excluded from every total by design.
+      security:
+        - BearerAuth: []
+        - CookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "schemas/payroll/main.yaml#/CreateManualPaySlipRequest"
+      responses:
+        "200":
+          description: Pay slip written
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    enum: [true]
+                  data:
+                    $ref: "schemas/payroll/main.yaml#/PaySlipResponse"
+        "400":
+          $ref: "#/components/responses/CommonError"
+        "401":
+          $ref: "#/components/responses/CommonError"
+        "404":
+          $ref: "#/components/responses/CommonError"
+        "500":
+          $ref: "#/components/responses/CommonError"
+
   /api/v1/payroll/pay-slips/{id}:
     put:
       tags: [Payroll]
@@ -1878,6 +1927,11 @@ paths:
         data (base salary, employee compensations, deduction types) is never modified,
         so subsequent periods still recalculate from the unchanged components. Rejected
         while the owning period is `closed`.
+
+        `income_inputs` carries the non-money figures for the slip (jumlah_sukses,
+        persentase_rts, closing_bersih). Payroll setup holds only financial components, so
+        these are recorded here on the slip itself to explain a bonus. They are excluded
+        from every total by design.
       security:
         - BearerAuth: []
         - CookieAuth: []

@@ -1,0 +1,24 @@
+-- Descriptive, non-money figures recorded on a pay slip by hand: how many closings a
+-- salesperson made, the rate that applied, and so on.
+--
+-- They live on pay_slips rather than in a companion table. pay_slips already carries
+-- UNIQUE (period_id, employee_id), so a second table keyed on the same pair would have
+-- been strictly 1:1 with the slip it described while adding a join on every read and its
+-- own cascade rules to keep in step. A slip is also the shortest-lived thing these figures
+-- belong to: delete the slip and they should go with it, which a column gives for free.
+--
+-- JSONB, not one column per figure. The keys are open-ended, the units differ (a count is
+-- not a percentage), and a new figure should not need a migration. The cost is that these
+-- cannot be aggregated with plain SQL; the audit log is what records who changed them.
+--
+-- DEFAULT '[]' so every existing row, and every processor insert that does not care about
+-- these figures, stays valid without touching them. It is an array rather than '{}' because
+-- that is what the Go side unmarshals into: a JSON object would fail to decode into a
+-- slice, and the read path would have to swallow that error to cope.
+--
+-- Deliberately NOT part of base_salary, total_compensations, total_deductions or
+-- net_salary. A "10 closings" line added to compensations_breakdown would be summed into
+-- net salary, because every breakdown line is money by construction. Payroll setup stays
+-- financial; these are the descriptive half and they never move a number.
+ALTER TABLE pay_slips
+    ADD COLUMN income_inputs JSONB NOT NULL DEFAULT '[]'::jsonb;
