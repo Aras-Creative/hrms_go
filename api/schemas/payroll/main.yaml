@@ -314,7 +314,6 @@ CreateEmployeeCompensationRequest:
     - compensation_item_id
     - amount
     - frequency
-    - effective_date
   properties:
     employee_id:
       type: string
@@ -342,7 +341,6 @@ UpdateEmployeeCompensationRequest:
     - compensation_item_id
     - amount
     - frequency
-    - effective_date
   properties:
     compensation_item_id:
       type: string
@@ -507,7 +505,6 @@ CreateEmployeeBenefitRequest:
   required:
     - employee_id
     - benefit_type_id
-    - effective_date
   properties:
     employee_id:
       type: string
@@ -529,7 +526,6 @@ UpdateEmployeeBenefitRequest:
   type: object
   required:
     - benefit_type_id
-    - effective_date
   properties:
     benefit_type_id:
       type: string
