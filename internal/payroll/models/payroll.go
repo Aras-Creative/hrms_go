@@ -148,27 +148,21 @@ type UpdateEmployeeDeductionInput struct {
 // --- Setup ---
 
 type SetupCompensationItem struct {
-	CompensationItemID string     `json:"compensation_item_id"`
-	Amount             float64    `json:"amount"`
-	Frequency          string     `json:"frequency"`
-	CalcType           string     `json:"calc_type,omitempty"`
-	EffectiveDate      time.Time  `json:"effective_date"`
-	EndDate            *time.Time `json:"end_date,omitempty"`
+	CompensationItemID string  `json:"compensation_item_id"`
+	Amount             float64 `json:"amount"`
+	Frequency          string  `json:"frequency"`
+	CalcType           string  `json:"calc_type,omitempty"`
 }
 
 type SetupBenefitItem struct {
-	BenefitTypeID     string     `json:"benefit_type_id"`
-	ParticipantNumber string     `json:"participant_number"`
-	EffectiveDate     time.Time  `json:"effective_date"`
-	EndDate           *time.Time `json:"end_date,omitempty"`
+	BenefitTypeID     string `json:"benefit_type_id"`
+	ParticipantNumber string `json:"participant_number"`
 }
 
 type SetupDeductionItem struct {
-	DeductionTypeID string     `json:"deduction_type_id"`
-	Value           *float64   `json:"value,omitempty"`
-	UnitAmount      *float64   `json:"unit_amount,omitempty"`
-	EffectiveDate   time.Time  `json:"effective_date"`
-	EndDate         *time.Time `json:"end_date,omitempty"`
+	DeductionTypeID string   `json:"deduction_type_id"`
+	Value           *float64 `json:"value,omitempty"`
+	UnitAmount      *float64 `json:"unit_amount,omitempty"`
 }
 
 type SetupEmployeePayrollInput struct {

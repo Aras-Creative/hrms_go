@@ -33,31 +33,24 @@ type SetupCompensationRequest struct {
 	Amount             *FlexFloat64 `json:"amount,omitempty"`
 	Frequency          string       `json:"frequency,omitempty" validate:"omitempty,oneof=monthly yearly one_time"`
 	CalcType           string       `json:"calc_type,omitempty" validate:"omitempty,oneof=fixed per_attended_day"`
-	EffectiveDate      string       `json:"effective_date" validate:"required"`
-	EndDate            *string      `json:"end_date,omitempty"`
 }
 
 type SetupBenefitRequest struct {
-	BenefitTypeID     string  `json:"benefit_type_id" validate:"required,uuid"`
-	ParticipantNumber string  `json:"participant_number,omitempty"`
-	EffectiveDate     string  `json:"effective_date" validate:"required"`
-	EndDate           *string `json:"end_date,omitempty"`
+	BenefitTypeID     string `json:"benefit_type_id" validate:"required,uuid"`
+	ParticipantNumber string `json:"participant_number,omitempty"`
 }
 
 type SetupDeductionRequest struct {
 	DeductionTypeID string       `json:"deduction_type_id" validate:"required,uuid"`
 	Value           *FlexFloat64 `json:"value,omitempty"`
 	UnitAmount      *FlexFloat64 `json:"unit_amount,omitempty"`
-	EffectiveDate   string       `json:"effective_date" validate:"required"`
-	EndDate         *string      `json:"end_date,omitempty"`
 }
 
 type SetupBaseSalaryRequest struct {
-	Amount        FlexFloat64 `json:"amount" validate:"required"`
-	Currency      string      `json:"currency" validate:"omitempty,len=3"`
-	EffectiveDate string      `json:"effective_date" validate:"required"`
-	EndDate       *string     `json:"end_date,omitempty"`
-	Notes         string      `json:"notes"`
+	Amount   FlexFloat64 `json:"amount" validate:"required"`
+	Currency string      `json:"currency" validate:"omitempty,len=3"`
+
+	Notes string `json:"notes"`
 }
 
 type SetupEmployeePayrollRequest struct {
@@ -69,20 +62,18 @@ type SetupEmployeePayrollRequest struct {
 }
 
 type CreateBaseSalaryRequest struct {
-	EmployeeID    string      `json:"employee_id" validate:"required,uuid"`
-	Amount        FlexFloat64 `json:"amount" validate:"required"`
-	Currency      string      `json:"currency" validate:"omitempty,len=3"`
-	EffectiveDate string      `json:"effective_date" validate:"required"`
-	EndDate       *string     `json:"end_date" validate:"omitempty"`
-	Notes         string      `json:"notes"`
+	EmployeeID string      `json:"employee_id" validate:"required,uuid"`
+	Amount     FlexFloat64 `json:"amount" validate:"required"`
+	Currency   string      `json:"currency" validate:"omitempty,len=3"`
+
+	Notes string `json:"notes"`
 }
 
 type UpdateBaseSalaryRequest struct {
-	Amount        FlexFloat64 `json:"amount" validate:"required"`
-	Currency      string      `json:"currency" validate:"omitempty,len=3"`
-	EffectiveDate string      `json:"effective_date" validate:"required"`
-	EndDate       *string     `json:"end_date" validate:"omitempty"`
-	Notes         string      `json:"notes"`
+	Amount   FlexFloat64 `json:"amount" validate:"required"`
+	Currency string      `json:"currency" validate:"omitempty,len=3"`
+
+	Notes string `json:"notes"`
 }
 
 type CreateCompensationItemRequest struct {

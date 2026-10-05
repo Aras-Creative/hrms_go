@@ -287,44 +287,21 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 	}
 
 	if req.BaseSalary != nil {
-		effDate, err := time.Parse(dateFormat, req.BaseSalary.EffectiveDate)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid base_salary.effective_date, expected YYYY-MM-DD"))
-		}
-		var endDate *time.Time
-		if req.BaseSalary.EndDate != nil {
-			t, err := time.Parse(dateFormat, *req.BaseSalary.EndDate)
-			if err != nil {
-				return response.Error(c, errors.NewInvalidInput("invalid base_salary.end_date, expected YYYY-MM-DD"))
-			}
-			endDate = &t
-		}
+
 		currency := req.BaseSalary.Currency
 		if currency == "" {
 			currency = "IDR"
 		}
 		input.BaseSalary = &models.SetupBaseSalary{
-			Amount:        float64(req.BaseSalary.Amount),
-			Currency:      currency,
-			EffectiveDate: effDate,
-			EndDate:       endDate,
-			Notes:         req.BaseSalary.Notes,
+			Amount:   float64(req.BaseSalary.Amount),
+			Currency: currency,
+
+			Notes: req.BaseSalary.Notes,
 		}
 	}
 
 	for _, ci := range req.Compensations {
-		effDate, err := time.Parse(dateFormat, ci.EffectiveDate)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid compensation effective_date, expected YYYY-MM-DD"))
-		}
-		var endDate *time.Time
-		if ci.EndDate != nil {
-			t, err := time.Parse(dateFormat, *ci.EndDate)
-			if err != nil {
-				return response.Error(c, errors.NewInvalidInput("invalid compensation end_date, expected YYYY-MM-DD"))
-			}
-			endDate = &t
-		}
+
 		var amount float64
 		if ci.Amount != nil {
 			if float64(*ci.Amount) < 0 {
@@ -337,45 +314,19 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 			Amount:             amount,
 			Frequency:          ci.Frequency,
 			CalcType:           ci.CalcType,
-			EffectiveDate:      effDate,
-			EndDate:            endDate,
 		})
 	}
 
 	for _, bi := range req.Benefits {
-		effDate, err := time.Parse(dateFormat, bi.EffectiveDate)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid benefit effective_date, expected YYYY-MM-DD"))
-		}
-		var endDate *time.Time
-		if bi.EndDate != nil {
-			t, err := time.Parse(dateFormat, *bi.EndDate)
-			if err != nil {
-				return response.Error(c, errors.NewInvalidInput("invalid benefit end_date, expected YYYY-MM-DD"))
-			}
-			endDate = &t
-		}
+
 		input.Benefits = append(input.Benefits, models.SetupBenefitItem{
 			BenefitTypeID:     bi.BenefitTypeID,
 			ParticipantNumber: bi.ParticipantNumber,
-			EffectiveDate:     effDate,
-			EndDate:           endDate,
 		})
 	}
 
 	for _, di := range req.Deductions {
-		effDate, err := time.Parse(dateFormat, di.EffectiveDate)
-		if err != nil {
-			return response.Error(c, errors.NewInvalidInput("invalid deduction effective_date, expected YYYY-MM-DD"))
-		}
-		var endDate *time.Time
-		if di.EndDate != nil {
-			t, err := time.Parse(dateFormat, *di.EndDate)
-			if err != nil {
-				return response.Error(c, errors.NewInvalidInput("invalid deduction end_date, expected YYYY-MM-DD"))
-			}
-			endDate = &t
-		}
+
 		var val *float64
 		if di.Value != nil {
 			if float64(*di.Value) < 0 {
@@ -399,8 +350,6 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 			DeductionTypeID: di.DeductionTypeID,
 			Value:           val,
 			UnitAmount:      unitAmount,
-			EffectiveDate:   effDate,
-			EndDate:         endDate,
 		})
 	}
 
