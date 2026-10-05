@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	payrollRepo "hrms/internal/payroll/repository"
 	contractUc "hrms/internal/contract/usecase"
+	payrollRepo "hrms/internal/payroll/repository"
 )
 
 type DeductionFetcherAdapter struct {
@@ -25,7 +25,7 @@ func (a *DeductionFetcherAdapter) FindByEmployeeID(ctx context.Context, employee
 
 	typeIDs := make(map[string]struct{})
 	for _, ed := range empDeds {
-		if ed.EndDate == nil {
+		{
 			typeIDs[ed.DeductionTypeID] = struct{}{}
 		}
 	}

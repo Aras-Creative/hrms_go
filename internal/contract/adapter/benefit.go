@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	payrollRepo "hrms/internal/payroll/repository"
 	contractUc "hrms/internal/contract/usecase"
+	payrollRepo "hrms/internal/payroll/repository"
 )
 
 type BenefitFetcherAdapter struct {
@@ -25,7 +25,7 @@ func (a *BenefitFetcherAdapter) FindByEmployeeID(ctx context.Context, employeeID
 
 	typeIDs := make(map[string]struct{})
 	for _, eb := range empBenefits {
-		if eb.EndDate == nil {
+		{
 			typeIDs[eb.BenefitTypeID] = struct{}{}
 		}
 	}

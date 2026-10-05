@@ -20,8 +20,6 @@ type EmployeeDeduction struct {
 	DeductionType     DeductionCalcType
 	DeductionTypeName string
 	ValueSource       ValueSource
-	EffectiveDate     time.Time
-	EndDate           *time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -31,8 +29,6 @@ func NewEmployeeDeduction(
 	deductionTypeID string,
 	value *float64,
 	unitAmount *int64,
-	effectiveDate time.Time,
-	endDate *time.Time,
 ) *EmployeeDeduction {
 	now := time.Now()
 	return &EmployeeDeduction{
@@ -41,8 +37,6 @@ func NewEmployeeDeduction(
 		DeductionTypeID: deductionTypeID,
 		Value:           value,
 		UnitAmount:      unitAmount,
-		EffectiveDate:   effectiveDate,
-		EndDate:         endDate,
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
@@ -54,8 +48,6 @@ func ReconstituteEmployeeDeduction(
 	deductionTypeID string,
 	value *float64,
 	unitAmount *int64,
-	effectiveDate time.Time,
-	endDate *time.Time,
 	createdAt time.Time,
 	updatedAt time.Time,
 	deductionType DeductionCalcType,
@@ -68,8 +60,6 @@ func ReconstituteEmployeeDeduction(
 		DeductionTypeID:   deductionTypeID,
 		Value:             value,
 		UnitAmount:        unitAmount,
-		EffectiveDate:     effectiveDate,
-		EndDate:           endDate,
 		CreatedAt:         createdAt,
 		UpdatedAt:         updatedAt,
 		DeductionType:     deductionType,

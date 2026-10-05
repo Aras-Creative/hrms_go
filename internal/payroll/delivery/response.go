@@ -237,10 +237,9 @@ func empCompToResponse(ec *entity.EmployeeCompensation) *EmployeeCompensationRes
 		Amount:             ec.Amount.Float(),
 		Frequency:          string(ec.Frequency),
 		CalcType:           string(ec.CalcType),
-		EffectiveDate:      ec.EffectiveDate,
-		EndDate:            ec.EndDate,
-		CreatedAt:          ec.CreatedAt,
-		UpdatedAt:          ec.UpdatedAt,
+
+		CreatedAt: ec.CreatedAt,
+		UpdatedAt: ec.UpdatedAt,
 	}
 }
 
@@ -281,10 +280,9 @@ func empBenefitToResponse(eb *entity.EmployeeBenefit) *EmployeeBenefitResponse {
 		EmployeeID:        eb.EmployeeID,
 		BenefitTypeID:     eb.BenefitTypeID,
 		ParticipantNumber: eb.ParticipantNumber,
-		EffectiveDate:     eb.EffectiveDate,
-		EndDate:           eb.EndDate,
-		CreatedAt:         eb.CreatedAt,
-		UpdatedAt:         eb.UpdatedAt,
+
+		CreatedAt: eb.CreatedAt,
+		UpdatedAt: eb.UpdatedAt,
 	}
 }
 
@@ -331,10 +329,9 @@ func empDeductionToResponse(ed *entity.EmployeeDeduction) *EmployeeDeductionResp
 		ValueSource:       string(ed.ValueSource),
 		Value:             ed.Value,
 		UnitAmount:        centsToFlexPtr(ed.UnitAmount),
-		EffectiveDate:     ed.EffectiveDate,
-		EndDate:           ed.EndDate,
-		CreatedAt:         ed.CreatedAt,
-		UpdatedAt:         ed.UpdatedAt,
+
+		CreatedAt: ed.CreatedAt,
+		UpdatedAt: ed.UpdatedAt,
 	}
 }
 

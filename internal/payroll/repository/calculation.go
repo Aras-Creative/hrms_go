@@ -97,7 +97,7 @@ func NewPostgresCalculationRepo(db *sqlx.DB) *PostgresCalculationRepo {
 
 const qryCalcActiveSalaries = `
 	SELECT employee_id, amount, currency FROM employee_base_salaries
-	WHERE effective_date <= $2::date AND (end_date IS NULL OR end_date >= $1::date)
+	
 `
 
 // PerDay is an attendance-derived day count used by payroll calculation.
@@ -113,7 +113,7 @@ const qryCalcCompensations = `
 	JOIN compensation_items ci ON ci.id = ec.compensation_item_id
 	WHERE ec.employee_id = $1
 	  AND ec.frequency IN ('monthly', 'yearly')
-	  AND ec.effective_date <= $3::date AND (ec.end_date IS NULL OR ec.end_date >= $2::date)
+	
 `
 
 const qryCalcDeductions = `
@@ -125,7 +125,7 @@ const qryCalcDeductions = `
 	FROM employee_deductions ed
 	JOIN deduction_types dt ON dt.id = ed.deduction_type_id
 	WHERE ed.employee_id = $1
-	  AND ed.effective_date <= $3::date AND (ed.end_date IS NULL OR ed.end_date >= $2::date)
+	
 	  AND dt.is_active = true
 `
 

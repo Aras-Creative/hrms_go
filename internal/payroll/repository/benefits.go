@@ -192,12 +192,12 @@ func NewPostgresEmployeeBenefitRepo(db *sqlx.DB) *PostgresEmployeeBenefitRepo {
 }
 
 const qryInsertEmpBenefit = `
-	INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_number, effective_date, end_date, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_numbercreated_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 const qrySelectEmpBenefit = `
-	SELECT id, employee_id, benefit_type_id, participant_number, effective_date, end_date, created_at, updated_at
+	SELECT id, employee_id, benefit_type_id, participant_numbercreated_at, updated_at
 	FROM employee_benefits
 `
 
@@ -213,7 +213,7 @@ const qryDeleteEmpBenefit = `DELETE FROM employee_benefits WHERE id = $1`
 func (r *PostgresEmployeeBenefitRepo) Create(ctx context.Context, eb *entity.EmployeeBenefit) error {
 	_, err := r.db.ExecContext(ctx, qryInsertEmpBenefit,
 		eb.ID, eb.EmployeeID, eb.BenefitTypeID, eb.ParticipantNumber,
-		eb.EffectiveDate, eb.EndDate, eb.CreatedAt, eb.UpdatedAt,
+		eb.CreatedAt, eb.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert employee benefit: %w", err)
@@ -293,7 +293,7 @@ func (r *PostgresEmployeeBenefitRepo) FindAll(ctx context.Context, filter EmpBen
 
 func (r *PostgresEmployeeBenefitRepo) Update(ctx context.Context, eb *entity.EmployeeBenefit) error {
 	res, err := r.db.ExecContext(ctx, qryUpdateEmpBenefit,
-		eb.EmployeeID, eb.BenefitTypeID, eb.ParticipantNumber, eb.EffectiveDate, eb.EndDate, eb.UpdatedAt, eb.ID,
+		eb.EmployeeID, eb.BenefitTypeID, eb.ParticipantNumber, eb.UpdatedAt, eb.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update employee benefit: %w", err)
@@ -326,6 +326,6 @@ func (r *PostgresEmployeeBenefitRepo) Delete(ctx context.Context, id string) err
 func empBenefitModelToEntity(m *EmployeeBenefitModel) *entity.EmployeeBenefit {
 	return entity.ReconstituteEmployeeBenefit(
 		m.ID, m.EmployeeID, m.BenefitTypeID, m.ParticipantNumber,
-		m.EffectiveDate, m.EndDate, m.CreatedAt, m.UpdatedAt,
+		m.CreatedAt, m.UpdatedAt,
 	)
 }

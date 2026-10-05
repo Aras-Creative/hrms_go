@@ -74,7 +74,7 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 				return errors.WrapInvalidInput(fmt.Sprintf("compensation %s", c.CompensationItemID), err)
 			}
 		}
-		ec := entity.NewEmployeeCompensation(input.EmployeeID, c.CompensationItemID, amount, freq, calcType, c.EffectiveDate, c.EndDate)
+		ec := entity.NewEmployeeCompensation(input.EmployeeID, c.CompensationItemID, amount, freq, calcType)
 		if err := insertEmpCompTx(ctx, tx, ec); err != nil {
 			return fmt.Errorf("insert compensation: %w", err)
 		}
@@ -84,7 +84,7 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 		return fmt.Errorf("delete benefits: %w", err)
 	}
 	for _, b := range input.Benefits {
-		eb := entity.NewEmployeeBenefit(input.EmployeeID, b.BenefitTypeID, b.ParticipantNumber, b.EffectiveDate, b.EndDate)
+		eb := entity.NewEmployeeBenefit(input.EmployeeID, b.BenefitTypeID, b.ParticipantNumber)
 		if err := insertEmpBenefitTx(ctx, tx, eb); err != nil {
 			return fmt.Errorf("insert benefit: %w", err)
 		}
@@ -101,7 +101,7 @@ func (uc *SetupUsecase) SetupEmployeePayroll(ctx context.Context, input models.S
 		if err != nil {
 			return fmt.Errorf("invalid deduction unit_amount: %w", err)
 		}
-		ed := entity.NewEmployeeDeduction(input.EmployeeID, d.DeductionTypeID, d.Value, unitAmount, d.EffectiveDate, d.EndDate)
+		ed := entity.NewEmployeeDeduction(input.EmployeeID, d.DeductionTypeID, d.Value, unitAmount)
 		if err := insertEmpDeductionTx(ctx, tx, ed); err != nil {
 			return fmt.Errorf("insert deduction: %w", err)
 		}

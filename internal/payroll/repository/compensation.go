@@ -181,20 +181,20 @@ func NewPostgresEmployeeCompensationRepo(db *sqlx.DB) *PostgresEmployeeCompensat
 }
 
 const qryInsertEmpComp = `
-	INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_type, effective_date, end_date, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+	INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_type, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 const qrySelectEmpComp = `
-	SELECT id, employee_id, compensation_item_id, amount, frequency, calc_type, effective_date, end_date, created_at, updated_at
+	SELECT id, employee_id, compensation_item_id, amount, frequency, calc_type, created_at, updated_at
 	FROM employee_compensations
 `
 
 const qryUpdateEmpComp = `
 	UPDATE employee_compensations SET
 		employee_id = $1, compensation_item_id = $2, amount = $3, frequency = $4, calc_type = $5,
-		effective_date = $6, end_date = $7, updated_at = $8
-	WHERE id = $9
+		updated_at = $6
+	WHERE id = $7
 `
 
 const qryDeleteEmpComp = `DELETE FROM employee_compensations WHERE id = $1`
@@ -202,7 +202,7 @@ const qryDeleteEmpComp = `DELETE FROM employee_compensations WHERE id = $1`
 func (r *PostgresEmployeeCompensationRepo) Create(ctx context.Context, ec *entity.EmployeeCompensation) error {
 	_, err := r.db.ExecContext(ctx, qryInsertEmpComp,
 		ec.ID, ec.EmployeeID, ec.CompensationItemID, ec.Amount.Cents(), string(ec.Frequency), string(ec.CalcType),
-		ec.EffectiveDate, ec.EndDate, ec.CreatedAt, ec.UpdatedAt,
+		ec.CreatedAt, ec.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert employee compensation: %w", err)
@@ -283,7 +283,7 @@ func (r *PostgresEmployeeCompensationRepo) FindAll(ctx context.Context, filter E
 func (r *PostgresEmployeeCompensationRepo) Update(ctx context.Context, ec *entity.EmployeeCompensation) error {
 	res, err := r.db.ExecContext(ctx, qryUpdateEmpComp,
 		ec.EmployeeID, ec.CompensationItemID, ec.Amount.Cents(), string(ec.Frequency), string(ec.CalcType),
-		ec.EffectiveDate, ec.EndDate, ec.UpdatedAt, ec.ID,
+		ec.UpdatedAt, ec.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update employee compensation: %w", err)
@@ -316,6 +316,6 @@ func (r *PostgresEmployeeCompensationRepo) Delete(ctx context.Context, id string
 func empCompModelToEntity(m *EmployeeCompensationModel) *entity.EmployeeCompensation {
 	return entity.ReconstituteEmployeeCompensation(
 		m.ID, m.EmployeeID, m.CompensationItemID, m.Amount, m.Frequency, m.CalcType,
-		m.EffectiveDate, m.EndDate, m.CreatedAt, m.UpdatedAt,
+		m.CreatedAt, m.UpdatedAt,
 	)
 }

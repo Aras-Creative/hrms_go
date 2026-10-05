@@ -204,7 +204,7 @@ func NewPostgresEmployeeDeductionRepo(db *sqlx.DB) *PostgresEmployeeDeductionRep
 }
 
 const qryInsertEmpDeduction = `
-	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, effective_date, end_date, created_at, updated_at)
+	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amountcreated_at, updated_at)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
@@ -213,7 +213,7 @@ const qryInsertEmpDeduction = `
 // type separately just to know whether value or unit_amount is meaningful.
 const qrySelectEmpDeduction = `
 	SELECT ed.id, ed.employee_id, ed.deduction_type_id, ed.value, ed.unit_amount,
-		ed.effective_date, ed.end_date, ed.created_at, ed.updated_at,
+		ed.created_at, ed.updated_at,
 		dt.deduction_type AS deduction_type,
 		dt.name AS deduction_type_name,
 		dt.value_source AS value_source
@@ -224,8 +224,8 @@ const qrySelectEmpDeduction = `
 const qryUpdateEmpDeduction = `
 	UPDATE employee_deductions SET
 		employee_id = $1, deduction_type_id = $2, value = $3, unit_amount = $4,
-		effective_date = $5, end_date = $6, updated_at = $7
-	WHERE id = $8
+		updated_at = $5
+	WHERE id = $6
 `
 
 const qryDeleteEmpDeduction = `DELETE FROM employee_deductions WHERE id = $1`
@@ -233,7 +233,7 @@ const qryDeleteEmpDeduction = `DELETE FROM employee_deductions WHERE id = $1`
 func (r *PostgresEmployeeDeductionRepo) Create(ctx context.Context, ed *entity.EmployeeDeduction) error {
 	_, err := r.db.ExecContext(ctx, qryInsertEmpDeduction,
 		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
-		ed.EffectiveDate, ed.EndDate, ed.CreatedAt, ed.UpdatedAt,
+		ed.CreatedAt, ed.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("insert employee deduction: %w", err)
@@ -255,7 +255,7 @@ func (r *PostgresEmployeeDeductionRepo) FindByID(ctx context.Context, id string)
 
 func (r *PostgresEmployeeDeductionRepo) FindByEmployeeID(ctx context.Context, employeeID string) ([]*entity.EmployeeDeduction, error) {
 	var models []EmployeeDeductionModel
-	err := r.db.SelectContext(ctx, &models, qrySelectEmpDeduction+` WHERE ed.employee_id = $1 ORDER BY ed.effective_date DESC`, employeeID)
+	err := r.db.SelectContext(ctx, &models, qrySelectEmpDeduction+` WHERE ed.employee_id = $1 ORDER BY ed.created_at DESC`, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("find employee deductions by employee: %w", err)
 	}
@@ -314,7 +314,7 @@ func (r *PostgresEmployeeDeductionRepo) FindAll(ctx context.Context, filter EmpD
 func (r *PostgresEmployeeDeductionRepo) Update(ctx context.Context, ed *entity.EmployeeDeduction) error {
 	res, err := r.db.ExecContext(ctx, qryUpdateEmpDeduction,
 		ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
-		ed.EffectiveDate, ed.EndDate, ed.UpdatedAt, ed.ID,
+		ed.UpdatedAt, ed.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("update employee deduction: %w", err)
@@ -347,7 +347,7 @@ func (r *PostgresEmployeeDeductionRepo) Delete(ctx context.Context, id string) e
 func empDeductionModelToEntity(m *EmployeeDeductionModel) *entity.EmployeeDeduction {
 	return entity.ReconstituteEmployeeDeduction(
 		m.ID, m.EmployeeID, m.DeductionTypeID, m.Value, m.UnitAmount,
-		m.EffectiveDate, m.EndDate, m.CreatedAt, m.UpdatedAt,
+		m.CreatedAt, m.UpdatedAt,
 		entity.DeductionCalcType(m.DeductionType), m.DeductionTypeName, entity.ValueSource(m.ValueSource),
 	)
 }
