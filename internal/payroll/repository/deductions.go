@@ -204,8 +204,8 @@ func NewPostgresEmployeeDeductionRepo(db *sqlx.DB) *PostgresEmployeeDeductionRep
 }
 
 const qryInsertEmpDeduction = `
-	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amountcreated_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 // qrySelectEmpDeduction joins the deduction type so the basis (deduction_type,
@@ -295,7 +295,7 @@ func (r *PostgresEmployeeDeductionRepo) FindAll(ctx context.Context, filter EmpD
 	}
 	offset := (page - 1) * perPage
 
-	orderQry := qrySelectEmpDeduction + where + " ORDER BY ed.effective_date DESC"
+	orderQry := qrySelectEmpDeduction + where + " ORDER BY ed.created_at DESC"
 	orderQry += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 

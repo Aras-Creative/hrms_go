@@ -182,7 +182,7 @@ func NewPostgresEmployeeCompensationRepo(db *sqlx.DB) *PostgresEmployeeCompensat
 
 const qryInsertEmpComp = `
 	INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_type, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 const qrySelectEmpComp = `
@@ -224,7 +224,7 @@ func (r *PostgresEmployeeCompensationRepo) FindByID(ctx context.Context, id stri
 
 func (r *PostgresEmployeeCompensationRepo) FindByEmployeeID(ctx context.Context, employeeID string) ([]*entity.EmployeeCompensation, error) {
 	var models []EmployeeCompensationModel
-	err := r.db.SelectContext(ctx, &models, qrySelectEmpComp+` WHERE employee_id = $1 ORDER BY effective_date DESC`, employeeID)
+	err := r.db.SelectContext(ctx, &models, qrySelectEmpComp+` WHERE employee_id = $1 ORDER BY created_at DESC`, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("find employee compensations by employee: %w", err)
 	}
@@ -264,7 +264,7 @@ func (r *PostgresEmployeeCompensationRepo) FindAll(ctx context.Context, filter E
 	}
 	offset := (page - 1) * perPage
 
-	orderQry := qrySelectEmpComp + where + " ORDER BY effective_date DESC"
+	orderQry := qrySelectEmpComp + where + " ORDER BY created_at DESC"
 	orderQry += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 

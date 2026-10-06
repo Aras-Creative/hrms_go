@@ -192,20 +192,19 @@ func NewPostgresEmployeeBenefitRepo(db *sqlx.DB) *PostgresEmployeeBenefitRepo {
 }
 
 const qryInsertEmpBenefit = `
-	INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_numbercreated_at, updated_at)
+	INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_number, created_at, updated_at)
 	VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 const qrySelectEmpBenefit = `
-	SELECT id, employee_id, benefit_type_id, participant_numbercreated_at, updated_at
+	SELECT id, employee_id, benefit_type_id, participant_number, created_at, updated_at
 	FROM employee_benefits
 `
 
 const qryUpdateEmpBenefit = `
 	UPDATE employee_benefits SET
-		employee_id = $1, benefit_type_id = $2, participant_number = $3, effective_date = $4,
-		end_date = $5, updated_at = $6
-	WHERE id = $7
+		employee_id = $1, benefit_type_id = $2, participant_number = $3, updated_at = $4
+	WHERE id = $5
 `
 
 const qryDeleteEmpBenefit = `DELETE FROM employee_benefits WHERE id = $1`
@@ -235,7 +234,7 @@ func (r *PostgresEmployeeBenefitRepo) FindByID(ctx context.Context, id string) (
 
 func (r *PostgresEmployeeBenefitRepo) FindByEmployeeID(ctx context.Context, employeeID string) ([]*entity.EmployeeBenefit, error) {
 	var models []EmployeeBenefitModel
-	err := r.db.SelectContext(ctx, &models, qrySelectEmpBenefit+` WHERE employee_id = $1 ORDER BY effective_date DESC`, employeeID)
+	err := r.db.SelectContext(ctx, &models, qrySelectEmpBenefit+` WHERE employee_id = $1 ORDER BY created_at DESC`, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("find employee benefits by employee: %w", err)
 	}
@@ -275,7 +274,7 @@ func (r *PostgresEmployeeBenefitRepo) FindAll(ctx context.Context, filter EmpBen
 	}
 	offset := (page - 1) * perPage
 
-	orderQry := qrySelectEmpBenefit + where + " ORDER BY effective_date DESC"
+	orderQry := qrySelectEmpBenefit + where + " ORDER BY created_at DESC"
 	orderQry += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 

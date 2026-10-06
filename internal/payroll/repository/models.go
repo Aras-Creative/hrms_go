@@ -26,16 +26,14 @@ type CompensationItemModel struct {
 }
 
 type EmployeeCompensationModel struct {
-	ID                 string     `db:"id"`
-	EmployeeID         string     `db:"employee_id"`
-	CompensationItemID string     `db:"compensation_item_id"`
-	Amount             int64      `db:"amount"`
-	Frequency          string     `db:"frequency"`
-	CalcType           string     `db:"calc_type"`
-	EffectiveDate      time.Time  `db:"effective_date"`
-	EndDate            *time.Time `db:"end_date"`
-	CreatedAt          time.Time  `db:"created_at"`
-	UpdatedAt          time.Time  `db:"updated_at"`
+	ID                 string    `db:"id"`
+	EmployeeID         string    `db:"employee_id"`
+	CompensationItemID string    `db:"compensation_item_id"`
+	Amount             int64     `db:"amount"`
+	Frequency          string    `db:"frequency"`
+	CalcType           string    `db:"calc_type"`
+	CreatedAt          time.Time `db:"created_at"`
+	UpdatedAt          time.Time `db:"updated_at"`
 }
 
 type BenefitTypeModel struct {
@@ -52,14 +50,12 @@ type BenefitTypeModel struct {
 }
 
 type EmployeeBenefitModel struct {
-	ID                string     `db:"id"`
-	EmployeeID        string     `db:"employee_id"`
-	BenefitTypeID     string     `db:"benefit_type_id"`
-	ParticipantNumber string     `db:"participant_number"`
-	EffectiveDate     time.Time  `db:"effective_date"`
-	EndDate           *time.Time `db:"end_date"`
-	CreatedAt         time.Time  `db:"created_at"`
-	UpdatedAt         time.Time  `db:"updated_at"`
+	ID                string    `db:"id"`
+	EmployeeID        string    `db:"employee_id"`
+	BenefitTypeID     string    `db:"benefit_type_id"`
+	ParticipantNumber string    `db:"participant_number"`
+	CreatedAt         time.Time `db:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at"`
 }
 
 type DeductionTypeModel struct {
@@ -78,16 +74,14 @@ type DeductionTypeModel struct {
 }
 
 type EmployeeDeductionModel struct {
-	ID                string     `db:"id"`
-	EmployeeID        string     `db:"employee_id"`
-	DeductionTypeID   string     `db:"deduction_type_id"`
-	Value             *float64   `db:"value"`
-	UnitAmount        *int64     `db:"unit_amount"`
-	EffectiveDate     time.Time  `db:"effective_date"`
-	EndDate           *time.Time `db:"end_date"`
-	CreatedAt         time.Time  `db:"created_at"`
-	UpdatedAt         time.Time  `db:"updated_at"`
-	DeductionType     string     `db:"deduction_type"`
-	DeductionTypeName string     `db:"deduction_type_name"`
-	ValueSource       string     `db:"value_source"`
+	ID                string    `db:"id"`
+	EmployeeID        string    `db:"employee_id"`
+	DeductionTypeID   string    `db:"deduction_type_id"`
+	Value             *float64  `db:"value"`
+	UnitAmount        *int64    `db:"unit_amount"`
+	CreatedAt         time.Time `db:"created_at"`
+	UpdatedAt         time.Time `db:"updated_at"`
+	DeductionType     string    `db:"deduction_type"`
+	DeductionTypeName string    `db:"deduction_type_name"`
+	ValueSource       string    `db:"value_source"`
 }

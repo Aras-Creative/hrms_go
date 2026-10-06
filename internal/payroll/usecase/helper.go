@@ -12,15 +12,33 @@ import (
 
 // --- transactional helpers ---
 
+// The setup inserts live in the transaction helpers rather than a repository so the whole
+// replacement (delete previous, insert new) rolls back together. Their column lists and
+// placeholders are asserted in setup_query_test.go: the two must agree, because sqlx only
+// reports a mismatch at run time.
+const qryInsertSalary = `
+	INSERT INTO employee_base_salaries (id, employee_id, amount, currency, effective_date, end_date, notes, created_at, updated_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
+
+const qryInsertEmpComp = `
+	INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_type, created_at, updated_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`
+
+const qryInsertEmpBenefit = `
+	INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_number, created_at, updated_at)
+	VALUES ($1,$2,$3,$4,$5,$6)`
+
+const qryInsertEmpDeduction = `
+	INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, created_at, updated_at)
+	VALUES ($1,$2,$3,$4,$5,$6,$7)`
+
 func deleteCurrentSalaryTx(ctx context.Context, tx *sqlx.Tx, employeeID string) error {
 	_, err := tx.ExecContext(ctx, `DELETE FROM employee_base_salaries WHERE employee_id = $1 AND end_date IS NULL`, employeeID)
 	return err
 }
 
 func insertSalaryTx(ctx context.Context, tx *sqlx.Tx, s *entity.EmployeeBaseSalary) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_base_salaries (id, employee_id, amount, currency, effective_date, end_date, notes, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6)`,
+	_, err := tx.ExecContext(ctx, qryInsertSalary,
 		s.ID, s.EmployeeID, s.Amount.Cents(), s.Currency.String(), s.EffectiveDate, s.EndDate, s.Notes, s.CreatedAt, s.UpdatedAt)
 	return err
 }
@@ -31,9 +49,7 @@ func deleteEmployeeCompensationsTx(ctx context.Context, tx *sqlx.Tx, employeeID 
 }
 
 func insertEmpCompTx(ctx context.Context, tx *sqlx.Tx, ec *entity.EmployeeCompensation) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_compensations (id, employee_id, compensation_item_id, amount, frequency, calc_typecreated_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+	_, err := tx.ExecContext(ctx, qryInsertEmpComp,
 		ec.ID, ec.EmployeeID, ec.CompensationItemID, ec.Amount.Cents(), string(ec.Frequency), string(ec.CalcType), ec.CreatedAt, ec.UpdatedAt)
 	return err
 }
@@ -44,9 +60,7 @@ func deleteEmployeeBenefitsTx(ctx context.Context, tx *sqlx.Tx, employeeID strin
 }
 
 func insertEmpBenefitTx(ctx context.Context, tx *sqlx.Tx, eb *entity.EmployeeBenefit) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_benefits (id, employee_id, benefit_type_id, participant_numbercreated_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6)`,
+	_, err := tx.ExecContext(ctx, qryInsertEmpBenefit,
 		eb.ID, eb.EmployeeID, eb.BenefitTypeID, eb.ParticipantNumber, eb.CreatedAt, eb.UpdatedAt)
 	return err
 }
@@ -57,9 +71,7 @@ func deleteEmployeeDeductionsTx(ctx context.Context, tx *sqlx.Tx, employeeID str
 }
 
 func insertEmpDeductionTx(ctx context.Context, tx *sqlx.Tx, ed *entity.EmployeeDeduction) error {
-	_, err := tx.ExecContext(ctx, `
-		INSERT INTO employee_deductions (id, employee_id, deduction_type_id, value, unit_amount, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6)`,
+	_, err := tx.ExecContext(ctx, qryInsertEmpDeduction,
 		ed.ID, ed.EmployeeID, ed.DeductionTypeID, ed.Value, ed.UnitAmount,
 		ed.CreatedAt, ed.UpdatedAt)
 	return err
