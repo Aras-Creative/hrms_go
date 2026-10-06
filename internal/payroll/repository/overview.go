@@ -33,6 +33,7 @@ func (r *PostgresOverviewRepo) QueryEmployees(ctx context.Context, startDate, en
 		LEFT JOIN designations d ON d.id = e.designation_id
 		WHERE ebs.effective_date <= $1::date
 		  AND (ebs.end_date IS NULL OR ebs.end_date >= $2::date)
+		ORDER BY e.full_name ASC, e.employee_number ASC
 	`, endDate, startDate)
 	if err != nil {
 		return nil, fmt.Errorf("query employees: %w", err)
