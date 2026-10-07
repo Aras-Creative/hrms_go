@@ -258,7 +258,8 @@ const qryEmployeeWorkingDaysBatch = `
 			FROM ewp
 			JOIN work_patterns wp ON wp.id = ewp.work_pattern_id AND wp.is_active = true
 			JOIN work_pattern_details wpd ON wpd.work_pattern_id = wp.id
-			WHERE wpd.start_time IS NOT NULL
+			WHERE (wpd.working_type IS NULL OR wpd.working_type != 'off')
+			  AND (wpd.working_type = 'dynamic' OR wpd.start_time IS NOT NULL)
 		),
 		overrides AS (
 			SELECT eso.employee_id, eso.date, eso.is_working_day
@@ -274,26 +275,21 @@ const qryEmployeeWorkingDaysBatch = `
 			FROM pattern_days pd
 			JOIN generate_series(?::date, ?::date, '1 day'::interval) d(dt)
 				ON EXTRACT(DOW FROM d.dt)::int = pd.day_of_week
+			WHERE NOT EXISTS (
+				SELECT 1 FROM overrides o
+				WHERE o.employee_id = pd.employee_id AND o.date = d.dt::date
+			)
 			GROUP BY pd.employee_id
 		),
 		override_adjustments AS (
 			SELECT o.employee_id,
-				COUNT(*) FILTER (WHERE o.is_working_day = true) AS added,
-				COUNT(*) FILTER (
-					WHERE o.is_working_day = false
-					  AND EXISTS (
-						SELECT 1 FROM pattern_days pd2
-						WHERE pd2.employee_id = o.employee_id
-						  AND pd2.day_of_week = EXTRACT(DOW FROM o.date)::int
-					)
-				) AS removed
+				COUNT(*) FILTER (WHERE o.is_working_day = true) AS added
 			FROM overrides o
 			GROUP BY o.employee_id
 		)
 		SELECT COALESCE(bd.employee_id, oa.employee_id) AS employee_id,
 			COALESCE(bd.working_days, 0)
-				+ COALESCE(oa.added, 0)
-				- COALESCE(oa.removed, 0) AS working_days
+				+ COALESCE(oa.added, 0) AS working_days
 		FROM base_days bd
 		FULL OUTER JOIN override_adjustments oa ON oa.employee_id = bd.employee_id
 	`
