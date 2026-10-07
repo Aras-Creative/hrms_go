@@ -278,7 +278,7 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 	if err := c.Bind().Body(&req); err != nil {
 		return response.Error(c, errors.NewInvalidInput("invalid request body: "+err.Error()))
 	}
-	if req.BaseSalary != nil && float64(req.BaseSalary.Amount) < 0 {
+	if req.BaseSalary != nil && float64(*req.BaseSalary.Amount) < 0 {
 		return response.Error(c, errors.NewInvalidInput("base_salary.amount must be >= 0"))
 	}
 
@@ -293,7 +293,7 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 			currency = "IDR"
 		}
 		input.BaseSalary = &models.SetupBaseSalary{
-			Amount:   float64(req.BaseSalary.Amount),
+			Amount:   float64(*req.BaseSalary.Amount),
 			Currency: currency,
 
 			Notes: req.BaseSalary.Notes,
@@ -377,7 +377,7 @@ func (h *PayrollHandler) SetupEmployee(c fiber.Ctx) error {
 				"new_deduction_count":    len(req.Deductions),
 			}
 			if req.BaseSalary != nil {
-				payload["new_salary_amount"] = float64(req.BaseSalary.Amount)
+				payload["new_salary_amount"] = float64(*req.BaseSalary.Amount)
 			}
 			if len(beforeSalary) > 0 {
 				payload["old_salary_amount"] = beforeSalary[0].Amount.Float()

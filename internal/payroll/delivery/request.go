@@ -47,8 +47,8 @@ type SetupDeductionRequest struct {
 }
 
 type SetupBaseSalaryRequest struct {
-	Amount   FlexFloat64 `json:"amount" validate:"required"`
-	Currency string      `json:"currency" validate:"omitempty,len=3"`
+	Amount   *FlexFloat64 `json:"amount" validate:"required"`
+	Currency string       `json:"currency" validate:"omitempty,len=3"`
 
 	Notes string `json:"notes"`
 }
