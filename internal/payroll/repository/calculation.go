@@ -129,8 +129,10 @@ const qryCalcDeductions = `
 	  AND dt.is_active = true
 `
 
-// qryCalcAttendanceDayCounts derives both day counts in one pass. Attended counts
-// status = 'present' only; lateness and early leave do not disqualify a day.
+// qryCalcAttendanceDayCounts derives both day counts in one pass. Attendance
+// corrections overlay the computed daily attendance status, matching the employee
+// history endpoint. Attended counts status = 'present' only; lateness and early leave
+// do not disqualify a day.
 //
 // The placeholders must stay in ? form: this query is expanded by sqlx.In, which
 // counts ? to size the bind list. A postgres-style $1 placeholder makes sqlx.In see
@@ -138,11 +140,13 @@ const qryCalcDeductions = `
 const qryCalcAttendanceDayCounts = `
 	SELECT da.employee_id,
 		COUNT(*) FILTER (
-			WHERE da.status = 'absent'
-			   OR (da.status = 'on_leave' AND COALESCE(lt.is_paid, true) = false)
+			WHERE COALESCE(ac.status, da.status) = 'absent'
+			   OR (COALESCE(ac.status, da.status) = 'on_leave' AND COALESCE(lt.is_paid, true) = false)
 		)::int AS unpaid_absent,
-		COUNT(*) FILTER (WHERE da.status = 'present')::int AS attended
+		COUNT(*) FILTER (WHERE COALESCE(ac.status, da.status) = 'present')::int AS attended
 	FROM daily_attendances da
+	LEFT JOIN attendance_corrections ac
+		ON ac.employee_id = da.employee_id AND ac.date = da.date
 	LEFT JOIN leave_submissions ls ON ls.id = da.leave_submission_id AND ls.status = 'approved'
 	LEFT JOIN leave_types lt ON lt.id = ls.leave_type_id
 	WHERE da.employee_id IN (?)
