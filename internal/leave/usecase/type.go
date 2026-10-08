@@ -11,7 +11,7 @@ import (
 )
 
 func (uc *LeaveUsecase) CreateLeaveType(ctx context.Context, input models.CreateLeaveTypeInput) (*entity.LeaveType, error) {
-	lt := entity.NewLeaveType(input.Name, input.DefaultDays, input.IsPaid, input.IsUnlimited, input.IsHalfDay)
+	lt := entity.NewLeaveType(input.Name, input.DefaultDays, input.IsPaid, input.IsUnlimited, input.IsHalfDay, input.IncludeInAttendanceAllowance)
 	if err := uc.leaveTypeRepo.Create(ctx, lt); err != nil {
 		return nil, fmt.Errorf("failed to create leave type: %w", err)
 	}
@@ -64,6 +64,9 @@ func (uc *LeaveUsecase) UpdateLeaveType(ctx context.Context, id string, input mo
 	if input.IsHalfDay != lt.IsHalfDay {
 		lt.IsHalfDay = input.IsHalfDay
 		lt.UpdatedAt = time.Now()
+	}
+	if input.IncludeInAttendanceAllowance != lt.IncludeInAttendanceAllowance {
+		lt.SetIncludeInAttendanceAllowance(input.IncludeInAttendanceAllowance)
 	}
 
 	if err := uc.leaveTypeRepo.Update(ctx, lt); err != nil {

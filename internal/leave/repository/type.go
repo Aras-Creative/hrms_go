@@ -11,8 +11,8 @@ import (
 )
 
 const queryInsertLeaveType = `
-	INSERT INTO leave_types (id, name, default_days, is_paid, is_unlimited, is_half_day, is_active, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	INSERT INTO leave_types (id, name, default_days, is_paid, is_unlimited, is_half_day, include_in_attendance_allowance, is_active, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 `
 
 type PostgresLeaveTypeRepo struct {
@@ -25,15 +25,16 @@ func NewPostgresLeaveTypeRepo(db *sqlx.DB) *PostgresLeaveTypeRepo {
 
 func (r *PostgresLeaveTypeRepo) Create(ctx context.Context, lt *entity.LeaveType) error {
 	_, err := r.db.ExecContext(ctx, queryInsertLeaveType,
-		lt.ID,          // $1
-		lt.Name,        // $2
-		lt.DefaultDays, // $3
-		lt.IsPaid,      // $4
-		lt.IsUnlimited, // $5
-		lt.IsHalfDay,   // $6
-		lt.IsActive,    // $7
-		lt.CreatedAt,   // $8
-		lt.UpdatedAt,   // $9
+		lt.ID,                           // $1
+		lt.Name,                         // $2
+		lt.DefaultDays,                  // $3
+		lt.IsPaid,                       // $4
+		lt.IsUnlimited,                  // $5
+		lt.IsHalfDay,                    // $6
+		lt.IncludeInAttendanceAllowance, // $7
+		lt.IsActive,                     // $8
+		lt.CreatedAt,                    // $9
+		lt.UpdatedAt,                    // $10
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create leave type: %w", err)
@@ -75,7 +76,7 @@ var _ LeaveTypeRepository = (*PostgresLeaveTypeRepo)(nil)
 
 func (r *PostgresLeaveTypeRepo) Update(ctx context.Context, lt *entity.LeaveType) error {
 	result, err := r.db.ExecContext(ctx, queryUpdateLeaveType,
-		lt.Name, lt.DefaultDays, lt.IsPaid, lt.IsUnlimited, lt.IsHalfDay, lt.IsActive, lt.UpdatedAt, lt.ID,
+		lt.Name, lt.DefaultDays, lt.IsPaid, lt.IsUnlimited, lt.IsHalfDay, lt.IncludeInAttendanceAllowance, lt.IsActive, lt.UpdatedAt, lt.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update leave type: %w", err)

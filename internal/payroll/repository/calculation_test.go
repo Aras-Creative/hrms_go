@@ -39,6 +39,12 @@ func TestCalcCompRowCalculateCents(t *testing.T) {
 			ctx:  entity.CalcContext{AttendedDays: 0, UnpaidAbsentDays: 22},
 			want: 0,
 		},
+		{
+			name: "per_attended_day counts attended days from present plus eligible leave (cuti/sick)",
+			row:  CalcCompRow{Amount: rate, CalcType: string(entity.CompensationCalcPerAttendedDay)},
+			ctx:  entity.CalcContext{AttendedDays: 17, UnpaidAbsentDays: 0, WorkingDays: 20},
+			want: rate * 17,
+		},
 	}
 
 	for _, tc := range tests {

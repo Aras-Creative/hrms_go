@@ -61,11 +61,12 @@ func (h *LeaveHandler) CreateType(c fiber.Ctx) error {
 	}
 
 	lt, err := h.uc.CreateLeaveType(c.RequestCtx(), models.CreateLeaveTypeInput{
-		Name:        req.Name,
-		DefaultDays: req.DefaultDays,
-		IsPaid:      req.IsPaid,
-		IsUnlimited: req.IsUnlimited,
-		IsHalfDay:   req.IsHalfDay,
+		Name:                         req.Name,
+		DefaultDays:                  req.DefaultDays,
+		IsPaid:                       req.IsPaid,
+		IsUnlimited:                  req.IsUnlimited,
+		IsHalfDay:                    req.IsHalfDay,
+		IncludeInAttendanceAllowance: req.IncludeInAttendanceAllowance,
 	})
 	if err != nil {
 		return response.Error(c, err)
@@ -75,7 +76,7 @@ func (h *LeaveHandler) CreateType(c fiber.Ctx) error {
 		if uid != "" {
 			h.auditLogger.Log(c.RequestCtx(), uid, "leave_type", lt.ID, "",
 				adapter.ActionTypeCreate, c.IP(), string(c.RequestCtx().UserAgent()),
-				map[string]any{"name": req.Name, "default_days": req.DefaultDays, "is_paid": req.IsPaid},
+				map[string]any{"name": req.Name, "default_days": req.DefaultDays, "is_paid": req.IsPaid, "include_in_attendance_allowance": req.IncludeInAttendanceAllowance},
 			)
 		}
 	}
@@ -127,11 +128,12 @@ func (h *LeaveHandler) UpdateType(c fiber.Ctx) error {
 	}
 
 	lt, err := h.uc.UpdateLeaveType(c.RequestCtx(), id, models.UpdateLeaveTypeInput{
-		Name:        req.Name,
-		DefaultDays: req.DefaultDays,
-		IsPaid:      req.IsPaid,
-		IsUnlimited: req.IsUnlimited,
-		IsHalfDay:   req.IsHalfDay,
+		Name:                         req.Name,
+		DefaultDays:                  req.DefaultDays,
+		IsPaid:                       req.IsPaid,
+		IsUnlimited:                  req.IsUnlimited,
+		IsHalfDay:                    req.IsHalfDay,
+		IncludeInAttendanceAllowance: req.IncludeInAttendanceAllowance,
 	})
 	if err != nil {
 		return response.Error(c, err)
@@ -141,7 +143,7 @@ func (h *LeaveHandler) UpdateType(c fiber.Ctx) error {
 		if uid != "" {
 			h.auditLogger.Log(c.RequestCtx(), uid, "leave_type", id, "",
 				adapter.ActionTypeUpdate, c.IP(), string(c.RequestCtx().UserAgent()),
-				map[string]any{"name": req.Name, "default_days": req.DefaultDays},
+				map[string]any{"name": req.Name, "default_days": req.DefaultDays, "include_in_attendance_allowance": req.IncludeInAttendanceAllowance},
 			)
 		}
 	}
@@ -167,15 +169,16 @@ func (h *LeaveHandler) DeleteType(c fiber.Ctx) error {
 
 func toLeaveTypeResponse(lt *entity.LeaveType) LeaveTypeResponse {
 	return LeaveTypeResponse{
-		ID:          lt.ID,
-		Name:        lt.Name,
-		DefaultDays: lt.DefaultDays,
-		IsPaid:      lt.IsPaid,
-		IsUnlimited: lt.IsUnlimited,
-		IsHalfDay:   lt.IsHalfDay,
-		IsActive:    lt.IsActive,
-		CreatedAt:   lt.CreatedAt,
-		UpdatedAt:   lt.UpdatedAt,
+		ID:                           lt.ID,
+		Name:                         lt.Name,
+		DefaultDays:                  lt.DefaultDays,
+		IsPaid:                       lt.IsPaid,
+		IsUnlimited:                  lt.IsUnlimited,
+		IsHalfDay:                    lt.IsHalfDay,
+		IncludeInAttendanceAllowance: lt.IncludeInAttendanceAllowance,
+		IsActive:                     lt.IsActive,
+		CreatedAt:                    lt.CreatedAt,
+		UpdatedAt:                    lt.UpdatedAt,
 	}
 }
 

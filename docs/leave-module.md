@@ -250,6 +250,8 @@ After any leave status change (submit, approve, reject, cancel), the affected da
 | Migration | Description |
 |-----------|-------------|
 | `000008` | Create `leave_types`, `leave_balances`, `leave_submissions` tables |
+| `000040` | Add `is_half_day` to `leave_types` |
+| `000051` | Add `include_in_attendance_allowance` to `leave_types` |
 
 ---
 

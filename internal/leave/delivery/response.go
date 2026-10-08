@@ -58,13 +58,14 @@ type SubmissionDetailResponse struct {
 }
 
 type LeaveTypeResponse struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	DefaultDays int       `json:"default_days"`
-	IsPaid      bool      `json:"is_paid"`
-	IsUnlimited bool      `json:"is_unlimited"`
-	IsHalfDay   bool      `json:"is_half_day"`
-	IsActive    bool      `json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID                           string    `json:"id"`
+	Name                         string    `json:"name"`
+	DefaultDays                  int       `json:"default_days"`
+	IsPaid                       bool      `json:"is_paid"`
+	IsUnlimited                  bool      `json:"is_unlimited"`
+	IsHalfDay                    bool      `json:"is_half_day"`
+	IncludeInAttendanceAllowance bool      `json:"include_in_attendance_allowance"`
+	IsActive                     bool      `json:"is_active"`
+	CreatedAt                    time.Time `json:"created_at"`
+	UpdatedAt                    time.Time `json:"updated_at"`
 }

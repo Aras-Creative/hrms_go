@@ -21,16 +21,16 @@ type txContext interface {
 }
 
 var (
-	queryLeaveTypeByID       = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, is_active, created_at, updated_at FROM leave_types WHERE id = $1`
-	queryLeaveTypesAllActive = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, is_active, created_at, updated_at FROM leave_types WHERE is_active = true`
-	queryUpdateLeaveType     = `UPDATE leave_types SET name = $1, default_days = $2, is_paid = $3, is_unlimited = $4, is_half_day = $5, is_active = $6, updated_at = $7 WHERE id = $8`
-	querySelectLeaveType     = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, is_active, created_at, updated_at FROM leave_types`
+	queryLeaveTypeByID       = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, include_in_attendance_allowance, is_active, created_at, updated_at FROM leave_types WHERE id = $1`
+	queryLeaveTypesAllActive = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, include_in_attendance_allowance, is_active, created_at, updated_at FROM leave_types WHERE is_active = true`
+	queryUpdateLeaveType     = `UPDATE leave_types SET name = $1, default_days = $2, is_paid = $3, is_unlimited = $4, is_half_day = $5, include_in_attendance_allowance = $6, is_active = $7, updated_at = $8 WHERE id = $9`
+	querySelectLeaveType     = `SELECT id, name, default_days, is_paid, is_unlimited, is_half_day, include_in_attendance_allowance, is_active, created_at, updated_at FROM leave_types`
 	querySelectLeaveBalance  = `SELECT id, employee_id, leave_type_id, year, total_days, used_days, created_at, updated_at FROM leave_balances`
 	queryLeaveBalanceByEmpType = `SELECT id, employee_id, leave_type_id, year, total_days, used_days, created_at, updated_at FROM leave_balances WHERE employee_id = $1 AND leave_type_id = $2 AND year = $3`
 )
 
 func modelToLeaveType(m *LeaveTypeModel) *entity.LeaveType {
-	return entity.ReconstituteLeaveType(m.ID, m.Name, m.DefaultDays, m.IsPaid, m.IsUnlimited, m.IsHalfDay, m.IsActive, m.CreatedAt, m.UpdatedAt)
+	return entity.ReconstituteLeaveType(m.ID, m.Name, m.DefaultDays, m.IsPaid, m.IsUnlimited, m.IsHalfDay, m.IncludeInAttendanceAllowance, m.IsActive, m.CreatedAt, m.UpdatedAt)
 }
 
 func modelToLeaveBalance(m *LeaveBalanceModel) *entity.LeaveBalance {
@@ -38,15 +38,16 @@ func modelToLeaveBalance(m *LeaveBalanceModel) *entity.LeaveBalance {
 }
 
 type LeaveTypeModel struct {
-	ID          string    `db:"id"`
-	Name        string    `db:"name"`
-	DefaultDays int       `db:"default_days"`
-	IsPaid      bool      `db:"is_paid"`
-	IsUnlimited bool      `db:"is_unlimited"`
-	IsHalfDay   bool      `db:"is_half_day"`
-	IsActive    bool      `db:"is_active"`
-	CreatedAt   time.Time `db:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at"`
+	ID                           string    `db:"id"`
+	Name                         string    `db:"name"`
+	DefaultDays                  int       `db:"default_days"`
+	IsPaid                       bool      `db:"is_paid"`
+	IsUnlimited                  bool      `db:"is_unlimited"`
+	IsHalfDay                    bool      `db:"is_half_day"`
+	IncludeInAttendanceAllowance bool      `db:"include_in_attendance_allowance"`
+	IsActive                     bool      `db:"is_active"`
+	CreatedAt                    time.Time `db:"created_at"`
+	UpdatedAt                    time.Time `db:"updated_at"`
 }
 
 type LeaveSubmissionModel struct {

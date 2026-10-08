@@ -104,7 +104,8 @@ const qryCalcActiveSalaries = `
 type PerDay struct {
 	// UnpaidAbsent is absent days plus unpaid leave (leave_types.is_paid = false).
 	UnpaidAbsent int
-	// Attended is days actually present, regardless of lateness or early leave.
+	// Attended is days actually present, regardless of lateness or early leave,
+	// plus approved leave types where include_in_attendance_allowance = true (e.g. cuti, sick).
 	Attended int
 }
 
@@ -131,8 +132,9 @@ const qryCalcDeductions = `
 
 // qryCalcAttendanceDayCounts derives both day counts in one pass. Attendance
 // corrections overlay the computed daily attendance status, matching the employee
-// history endpoint. Attended counts status = 'present' only; lateness and early leave
-// do not disqualify a day.
+// history endpoint. Attended counts status = 'present' (regardless of lateness or early leave)
+// as well as approved leave with include_in_attendance_allowance = true (such as cuti and sick).
+// Other leave types with is_paid = true are not counted in attended.
 //
 // The placeholders must stay in ? form: this query is expanded by sqlx.In, which
 // counts ? to size the bind list. A postgres-style $1 placeholder makes sqlx.In see
@@ -143,7 +145,10 @@ const qryCalcAttendanceDayCounts = `
 			WHERE COALESCE(ac.status, da.status) = 'absent'
 			   OR (COALESCE(ac.status, da.status) = 'on_leave' AND COALESCE(lt.is_paid, true) = false)
 		)::int AS unpaid_absent,
-		COUNT(*) FILTER (WHERE COALESCE(ac.status, da.status) = 'present')::int AS attended
+		COUNT(*) FILTER (
+			WHERE COALESCE(ac.status, da.status) = 'present'
+			   OR (COALESCE(ac.status, da.status) = 'on_leave' AND COALESCE(lt.include_in_attendance_allowance, false) = true)
+		)::int AS attended
 	FROM daily_attendances da
 	LEFT JOIN attendance_corrections ac
 		ON ac.employee_id = da.employee_id AND ac.date = da.date
