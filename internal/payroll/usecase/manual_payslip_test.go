@@ -219,6 +219,44 @@ func TestUpdatePaySlipWithoutRecalculateKeepsBreakdown(t *testing.T) {
 	}
 }
 
+// TestUpdatePaySlipSetsBaseSalaryLabel covers the custom base salary label used by schemes
+// such as CRM ("Gaji Pokok (Skema)").
+func TestUpdatePaySlipSetsBaseSalaryLabel(t *testing.T) {
+	uc, slips := newRecalcFixture()
+
+	label := "Gaji Pokok (Skema)"
+	got, err := uc.UpdatePaySlip(context.Background(), models.UpdatePaySlipInput{
+		PaySlipID:       "slip-1",
+		BaseSalaryLabel: &label,
+	})
+	if err != nil {
+		t.Fatalf("UpdatePaySlip() error = %v", err)
+	}
+	if got.BaseSalaryLabel != label {
+		t.Errorf("BaseSalaryLabel = %q, want %q", got.BaseSalaryLabel, label)
+	}
+	if slips.updated == nil || slips.updated.BaseSalaryLabel != label {
+		t.Errorf("persisted label = %+v", slips.updated)
+	}
+}
+
+// An explicit empty string must restore the default, not be skipped like an omitted key.
+func TestUpdatePaySlipClearsBaseSalaryLabel(t *testing.T) {
+	uc, _ := newRecalcFixture()
+
+	empty := ""
+	got, err := uc.UpdatePaySlip(context.Background(), models.UpdatePaySlipInput{
+		PaySlipID:       "slip-1",
+		BaseSalaryLabel: &empty,
+	})
+	if err != nil {
+		t.Fatalf("UpdatePaySlip() error = %v", err)
+	}
+	if got.BaseSalaryLabel != "" {
+		t.Errorf("BaseSalaryLabel = %q, want empty", got.BaseSalaryLabel)
+	}
+}
+
 func TestUpdatePaySlipClosedPeriodRejected(t *testing.T) {
 	uc, _ := newRecalcFixture()
 	uc.periodRepo = &stubPeriodRepo{period: &entity.PayrollPeriod{

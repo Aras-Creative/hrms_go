@@ -59,6 +59,7 @@ func (uc *ManualPaySlipUsecase) CreateManualPaySlip(ctx context.Context, input m
 		return nil, errors.NewInvalidInput("invalid base salary: " + err.Error())
 	}
 	builder.WithBaseSalary(baseAmt)
+	builder.WithBaseSalaryLabel(input.BaseSalaryLabel)
 
 	for _, c := range input.Compensations {
 		ci, err := uc.compItemRepo.FindByID(ctx, c.CompensationItemID)
@@ -159,6 +160,10 @@ func (uc *ManualPaySlipUsecase) UpdatePaySlip(ctx context.Context, input models.
 			return nil, errors.NewInvalidInput("invalid base salary: " + err.Error())
 		}
 		ps.BaseSalary = amt
+	}
+
+	if input.BaseSalaryLabel != nil {
+		ps.BaseSalaryLabel = *input.BaseSalaryLabel
 	}
 
 	if input.Compensations != nil {

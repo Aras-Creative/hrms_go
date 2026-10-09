@@ -141,6 +141,7 @@ type PaySlipResponse struct {
 	DesignationName        string          `json:"designation_name"`
 	ProfilePhotoURL        string          `json:"profile_photo_url"`
 	BaseSalary             float64         `json:"base_salary"`
+	BaseSalaryLabel        string          `json:"base_salary_label"`
 	TotalCompensations     float64         `json:"total_compensations"`
 	TotalDeductions        float64         `json:"total_deductions"`
 	AbsentDays             int             `json:"absent_days"`
@@ -389,6 +390,7 @@ func paySlipToResponse(ps *entity.PaySlip) *PaySlipResponse {
 		PeriodID:               ps.PeriodID,
 		EmployeeID:             ps.EmployeeID,
 		BaseSalary:             ps.BaseSalary.Float(),
+		BaseSalaryLabel:        ps.BaseSalaryLabel,
 		TotalCompensations:     ps.TotalCompensations.Float(),
 		TotalDeductions:        ps.TotalDeductions.Float(),
 		AbsentDays:             ps.AbsentDays,

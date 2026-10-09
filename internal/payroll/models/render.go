@@ -24,6 +24,7 @@ type PayslipRenderData struct {
 	BankInfo        string
 
 	BaseSalary      string
+	BaseSalaryLabel string
 	Compensations   []BreakdownRow
 	TotalIncome     string
 	Deductions      []BreakdownRow

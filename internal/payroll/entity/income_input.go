@@ -120,8 +120,8 @@ func NewIncomeInput(key string, value float64, unit IncomeInputUnit, notes strin
 }
 
 // ValidateIncomeInputs normalises a whole submitted set and rejects a repeated key. The
-// result is sorted by key so the JSONB column does not churn on every rewrite of the same
-// figures, which would otherwise needlessly inflate the audit log and any row diffing.
+// input order is preserved so the payslip's calculation notes render in the order the
+// figures were entered, rather than being reshuffled into key order.
 //
 // The returned slice is non-nil even when empty: the caller stores "[]" rather than null
 // so the column never carries a null document that readers then have to special-case.
@@ -139,6 +139,5 @@ func ValidateIncomeInputs(raw []IncomeInput) ([]IncomeInput, error) {
 		seen[normalised.Key] = true
 		out = append(out, normalised)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Key < out[j].Key })
 	return out, nil
 }

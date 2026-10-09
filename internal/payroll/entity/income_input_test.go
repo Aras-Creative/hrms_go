@@ -43,7 +43,7 @@ func TestParseIncomeInputUnit(t *testing.T) {
 	}
 }
 
-func TestValidateIncomeInputsSortsAndNormalises(t *testing.T) {
+func TestValidateIncomeInputsPreservesOrderAndNormalises(t *testing.T) {
 	got, err := ValidateIncomeInputs([]IncomeInput{
 		{Key: "closing_bersih", Value: 8, Unit: IncomeInputUnit(" NUMBER ")},
 		{Key: " jumlah_sukses ", Value: 10, Unit: IncomeInputUnitPercent},
@@ -51,10 +51,10 @@ func TestValidateIncomeInputsSortsAndNormalises(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	// Sorted so rewriting the same figures produces the same JSONB document; an unsorted
-	// column would differ on every write and pollute row diffing and the audit log.
+	// Input order is preserved so the calculation notes render as entered; only the key and
+	// unit are normalised.
 	if len(got) != 2 || got[0].Key != "closing_bersih" || got[1].Key != "jumlah_sukses" {
-		t.Fatalf("not sorted by key: %+v", got)
+		t.Fatalf("input order not preserved: %+v", got)
 	}
 	if got[0].Unit != IncomeInputUnitNumber {
 		t.Errorf("unit not normalised: %q", got[0].Unit)

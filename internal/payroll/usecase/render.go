@@ -127,6 +127,7 @@ func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPe
 		AbsentDays:      ps.AbsentDays,
 
 		BaseSalary:      fmtutil.FormatMoneyFloat(ps.BaseSalary.Float(), currency),
+		BaseSalaryLabel: baseSalaryLabel(ps.BaseSalaryLabel),
 		TotalIncome:     fmtutil.FormatMoneyFloat(ps.BaseSalary.Float()+ps.TotalCompensations.Float(), currency),
 		TotalDeductions: fmtutil.FormatMoneyFloat(ps.TotalDeductions.Float(), currency),
 		NetSalary:       fmtutil.FormatMoneyFloat(ps.NetSalary.Float(), currency),
@@ -162,6 +163,15 @@ func (uc *RenderUsecase) buildRenderData(ps *entity.PaySlip, p *entity.PayrollPe
 	}
 
 	return data
+}
+
+// baseSalaryLabel falls back to the historical wording so a slip without an explicit label
+// (every auto slip, and every slip written before the column existed) prints as before.
+func baseSalaryLabel(label string) string {
+	if label == "" {
+		return "Gaji Pokok"
+	}
+	return label
 }
 
 // docNumberSuffix takes the short form of the slip ID for the printed document number.

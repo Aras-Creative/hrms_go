@@ -59,7 +59,7 @@ func TestPayslipTemplateRendersIncomeNotesOutsideTotals(t *testing.T) {
 		5_000_000_00, 200_000_00, 100_000_00,
 		4,
 		5_100_000_00,
-		"IDR", string(entity.PaySlipSourceManual),
+		"IDR", string(entity.PaySlipSourceManual), "",
 		[]byte(`[{"compensation_item_id":"c1","name":"Bonus Closing Bersih","amount":200000}]`),
 		[]byte(`[{"deduction_type_id":"d1","name":"BPJS","amount":100000}]`),
 		[]byte(`[]`), time.Now(), time.Now(),
@@ -101,6 +101,15 @@ func TestPayslipTemplateRendersIncomeNotesOutsideTotals(t *testing.T) {
 		}
 	}
 
+	// Notes render in the order the figures were entered, not reshuffled by key. Scope the
+	// search to the notes block: a compensation is also named "Bonus Closing Bersih", so a
+	// whole-document index would match the income table and never see the notes order.
+	notes := html[strings.Index(html, "Catatan Perhitungan"):]
+	if !(strings.Index(notes, "Jumlah Sukses") < strings.Index(notes, "Persentase RTS") &&
+		strings.Index(notes, "Persentase RTS") < strings.Index(notes, "Closing Bersih")) {
+		t.Error("calculation notes are not in input order")
+	}
+
 	// The notes block must come after the net pay, not inside the income table.
 	if strings.Index(html, "Catatan Perhitungan") < strings.Index(html, "Gaji Bersih Diterima") {
 		t.Error("notes section renders above the net pay, where they read as part of the sum")
@@ -111,10 +120,40 @@ func TestPayslipTemplateRendersIncomeNotesOutsideTotals(t *testing.T) {
 	}
 }
 
+// The base salary line shows the stored label, falling back to "Gaji Pokok" when empty.
+func TestPayslipTemplateBaseSalaryLabel(t *testing.T) {
+	cases := []struct {
+		label string
+		want  string
+	}{
+		{"", "Gaji Pokok"},
+		{"Gaji Pokok (Skema)", "Gaji Pokok (Skema)"},
+	}
+	for _, c := range cases {
+		ps := entity.ReconstitutePaySlip("ps-1", "p-1", "e-1", 0, 0, 0, 0, 0,
+			"IDR", string(entity.PaySlipSourceManual), c.label, nil, nil, []byte(`[]`), time.Now(), time.Now())
+		uc := &RenderUsecase{}
+		data := uc.buildRenderData(ps, &entity.PayrollPeriod{Name: "Okt"},
+			models.PayslipEmployeeData{}, "", "", "")
+
+		tpl, err := template.New("p").Parse(payslipTemplate)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if err := tpl.Execute(&buf, data); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(buf.String(), c.want) {
+			t.Errorf("label %q: rendered HTML missing %q", c.label, c.want)
+		}
+	}
+}
+
 // Without figures the section is omitted entirely rather than printing an empty box.
 func TestPayslipTemplateOmitsIncomeNotesWhenEmpty(t *testing.T) {
 	ps := entity.ReconstitutePaySlip("ps-1", "p-1", "e-1", 0, 0, 0, 0, 0,
-		"IDR", string(entity.PaySlipSourceAuto), nil, nil, []byte(`[]`), time.Now(), time.Now())
+		"IDR", string(entity.PaySlipSourceAuto), "", nil, nil, []byte(`[]`), time.Now(), time.Now())
 	uc := &RenderUsecase{}
 	data := uc.buildRenderData(ps, &entity.PayrollPeriod{Name: "Okt"},
 		models.PayslipEmployeeData{}, "", "", "")

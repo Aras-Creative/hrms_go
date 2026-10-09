@@ -184,12 +184,14 @@ func (r IncomeInputRequest) toEntity() entity.IncomeInput {
 }
 
 type CreateManualPaySlipRequest struct {
-	EmployeeID    string                      `json:"employee_id" validate:"required,uuid"`
-	BaseSalary    FlexFloat64                 `json:"base_salary" validate:"required"`
-	Currency      string                      `json:"currency"`
-	Compensations []ManualCompensationRequest `json:"compensations,omitempty"`
-	Deductions    []ManualDeductionRequest    `json:"deductions,omitempty"`
-	AbsentDays    int                         `json:"absent_days"`
+	EmployeeID string      `json:"employee_id" validate:"required,uuid"`
+	BaseSalary FlexFloat64 `json:"base_salary" validate:"required"`
+	// BaseSalaryLabel overrides the "Gaji Pokok" line on the slip; empty uses the default.
+	BaseSalaryLabel string                      `json:"base_salary_label" validate:"omitempty,max=255"`
+	Currency        string                      `json:"currency"`
+	Compensations   []ManualCompensationRequest `json:"compensations,omitempty"`
+	Deductions      []ManualDeductionRequest    `json:"deductions,omitempty"`
+	AbsentDays      int                         `json:"absent_days"`
 	// IncomeInputs are the descriptive, non-money figures for this slip. Optional: a slip
 	// without them is valid, and they never affect net salary.
 	IncomeInputs []IncomeInputRequest `json:"income_inputs,omitempty"`
@@ -199,11 +201,14 @@ type CreateManualPaySlipRequest struct {
 // while an explicit empty array clears the breakdown. Without this distinction a
 // partial edit would silently zero out compensations or deductions.
 type UpdatePaySlipRequest struct {
-	BaseSalary    *FlexFloat64                 `json:"base_salary"`
-	Compensations *[]ManualCompensationRequest `json:"compensations"`
-	Deductions    *[]ManualDeductionRequest    `json:"deductions"`
-	AbsentDays    *int                         `json:"absent_days"`
-	Recalculate   bool                         `json:"recalculate"`
+	BaseSalary *FlexFloat64 `json:"base_salary"`
+	// BaseSalaryLabel replaces the stored label; nil leaves it unchanged. An explicit empty
+	// string restores the default "Gaji Pokok".
+	BaseSalaryLabel *string                      `json:"base_salary_label" validate:"omitempty,max=255"`
+	Compensations   *[]ManualCompensationRequest `json:"compensations"`
+	Deductions      *[]ManualDeductionRequest    `json:"deductions"`
+	AbsentDays      *int                         `json:"absent_days"`
+	Recalculate     bool                         `json:"recalculate"`
 	// IncomeInputs holds the non-money figures for this slip, e.g. how many closings a
 	// salesperson made. Sending the field replaces the whole set, so an omitted key clears
 	// the figure. None of these values affect net salary.

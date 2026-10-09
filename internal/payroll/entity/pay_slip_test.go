@@ -8,7 +8,7 @@ func TestPaySlipMarkManualRecalculates(t *testing.T) {
 		5_000_000_00, 500_000_00, 100_000_00,
 		0,
 		5_400_000_00,
-		"IDR", string(PaySlipSourceAuto),
+		"IDR", string(PaySlipSourceAuto), "",
 		[]byte(`[{"compensation_item_id":"c1","name":"Tunjangan","amount":500000}]`),
 		[]byte(`[{"deduction_type_id":"d1","name":"Potongan","amount":100000}]`),
 		[]byte(`[]`),
@@ -42,7 +42,7 @@ func TestPaySlipRecalculateTotalsAfterBreakdownEdit(t *testing.T) {
 		5_000_000_00, 0, 0,
 		0,
 		5_000_000_00,
-		"IDR", string(PaySlipSourceManual),
+		"IDR", string(PaySlipSourceManual), "",
 		nil, nil, nil,
 		testTime(), testTime(),
 	)
@@ -84,13 +84,24 @@ func TestPaySlipBuilderRecalculatesNetFromBreakdown(t *testing.T) {
 	}
 }
 
+func TestPaySlipBuilderCarriesBaseSalaryLabel(t *testing.T) {
+	ps := NewPaySlipBuilder("period-1", "emp-1").
+		WithBaseSalary(AmountFromCents(3_000_000_00)).
+		WithBaseSalaryLabel("Gaji Pokok (Skema)").
+		Build()
+
+	if ps.BaseSalaryLabel != "Gaji Pokok (Skema)" {
+		t.Errorf("BaseSalaryLabel = %q, want %q", ps.BaseSalaryLabel, "Gaji Pokok (Skema)")
+	}
+}
+
 func TestPaySlipIncomeInputsNeverMoveTotals(t *testing.T) {
 	ps := ReconstitutePaySlip(
 		"ps-1", "period-1", "emp-1",
 		5_000_000_00, 0, 0,
 		0,
 		5_000_000_00,
-		"IDR", string(PaySlipSourceManual),
+		"IDR", string(PaySlipSourceManual), "",
 		nil, nil,
 		[]byte(`[{"key":"jumlah_sukses","value":10,"unit":"number"}]`),
 		testTime(), testTime(),
@@ -115,7 +126,7 @@ func TestPaySlipReconstituteDefaultsIncomeInputs(t *testing.T) {
 	for _, doc := range []string{"", "{}", "[]", "null"} {
 		ps := ReconstitutePaySlip(
 			"ps-1", "period-1", "emp-1",
-			0, 0, 0, 0, 0, "IDR", string(PaySlipSourceAuto),
+			0, 0, 0, 0, 0, "IDR", string(PaySlipSourceAuto), "",
 			nil, nil, []byte(doc), testTime(), testTime(),
 		)
 		if ps.IncomeInputs == nil {

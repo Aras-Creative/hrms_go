@@ -741,7 +741,7 @@ func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
 		if req.Compensations != nil || req.Deductions != nil || req.AbsentDays != nil {
 			return response.Error(c, errors.NewInvalidInput("recalculate cannot be combined with compensations, deductions or absent_days"))
 		}
-	} else if req.BaseSalary == nil && req.Compensations == nil && req.Deductions == nil && req.AbsentDays == nil && req.IncomeInputs == nil {
+	} else if req.BaseSalary == nil && req.BaseSalaryLabel == nil && req.Compensations == nil && req.Deductions == nil && req.AbsentDays == nil && req.IncomeInputs == nil {
 		return response.Error(c, errors.NewInvalidInput("no updatable field supplied"))
 	}
 	if req.BaseSalary != nil && float64(*req.BaseSalary) < 0 {
@@ -752,9 +752,10 @@ func (h *PayrollHandler) UpdatePaySlip(c fiber.Ctx) error {
 	}
 
 	input := models.UpdatePaySlipInput{
-		PaySlipID:   payslipID,
-		AbsentDays:  req.AbsentDays,
-		Recalculate: req.Recalculate,
+		PaySlipID:       payslipID,
+		BaseSalaryLabel: req.BaseSalaryLabel,
+		AbsentDays:      req.AbsentDays,
+		Recalculate:     req.Recalculate,
 	}
 	if req.BaseSalary != nil {
 		baseSalary := float64(*req.BaseSalary)
@@ -853,11 +854,12 @@ func (h *PayrollHandler) CreateManualPaySlip(c fiber.Ctx) error {
 		return response.Error(c, errors.NewInvalidInput("base_salary must be >= 0"))
 	}
 	input := models.ManualPaySlipInput{
-		PeriodID:   periodID,
-		EmployeeID: req.EmployeeID,
-		BaseSalary: float64(req.BaseSalary),
-		Currency:   req.Currency,
-		AbsentDays: req.AbsentDays,
+		PeriodID:        periodID,
+		EmployeeID:      req.EmployeeID,
+		BaseSalary:      float64(req.BaseSalary),
+		BaseSalaryLabel: req.BaseSalaryLabel,
+		Currency:        req.Currency,
+		AbsentDays:      req.AbsentDays,
 	}
 	for _, c := range req.Compensations {
 		input.Compensations = append(input.Compensations, models.ManualCompensationInput{

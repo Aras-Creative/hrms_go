@@ -152,8 +152,8 @@ func NewPostgresPaySlipRepo(db *sqlx.DB) *PostgresPaySlipRepo {
 
 const qryUpsertPaySlip = `
 	INSERT INTO pay_slips (id, period_id, employee_id, base_salary, total_compensations, total_deductions,
-		absent_days, net_salary, currency, source, compensations_breakdown, deductions_breakdown, income_inputs, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+		absent_days, net_salary, currency, source, base_salary_label, compensations_breakdown, deductions_breakdown, income_inputs, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 	ON CONFLICT (period_id, employee_id) DO UPDATE SET
 		base_salary = EXCLUDED.base_salary,
 		total_compensations = EXCLUDED.total_compensations,
@@ -162,6 +162,7 @@ const qryUpsertPaySlip = `
 		net_salary = EXCLUDED.net_salary,
 		currency = EXCLUDED.currency,
 		source = EXCLUDED.source,
+		base_salary_label = EXCLUDED.base_salary_label,
 		compensations_breakdown = EXCLUDED.compensations_breakdown,
 		deductions_breakdown = EXCLUDED.deductions_breakdown,
 		income_inputs = EXCLUDED.income_inputs,
@@ -173,10 +174,11 @@ const qryUpsertPaySlip = `
 // re-processing a period cannot silently revert a deliberate human correction.
 // RowsAffected == 0 therefore means "skipped, manual override preserved".
 const qryUpsertPaySlipIfNotManual = `
-	-- income_inputs is deliberately left out of the column list and of the DO UPDATE SET.
-	-- Re-processing recalculates money from master data; it has no source for a figure an
-	-- admin typed by hand, so overwriting it would erase their work. Keeping it out of the
-	-- DO UPDATE also means a slip that skipped this insert keeps its existing value.
+	-- income_inputs and base_salary_label are deliberately left out of the column list and
+	-- of the DO UPDATE SET. Re-processing recalculates money from master data; it has no
+	-- source for a figure an admin typed by hand, so overwriting it would erase their work.
+	-- Keeping them out of the DO UPDATE also means a slip that skipped this insert keeps its
+	-- existing values.
 	INSERT INTO pay_slips (id, period_id, employee_id, base_salary, total_compensations, total_deductions,
 		absent_days, net_salary, currency, source, compensations_breakdown, deductions_breakdown, created_at, updated_at)
 	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
@@ -204,16 +206,17 @@ const qryUpdatePaySlip = `
 		net_salary = $6,
 		currency = $7,
 		source = $8,
-		compensations_breakdown = $9,
-		deductions_breakdown = $10,
-		income_inputs = $11,
-		updated_at = $12
+		base_salary_label = $9,
+		compensations_breakdown = $10,
+		deductions_breakdown = $11,
+		income_inputs = $12,
+		updated_at = $13
 	WHERE id = $1
 `
 
 const qrySelectPaySlip = `
 	SELECT id, period_id, employee_id, base_salary, total_compensations, total_deductions,
-		absent_days, net_salary, currency, source, compensations_breakdown, deductions_breakdown, income_inputs, created_at, updated_at
+		absent_days, net_salary, currency, source, base_salary_label, compensations_breakdown, deductions_breakdown, income_inputs, created_at, updated_at
 	FROM pay_slips
 `
 
@@ -226,7 +229,7 @@ func (r *PostgresPaySlipRepo) Upsert(ctx context.Context, ps *entity.PaySlip) er
 		ps.ID, ps.PeriodID, ps.EmployeeID,
 		ps.BaseSalary.Cents(), ps.TotalCompensations.Cents(), ps.TotalDeductions.Cents(),
 		ps.AbsentDays, ps.NetSalary.Cents(), ps.Currency.String(), string(ps.Source),
-		compJSON, dedJSON, incomeJSON, ps.CreatedAt, ps.UpdatedAt,
+		ps.BaseSalaryLabel, compJSON, dedJSON, incomeJSON, ps.CreatedAt, ps.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("upsert pay slip: %w", err)
@@ -265,7 +268,7 @@ func (r *PostgresPaySlipRepo) Update(ctx context.Context, ps *entity.PaySlip) er
 		ps.ID,
 		ps.BaseSalary.Cents(), ps.TotalCompensations.Cents(), ps.TotalDeductions.Cents(),
 		ps.AbsentDays, ps.NetSalary.Cents(), ps.Currency.String(), string(ps.Source),
-		compJSON, dedJSON, incomeJSON, ps.UpdatedAt,
+		ps.BaseSalaryLabel, compJSON, dedJSON, incomeJSON, ps.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("update pay slip: %w", err)
@@ -363,7 +366,7 @@ func paySlipModelToEntity(m *PaySlipModel) *entity.PaySlip {
 	return entity.ReconstitutePaySlip(
 		m.ID, m.PeriodID, m.EmployeeID,
 		m.BaseSalary, m.TotalCompensations, m.TotalDeductions,
-		m.AbsentDays, m.NetSalary, m.Currency, m.Source,
+		m.AbsentDays, m.NetSalary, m.Currency, m.Source, m.BaseSalaryLabel,
 		[]byte(m.CompensationsBreakdown), []byte(m.DeductionsBreakdown), []byte(m.IncomeInputs),
 		m.CreatedAt, m.UpdatedAt,
 	)
@@ -394,6 +397,7 @@ type PaySlipModel struct {
 	NetSalary              int64           `db:"net_salary"`
 	Currency               string          `db:"currency"`
 	Source                 string          `db:"source"`
+	BaseSalaryLabel        string          `db:"base_salary_label"`
 	CompensationsBreakdown json.RawMessage `db:"compensations_breakdown"`
 	DeductionsBreakdown    json.RawMessage `db:"deductions_breakdown"`
 	IncomeInputs           json.RawMessage `db:"income_inputs"`

@@ -53,10 +53,13 @@ type DeductionBreakdown struct {
 }
 
 type PaySlip struct {
-	ID                     string
-	PeriodID               string
-	EmployeeID             string
-	BaseSalary             Amount
+	ID         string
+	PeriodID   string
+	EmployeeID string
+	BaseSalary Amount
+	// BaseSalaryLabel overrides the "Gaji Pokok" line on the PDF for schemes that call
+	// their base pay something else. Empty means the renderer uses the default label.
+	BaseSalaryLabel        string
 	TotalCompensations     Amount
 	TotalDeductions        Amount
 	AbsentDays             int
@@ -82,6 +85,7 @@ type PaySlipBuilder struct {
 	currency   Currency
 	source     PaySlipSource
 	baseSalary Amount
+	baseLabel  string
 	absentDays int
 
 	comps []CompensationBreakdown
@@ -109,6 +113,11 @@ func (b *PaySlipBuilder) WithSource(s PaySlipSource) *PaySlipBuilder {
 
 func (b *PaySlipBuilder) WithBaseSalary(a Amount) *PaySlipBuilder {
 	b.baseSalary = a
+	return b
+}
+
+func (b *PaySlipBuilder) WithBaseSalaryLabel(label string) *PaySlipBuilder {
+	b.baseLabel = label
 	return b
 }
 
@@ -191,6 +200,7 @@ func (b *PaySlipBuilder) Build() *PaySlip {
 		PeriodID:               b.periodID,
 		EmployeeID:             b.employeeID,
 		BaseSalary:             b.baseSalary,
+		BaseSalaryLabel:        b.baseLabel,
 		TotalCompensations:     AmountFromCents(totalCompCents),
 		TotalDeductions:        AmountFromCents(totalDedCents),
 		AbsentDays:             b.absentDays,
@@ -213,6 +223,7 @@ func ReconstitutePaySlip(
 	netSalaryCents int64,
 	currency string,
 	source string,
+	baseSalaryLabel string,
 	compJSON, dedJSON, incomeInputsJSON []byte,
 	createdAt, updatedAt time.Time,
 ) *PaySlip {
@@ -247,6 +258,7 @@ func ReconstitutePaySlip(
 		PeriodID:               periodID,
 		EmployeeID:             employeeID,
 		BaseSalary:             AmountFromCents(baseSalaryCents),
+		BaseSalaryLabel:        baseSalaryLabel,
 		TotalCompensations:     AmountFromCents(totalCompCents),
 		TotalDeductions:        AmountFromCents(totalDedCents),
 		AbsentDays:             absentDays,

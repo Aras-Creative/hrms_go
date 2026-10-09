@@ -845,6 +845,12 @@ PaySlipResponse:
     base_salary:
       type: number
       format: float
+    base_salary_label:
+      type: string
+      maxLength: 255
+      description: >-
+        Display label for the base salary line on the printed slip. Empty means the default
+        "Gaji Pokok". Descriptive only: it never affects any total.
     total_compensations:
       type: number
       format: float
@@ -975,6 +981,12 @@ CreateManualPaySlipRequest:
       format: float
       minimum: 0
       description: Major units, not cents.
+    base_salary_label:
+      type: string
+      maxLength: 255
+      description: >-
+        Display label for the base salary line, for example "Gaji Pokok (Skema)". Empty uses
+        the default "Gaji Pokok".
     currency:
       type: string
       default: IDR
@@ -1036,6 +1048,12 @@ UpdatePaySlipRequest:
       type: number
       format: float
       minimum: 0
+    base_salary_label:
+      type: string
+      maxLength: 255
+      description: >-
+        Replaces the base salary line label. An explicit empty string restores the default
+        "Gaji Pokok"; omitting the key leaves the stored label unchanged.
     compensations:
       type: array
       items:

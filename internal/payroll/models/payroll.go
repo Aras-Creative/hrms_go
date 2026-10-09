@@ -197,13 +197,14 @@ type UpdatePeriodInput struct {
 
 // ManualPaySlipInput carries the figures for a hand-written slip.
 type ManualPaySlipInput struct {
-	PeriodID      string
-	EmployeeID    string
-	BaseSalary    float64
-	Currency      string
-	Compensations []ManualCompensationInput
-	Deductions    []ManualDeductionInput
-	AbsentDays    int
+	PeriodID        string
+	EmployeeID      string
+	BaseSalary      float64
+	BaseSalaryLabel string
+	Currency        string
+	Compensations   []ManualCompensationInput
+	Deductions      []ManualDeductionInput
+	AbsentDays      int
 	// IncomeInputs are the descriptive, non-money figures typed onto the slip. They are
 	// never summed into any total; see entity.IncomeInput for why.
 	IncomeInputs []entity.IncomeInput
@@ -212,12 +213,13 @@ type ManualPaySlipInput struct {
 // UpdatePaySlipInput is a partial edit: a nil slice pointer means "leave unchanged",
 // a non-nil (possibly empty) slice means "replace with exactly this".
 type UpdatePaySlipInput struct {
-	PaySlipID     string
-	BaseSalary    *float64
-	Compensations *[]ManualCompensationInput
-	Deductions    *[]ManualDeductionInput
-	AbsentDays    *int
-	Recalculate   bool
+	PaySlipID       string
+	BaseSalary      *float64
+	BaseSalaryLabel *string
+	Compensations   *[]ManualCompensationInput
+	Deductions      *[]ManualDeductionInput
+	AbsentDays      *int
+	Recalculate     bool
 	// IncomeInputs follows the same nil-means-unchanged rule as the breakdowns: nil leaves
 	// the stored figures alone, a non-nil slice replaces the whole set so an omitted key
 	// clears the figure rather than lingering on the slip.
