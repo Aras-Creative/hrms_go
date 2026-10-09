@@ -248,11 +248,11 @@ func (uc *ManualPaySlipUsecase) recalculateBreakdown(
 		AttendedDays:     days.Attended,
 	}
 
-	comps, err := uc.calcRepo.QueryEmployeeCompensations(ctx, ps.EmployeeID, period.StartDate, period.EndDate)
+	comps, err := uc.calcRepo.QueryEmployeeCompensations(ctx, ps.EmployeeID)
 	if err != nil {
 		return fmt.Errorf("query compensations: %w", err)
 	}
-	deds, err := uc.calcRepo.QueryEmployeeDeductions(ctx, ps.EmployeeID, period.StartDate, period.EndDate)
+	deds, err := uc.calcRepo.QueryEmployeeDeductions(ctx, ps.EmployeeID)
 	if err != nil {
 		return fmt.Errorf("query deductions: %w", err)
 	}

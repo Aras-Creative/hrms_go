@@ -20,10 +20,10 @@ type stubCalcRepo struct {
 	workDays map[string]int
 }
 
-func (s *stubCalcRepo) QueryEmployeeCompensations(context.Context, string, time.Time, time.Time) ([]repository.CalcCompRow, error) {
+func (s *stubCalcRepo) QueryEmployeeCompensations(context.Context, string) ([]repository.CalcCompRow, error) {
 	return s.comps, nil
 }
-func (s *stubCalcRepo) QueryEmployeeDeductions(context.Context, string, time.Time, time.Time) ([]repository.CalcDedRow, error) {
+func (s *stubCalcRepo) QueryEmployeeDeductions(context.Context, string) ([]repository.CalcDedRow, error) {
 	return s.deds, nil
 }
 func (s *stubCalcRepo) QueryAttendanceDayCounts(_ context.Context, ids []string, _, _ time.Time) (map[string]repository.PerDay, error) {

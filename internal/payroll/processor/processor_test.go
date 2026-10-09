@@ -70,11 +70,11 @@ func (r *fakeCalcRepo) QueryEmployeeWorkingDaysBatch(context.Context, []string, 
 	return map[string]int{"emp-auto": 20, "emp-manual": 20}, nil
 }
 
-func (r *fakeCalcRepo) QueryEmployeeCompensations(context.Context, string, time.Time, time.Time) ([]repository.CalcCompRow, error) {
+func (r *fakeCalcRepo) QueryEmployeeCompensations(context.Context, string) ([]repository.CalcCompRow, error) {
 	return nil, nil
 }
 
-func (r *fakeCalcRepo) QueryEmployeeDeductions(context.Context, string, time.Time, time.Time) ([]repository.CalcDedRow, error) {
+func (r *fakeCalcRepo) QueryEmployeeDeductions(context.Context, string) ([]repository.CalcDedRow, error) {
 	return nil, nil
 }
 

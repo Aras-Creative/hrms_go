@@ -105,8 +105,8 @@ type PayrollCalculationRepository interface {
 	QueryActiveSalariesByIDs(ctx context.Context, startDate, endDate time.Time, employeeIDs []string) ([]CalcSalaryRow, error)
 	QueryAbsentDays(ctx context.Context, employeeID string, startDate, endDate time.Time) (int, error)
 	QueryAttendanceDayCounts(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]PerDay, error)
-	QueryEmployeeCompensations(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcCompRow, error)
-	QueryEmployeeDeductions(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcDedRow, error)
+	QueryEmployeeCompensations(ctx context.Context, employeeID string) ([]CalcCompRow, error)
+	QueryEmployeeDeductions(ctx context.Context, employeeID string) ([]CalcDedRow, error)
 	QueryEmployeeWorkingDaysBatch(ctx context.Context, employeeIDs []string, startDate, endDate time.Time) (map[string]int, error)
 }
 

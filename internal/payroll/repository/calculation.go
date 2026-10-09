@@ -227,18 +227,18 @@ func (r *PostgresCalculationRepo) QueryAttendanceDayCounts(
 	return result, nil
 }
 
-func (r *PostgresCalculationRepo) QueryEmployeeCompensations(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcCompRow, error) {
+func (r *PostgresCalculationRepo) QueryEmployeeCompensations(ctx context.Context, employeeID string) ([]CalcCompRow, error) {
 	var rows []CalcCompRow
-	err := r.db.SelectContext(ctx, &rows, qryCalcCompensations, employeeID, startDate, endDate)
+	err := r.db.SelectContext(ctx, &rows, qryCalcCompensations, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("query employee compensations: %w", err)
 	}
 	return rows, nil
 }
 
-func (r *PostgresCalculationRepo) QueryEmployeeDeductions(ctx context.Context, employeeID string, startDate, endDate time.Time) ([]CalcDedRow, error) {
+func (r *PostgresCalculationRepo) QueryEmployeeDeductions(ctx context.Context, employeeID string) ([]CalcDedRow, error) {
 	var rows []CalcDedRow
-	err := r.db.SelectContext(ctx, &rows, qryCalcDeductions, employeeID, startDate, endDate)
+	err := r.db.SelectContext(ctx, &rows, qryCalcDeductions, employeeID)
 	if err != nil {
 		return nil, fmt.Errorf("query employee deductions: %w", err)
 	}

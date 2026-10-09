@@ -107,12 +107,12 @@ func (p *PayrollProcessor) processEmployee(
 	currency string,
 	calcCtx entity.CalcContext,
 ) (bool, error) {
-	comps, err := p.calcRepo.QueryEmployeeCompensations(ctx, employeeID, period.StartDate, period.EndDate)
+	comps, err := p.calcRepo.QueryEmployeeCompensations(ctx, employeeID)
 	if err != nil {
 		return false, fmt.Errorf("query compensations: %w", err)
 	}
 
-	dedItems, err := p.calcRepo.QueryEmployeeDeductions(ctx, employeeID, period.StartDate, period.EndDate)
+	dedItems, err := p.calcRepo.QueryEmployeeDeductions(ctx, employeeID)
 	if err != nil {
 		return false, fmt.Errorf("query deductions: %w", err)
 	}
