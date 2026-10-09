@@ -97,7 +97,7 @@ func NewPostgresCalculationRepo(db *sqlx.DB) *PostgresCalculationRepo {
 
 const qryCalcActiveSalaries = `
 	SELECT employee_id, amount, currency FROM employee_base_salaries
-	
+	WHERE effective_date <= $2::date AND (end_date IS NULL OR end_date >= $1::date)
 `
 
 // PerDay is an attendance-derived day count used by payroll calculation.
