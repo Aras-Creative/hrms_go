@@ -1110,6 +1110,6 @@ func (h *PayrollHandler) DeleteDeductionType(c fiber.Ctx) error {
 
 // --- Income calculation inputs ---
 //
-// Non-money figures HR records per employee per period (jumlah_sukses, persentase_rts,
-// closing_bersih). They are stored so a payslip can explain a bonus, and are excluded
-// from every payslip total by design.
+// Non-money figures HR records per employee per period, keyed by a free-form string such as
+// "jumlah_sukses" or "closing_bersih". They are stored so a payslip can explain a bonus, and
+// are excluded from every payslip total by design.

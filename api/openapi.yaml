@@ -1928,10 +1928,10 @@ paths:
         so subsequent periods still recalculate from the unchanged components. Rejected
         while the owning period is `closed`.
 
-        `income_inputs` carries the non-money figures for the slip (jumlah_sukses,
-        persentase_rts, closing_bersih). Payroll setup holds only financial components, so
-        these are recorded here on the slip itself to explain a bonus. They are excluded
-        from every total by design.
+        `income_inputs` carries the non-money figures for the slip, each under a free-form
+        key such as jumlah_sukses or closing_bersih. Payroll setup holds only financial
+        components, so these are recorded here on the slip itself to explain a bonus. They
+        are excluded from every total by design.
       security:
         - BearerAuth: []
         - CookieAuth: []

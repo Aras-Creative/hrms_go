@@ -158,9 +158,9 @@ type ManualDeductionRequest struct {
 	Amount          FlexFloat64 `json:"amount" validate:"required"`
 }
 
-// IncomeInputRequest is one non-money figure HR records. Keys are limited to
-// jumlah_sukses, persentase_rts and closing_bersih; anything else is rejected so a
-// typo cannot create an input that silently never appears on the slip.
+// IncomeInputRequest is one non-money figure HR records. The key is free-form so HR can
+// record a figure the CRM payroll did not anticipate; it is trimmed and capped at 100
+// characters but otherwise accepted as typed.
 type IncomeInputRequest struct {
 	Key   string      `json:"key" validate:"required"`
 	Value FlexFloat64 `json:"value"`

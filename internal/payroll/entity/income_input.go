@@ -2,7 +2,6 @@ package entity
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -19,28 +18,21 @@ const (
 	IncomeInputUnitText     IncomeInputUnit = "text"
 )
 
-// incomeInputLabels gives each key a display name. The key stays the stored identifier and
-// the label is derived, never stored, so renaming a figure later is a code change and not a
-// data migration. Both the PDF and the API use it, so the slip and the client cannot drift
-// into calling the same thing different names.
+// incomeInputLabels gives well-known keys a friendlier display name. The key stays the
+// stored identifier and the label is derived, never stored, so renaming a figure later is a
+// code change and not a data migration. Both the PDF and the API use it, so the slip and the
+// client cannot drift into calling the same thing different names. Keys are free-form, so
+// this table is only a convenience for the keys the CRM payslip is known to use; any other
+// key simply falls back to itself.
 var incomeInputLabels = map[string]string{
 	"jumlah_sukses":  "Jumlah Sukses",
 	"persentase_rts": "Persentase RTS",
 	"closing_bersih": "Closing Bersih",
 }
 
-// canonicalIncomeInputKeys are the inputs the CRM payslip is known to use. They are
-// validated so a typo like "persen_rts" is rejected instead of silently creating a second
-// key that never renders on the slip.
-var canonicalIncomeInputKeys = map[string]bool{
-	"jumlah_sukses":  true,
-	"persentase_rts": true,
-	"closing_bersih": true,
-}
-
-// IncomeInputLabel returns the display name for a key. An unknown key falls back to the key
-// itself rather than to an empty string: a blank label would render an unlabelled line on
-// the slip, while the key at least tells a reader what went wrong.
+// IncomeInputLabel returns the display name for a key. A key without a known label falls
+// back to the key itself rather than to an empty string: a blank label would render an
+// unlabelled line on the slip, while the key at least tells a reader what was entered.
 func IncomeInputLabel(key string) string {
 	if l, ok := incomeInputLabels[key]; ok {
 		return l
@@ -62,17 +54,6 @@ type IncomeInput struct {
 	Notes string          `json:"notes,omitempty"`
 }
 
-// CanonicalIncomeInputKeys returns the accepted keys in a stable order, for error messages
-// and for clients that want to render a fixed form.
-func CanonicalIncomeInputKeys() []string {
-	keys := make([]string, 0, len(canonicalIncomeInputKeys))
-	for k := range canonicalIncomeInputKeys {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
 func ParseIncomeInputUnit(s string) (IncomeInputUnit, error) {
 	if s == "" {
 		return IncomeInputUnitNumber, nil
@@ -86,6 +67,9 @@ func ParseIncomeInputUnit(s string) (IncomeInputUnit, error) {
 	return "", fmt.Errorf("invalid income input unit %q: expected number, percent, currency, days or text", s)
 }
 
+// ParseIncomeInputKey normalises a free-form key. Any non-empty key is accepted so HR can
+// record a figure the CRM payroll did not anticipate; only surrounding whitespace is trimmed
+// and a length cap keeps a stray paste from filling the column.
 func ParseIncomeInputKey(s string) (string, error) {
 	k := strings.TrimSpace(s)
 	if k == "" {
@@ -93,9 +77,6 @@ func ParseIncomeInputKey(s string) (string, error) {
 	}
 	if len(k) > 100 {
 		return "", fmt.Errorf("income input key must be 100 characters or fewer")
-	}
-	if !canonicalIncomeInputKeys[k] {
-		return "", fmt.Errorf("unknown income input key %q: expected one of %s", k, strings.Join(CanonicalIncomeInputKeys(), ", "))
 	}
 	return k, nil
 }

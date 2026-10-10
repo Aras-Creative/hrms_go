@@ -1,9 +1,13 @@
 package entity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseIncomeInputKey(t *testing.T) {
-	valid := []string{"jumlah_sukses", "persentase_rts", "closing_bersih"}
+	// Keys are free-form: anything non-empty is accepted and only trimmed.
+	valid := []string{"jumlah_sukses", "persentase_rts", "closing_bersih", "persen_rts", "JUMLAH_SUKSES", "closing"}
 	for _, k := range valid {
 		got, err := ParseIncomeInputKey(k)
 		if err != nil {
@@ -15,15 +19,13 @@ func TestParseIncomeInputKey(t *testing.T) {
 	}
 
 	// Surrounding whitespace is normalised rather than rejected, so a pasted key still
-	// lands on the canonical one.
+	// lands on the same key.
 	if got, err := ParseIncomeInputKey("  jumlah_sukses  "); err != nil || got != "jumlah_sukses" {
 		t.Errorf("padded key should normalise, got %q err %v", got, err)
 	}
 
-	// A typo must be rejected. Accepting it would create a second key that never renders
-	// on the payslip, so the figure would silently vanish while still looking stored.
-	// Keys are case-sensitive on purpose: they are machine identifiers, not labels.
-	invalid := []string{"", "   ", "persen_rts", "JUMLAH_SUKSES", "closing"}
+	// Only a blank key is rejected, along with anything past the length cap.
+	invalid := []string{"", "   ", strings.Repeat("a", 101)}
 	for _, k := range invalid {
 		if _, err := ParseIncomeInputKey(k); err == nil {
 			t.Errorf("ParseIncomeInputKey(%q) should have failed", k)
