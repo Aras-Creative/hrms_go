@@ -29,10 +29,18 @@ func New(cfg *config.ServerConfig, log *logrus.Logger) *fiber.App {
 	}
 
 	app := fiber.New(fiber.Config{
-		ReadTimeout:     readTimeout,
-		WriteTimeout:    0,
-		ErrorHandler:    middleware.NewErrorHandler(log),
-		StructValidator: &structValidator{v: validator.New()},
+		ReadTimeout:        readTimeout,
+		WriteTimeout:       0,
+		ErrorHandler:       middleware.NewErrorHandler(log),
+		StructValidator:    &structValidator{v: validator.New()},
+		TrustProxy:         true,
+		EnableIPValidation: true,
+		TrustProxyConfig: fiber.TrustProxyConfig{
+			Proxies: []string{
+				"172.22.0.1",
+			},
+		},
+		ProxyHeader: fiber.HeaderXForwardedFor,
 	})
 
 	middleware.Register(app, log, &cfg.CORS)
