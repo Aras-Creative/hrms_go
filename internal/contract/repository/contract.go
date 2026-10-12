@@ -269,7 +269,7 @@ func (r *PostgresContractRepo) FindAllContracts(ctx context.Context, filter mode
 		where += " AND c.status != 'draft'"
 	}
 
-	countQuery := `SELECT COUNT(*) FROM contracts c LEFT JOIN contract_templates ct ON ct.id=c.template_id` + where
+	countQuery := `SELECT COUNT(*) FROM contracts c LEFT JOIN contract_templates ct ON ct.id=c.template_id JOIN employees emp ON emp.id=c.employee_id` + where
 	var total int64
 	if err := r.db.GetContext(ctx, &total, countQuery, args...); err != nil {
 		return nil, 0, fmt.Errorf("count contracts: %w", err)
@@ -280,7 +280,7 @@ func (r *PostgresContractRepo) FindAllContracts(ctx context.Context, filter mode
 	if perPage < 1 || perPage > 100 { perPage = 20 }
 	offset := (page - 1) * perPage
 
-	dataQuery := querySelectContractWithType + where + fmt.Sprintf(" ORDER BY c.created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	dataQuery := querySelectContractWithType + ` JOIN employees emp ON emp.id = c.employee_id` + where + fmt.Sprintf(" ORDER BY c.created_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, perPage, offset)
 
 	rows, err := r.db.QueryxContext(ctx, dataQuery, args...)
