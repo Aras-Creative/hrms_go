@@ -49,6 +49,7 @@ import (
 	payrollUc "hrms/internal/payroll/usecase"
 	"hrms/internal/pkg/config"
 	"hrms/internal/pkg/database"
+	"hrms/internal/pkg/iputil"
 	hrmsJwt "hrms/internal/pkg/jwt"
 	"hrms/internal/pkg/logger"
 	"hrms/internal/pkg/middleware"
@@ -192,6 +193,10 @@ func Run(cfgPath string) {
 			timeutil.SetDefaultTimezone("Asia/Jakarta")
 			log.Printf("timezone set to default: Asia/Jakarta (settings err=%v s=%v)", err, s)
 		}
+		if err == nil && s != nil {
+			iputil.SetAllowedCIDRs(s.WhitelistIPCIDRs)
+			log.Printf("ip whitelist set from settings: %v", s.WhitelistIPCIDRs)
+		}
 	}
 	settingHandler := settingDelivery.NewSettingHandler(settingUC)
 	settingHandler.RegisterRoutes(api, authmw, adminmw)
@@ -242,7 +247,8 @@ func Run(cfgPath string) {
 	designationHandler.RegisterRoutes(api, authmw)
 
 	attendanceHandler := attendanceDelivery.NewAttendanceHandler(punchUc, dailyUc, correctionUc, attendanceMeUc, attendanceEmpFetcher, punchHub, auditUC, photoResolver, attendanceAuditLog, notifAdapter)
-	attendanceHandler.RegisterRoutes(api, authmw, adminmw)
+	punchIPMw := middleware.NewIPWhitelistMiddleware()
+	attendanceHandler.RegisterRoutes(api, authmw, adminmw, punchIPMw)
 
 	// Leave
 	leaveTypeRepo := leaveRepo.NewPostgresLeaveTypeRepo(db)

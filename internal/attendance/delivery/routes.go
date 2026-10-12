@@ -2,8 +2,8 @@ package delivery
 
 import "github.com/gofiber/fiber/v3"
 
-func (h *AttendanceHandler) RegisterRoutes(r fiber.Router, authMw, adminMw fiber.Handler) {
-	p := r.Group("/attendance/punch", authMw)
+func (h *AttendanceHandler) RegisterRoutes(r fiber.Router, authMw, adminMw, ipMw fiber.Handler) {
+	p := r.Group("/attendance/punch", authMw, ipMw)
 	p.Post("/in", h.PunchIn)
 	p.Post("/out", h.PunchOut)
 	p.Get("/today", h.PunchToday)

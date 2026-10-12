@@ -64,6 +64,7 @@ func (h *SettingHandler) Update(c fiber.Ctx) error {
 	}
 
 	h.uc.ApplyTimezone(s)
+	h.uc.ApplyWhitelist(s)
 
 	logoURL, err := h.resolveLogoURL(c.RequestCtx(), s)
 	if err != nil {

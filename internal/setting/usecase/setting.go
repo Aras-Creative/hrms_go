@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	errors "hrms/internal/pkg/apperror"
+	"hrms/internal/pkg/iputil"
 	"hrms/internal/pkg/timeutil"
 	"hrms/internal/setting/entity"
 	"hrms/internal/setting/models"
@@ -65,6 +66,9 @@ func (uc *SettingUsecase) Update(ctx context.Context, input models.UpdateSetting
 			if cidr == "" {
 				return nil, errors.NewInvalidInput("CIDR must not be empty")
 			}
+			if !iputil.ValidateCIDR(cidr) {
+				return nil, errors.NewInvalidInput("invalid CIDR: " + cidr)
+			}
 		}
 	}
 
@@ -107,4 +111,9 @@ func (uc *SettingUsecase) ApplyTimezone(setting *entity.Setting) {
 	if setting.Timezone != "" {
 		timeutil.SetDefaultTimezone(setting.Timezone)
 	}
+}
+
+// ApplyWhitelist sets the global IP allow-list checked by the punch middleware.
+func (uc *SettingUsecase) ApplyWhitelist(setting *entity.Setting) {
+	iputil.SetAllowedCIDRs(setting.WhitelistIPCIDRs)
 }
