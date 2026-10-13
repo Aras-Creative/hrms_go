@@ -8,49 +8,52 @@ import (
 )
 
 type Setting struct {
-	ID               string
-	Timezone         string
-	CompanyName      string
-	CompanyAddress   string
-	CompanyLogoID    *string
-	WhitelistIPCIDRs []string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID                           string
+	Timezone                     string
+	CompanyName                  string
+	CompanyAddress               string
+	CompanyLogoID                *string
+	WhitelistIPCIDRs             []string
+	WhitelistIPBypassEmployeeIDs []string
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
 }
 
-func NewSetting(timezone, companyName, companyAddress string, companyLogoID *string, whitelistIPCIDRs []string) *Setting {
+func NewSetting(timezone, companyName, companyAddress string, companyLogoID *string, whitelistIPCIDRs, whitelistIPBypassEmployeeIDs []string) *Setting {
 	now := time.Now()
 	return &Setting{
-		ID:               uuid.New().String(),
-		Timezone:         timezone,
-		CompanyName:      companyName,
-		CompanyAddress:   companyAddress,
-		CompanyLogoID:    companyLogoID,
-		WhitelistIPCIDRs: whitelistIPCIDRs,
-		CreatedAt:        now,
-		UpdatedAt:        now,
+		ID:                           uuid.New().String(),
+		Timezone:                     timezone,
+		CompanyName:                  companyName,
+		CompanyAddress:               companyAddress,
+		CompanyLogoID:                companyLogoID,
+		WhitelistIPCIDRs:             whitelistIPCIDRs,
+		WhitelistIPBypassEmployeeIDs: whitelistIPBypassEmployeeIDs,
+		CreatedAt:                    now,
+		UpdatedAt:                    now,
 	}
 }
 
 func ReconstituteSetting(
 	id, timezone, companyName, companyAddress string,
 	companyLogoID *string,
-	whitelistIPCIDRs []string,
+	whitelistIPCIDRs, whitelistIPBypassEmployeeIDs []string,
 	createdAt, updatedAt time.Time,
 ) *Setting {
 	return &Setting{
-		ID:               id,
-		Timezone:         timezone,
-		CompanyName:      companyName,
-		CompanyAddress:   companyAddress,
-		CompanyLogoID:    companyLogoID,
-		WhitelistIPCIDRs: whitelistIPCIDRs,
-		CreatedAt:        createdAt,
-		UpdatedAt:        updatedAt,
+		ID:                           id,
+		Timezone:                     timezone,
+		CompanyName:                  companyName,
+		CompanyAddress:               companyAddress,
+		CompanyLogoID:                companyLogoID,
+		WhitelistIPCIDRs:             whitelistIPCIDRs,
+		WhitelistIPBypassEmployeeIDs: whitelistIPBypassEmployeeIDs,
+		CreatedAt:                    createdAt,
+		UpdatedAt:                    updatedAt,
 	}
 }
 
-func (s *Setting) Update(timezone, companyName, companyAddress string, companyLogoID *string, whitelistIPCIDRs []string) {
+func (s *Setting) Update(timezone, companyName, companyAddress string, companyLogoID *string, whitelistIPCIDRs, whitelistIPBypassEmployeeIDs []string) {
 	if timezone != "" {
 		s.Timezone = timezone
 	}
@@ -62,6 +65,7 @@ func (s *Setting) Update(timezone, companyName, companyAddress string, companyLo
 	}
 	s.CompanyLogoID = companyLogoID
 	s.WhitelistIPCIDRs = whitelistIPCIDRs
+	s.WhitelistIPBypassEmployeeIDs = whitelistIPBypassEmployeeIDs
 	s.UpdatedAt = time.Now()
 }
 

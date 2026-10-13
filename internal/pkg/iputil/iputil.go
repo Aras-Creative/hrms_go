@@ -8,9 +8,16 @@ import (
 
 var DefaultAllowedCIDRs []string
 
+// DefaultBypassEmployeeIDs holds the employee IDs that bypass the global IP
+// allow-list, mirroring the persisted settings for observability.
+var DefaultBypassEmployeeIDs []string
+
 var (
 	allowedNets   []*net.IPNet
 	allowedNetsMu sync.RWMutex
+
+	bypassEmployees   map[string]struct{}
+	bypassEmployeesMu sync.RWMutex
 )
 
 // SetAllowedCIDRs replaces the global allow-list used by IsAllowed. Entries may
@@ -72,6 +79,37 @@ func IsAllowed(ip string) bool {
 		}
 	}
 	return false
+}
+
+// SetBypassEmployeeIDs replaces the set of employee IDs allowed to punch from
+// any IP, ignoring the global allow-list. Blank entries are skipped. An empty
+// list disables the bypass.
+func SetBypassEmployeeIDs(ids []string) {
+	set := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		set[id] = struct{}{}
+	}
+
+	bypassEmployeesMu.Lock()
+	bypassEmployees = set
+	DefaultBypassEmployeeIDs = append([]string(nil), ids...)
+	bypassEmployeesMu.Unlock()
+}
+
+// IsEmployeeBypassed reports whether employeeID is exempt from the IP
+// allow-list.
+func IsEmployeeBypassed(employeeID string) bool {
+	if employeeID == "" {
+		return false
+	}
+	bypassEmployeesMu.RLock()
+	_, ok := bypassEmployees[employeeID]
+	bypassEmployeesMu.RUnlock()
+	return ok
 }
 
 // ValidateCIDR checks that cidr is a valid CIDR or a bare IP address.

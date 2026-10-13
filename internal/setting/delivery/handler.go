@@ -51,11 +51,12 @@ func (h *SettingHandler) Update(c fiber.Ctx) error {
 	}
 
 	input := models.UpdateSettingInput{
-		Timezone:         req.Timezone,
-		CompanyName:      req.CompanyName,
-		CompanyAddress:   req.CompanyAddress,
-		CompanyLogoID:    req.CompanyLogoID,
-		WhitelistIPCIDRs: req.WhitelistIPCIDRs,
+		Timezone:                     req.Timezone,
+		CompanyName:                  req.CompanyName,
+		CompanyAddress:               req.CompanyAddress,
+		CompanyLogoID:                req.CompanyLogoID,
+		WhitelistIPCIDRs:             req.WhitelistIPCIDRs,
+		WhitelistIPBypassEmployeeIDs: req.WhitelistIPBypassEmployeeIDs,
 	}
 
 	s, err := h.uc.Update(c.RequestCtx(), input)

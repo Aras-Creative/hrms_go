@@ -8,14 +8,15 @@ import (
 
 // SettingModel is the DB representation of app settings.
 type SettingModel struct {
-	ID               string      `db:"id"`
-	Timezone         string      `db:"timezone"`
-	CompanyName      string      `db:"company_name"`
-	CompanyAddress   string      `db:"company_address"`
-	CompanyLogoID    *string     `db:"company_logo_id"`
-	WhitelistIPCIDRs StringSlice `db:"whitelist_ip_cidrs"`
-	CreatedAt        string      `db:"created_at"`
-	UpdatedAt        string      `db:"updated_at"`
+	ID                           string      `db:"id"`
+	Timezone                     string      `db:"timezone"`
+	CompanyName                  string      `db:"company_name"`
+	CompanyAddress               string      `db:"company_address"`
+	CompanyLogoID                *string     `db:"company_logo_id"`
+	WhitelistIPCIDRs             StringSlice `db:"whitelist_ip_cidrs"`
+	WhitelistIPBypassEmployeeIDs StringSlice `db:"whitelist_ip_bypass_employee_ids"`
+	CreatedAt                    string      `db:"created_at"`
+	UpdatedAt                    string      `db:"updated_at"`
 }
 
 // StringSlice supports JSONB scan/value for []string.

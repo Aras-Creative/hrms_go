@@ -15,20 +15,22 @@ const (
 	findSettingsQuery = `
 		SELECT id, timezone, company_name, company_address,
 		       company_logo_id, whitelist_ip_cidrs,
+		       whitelist_ip_bypass_employee_ids,
 		       created_at, updated_at
 		FROM settings
 		LIMIT 1`
 
 	upsertSettingsQuery = `
-		INSERT INTO settings (id, timezone, company_name, company_address, company_logo_id, whitelist_ip_cidrs, updated_at)
-		VALUES (:id, :timezone, :company_name, :company_address, :company_logo_id, :whitelist_ip_cidrs, :updated_at)
+		INSERT INTO settings (id, timezone, company_name, company_address, company_logo_id, whitelist_ip_cidrs, whitelist_ip_bypass_employee_ids, updated_at)
+		VALUES (:id, :timezone, :company_name, :company_address, :company_logo_id, :whitelist_ip_cidrs, :whitelist_ip_bypass_employee_ids, :updated_at)
 		ON CONFLICT (id) DO UPDATE SET
-			timezone           = EXCLUDED.timezone,
-			company_name       = EXCLUDED.company_name,
-			company_address    = EXCLUDED.company_address,
-			company_logo_id    = EXCLUDED.company_logo_id,
-			whitelist_ip_cidrs = EXCLUDED.whitelist_ip_cidrs,
-			updated_at         = EXCLUDED.updated_at`
+			timezone                         = EXCLUDED.timezone,
+			company_name                     = EXCLUDED.company_name,
+			company_address                  = EXCLUDED.company_address,
+			company_logo_id                  = EXCLUDED.company_logo_id,
+			whitelist_ip_cidrs               = EXCLUDED.whitelist_ip_cidrs,
+			whitelist_ip_bypass_employee_ids = EXCLUDED.whitelist_ip_bypass_employee_ids,
+			updated_at                       = EXCLUDED.updated_at`
 )
 
 type PostgresSettingRepo struct {
@@ -77,6 +79,11 @@ func modelToEntity(m *SettingModel) *entity.Setting {
 		cidrs = []string{}
 	}
 
+	bypassIDs := []string(m.WhitelistIPBypassEmployeeIDs)
+	if bypassIDs == nil {
+		bypassIDs = []string{}
+	}
+
 	return entity.ReconstituteSetting(
 		m.ID,
 		m.Timezone,
@@ -84,6 +91,7 @@ func modelToEntity(m *SettingModel) *entity.Setting {
 		m.CompanyAddress,
 		m.CompanyLogoID,
 		cidrs,
+		bypassIDs,
 		createdAt,
 		updatedAt,
 	)
@@ -91,12 +99,13 @@ func modelToEntity(m *SettingModel) *entity.Setting {
 
 func entityToModel(e *entity.Setting) *SettingModel {
 	return &SettingModel{
-		ID:               e.ID,
-		Timezone:         e.Timezone,
-		CompanyName:      e.CompanyName,
-		CompanyAddress:   e.CompanyAddress,
-		CompanyLogoID:    e.CompanyLogoID,
-		WhitelistIPCIDRs: StringSlice(e.WhitelistIPCIDRs),
-		UpdatedAt:        e.UpdatedAt.Format(time.RFC3339),
+		ID:                           e.ID,
+		Timezone:                     e.Timezone,
+		CompanyName:                  e.CompanyName,
+		CompanyAddress:               e.CompanyAddress,
+		CompanyLogoID:                e.CompanyLogoID,
+		WhitelistIPCIDRs:             StringSlice(e.WhitelistIPCIDRs),
+		WhitelistIPBypassEmployeeIDs: StringSlice(e.WhitelistIPBypassEmployeeIDs),
+		UpdatedAt:                    e.UpdatedAt.Format(time.RFC3339),
 	}
 }

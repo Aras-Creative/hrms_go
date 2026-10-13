@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/google/uuid"
+
 	errors "hrms/internal/pkg/apperror"
 	"hrms/internal/pkg/iputil"
 	"hrms/internal/pkg/timeutil"
@@ -52,7 +54,7 @@ func (uc *SettingUsecase) Get(ctx context.Context) (*entity.Setting, error) {
 		return nil, fmt.Errorf("get settings: %w", err)
 	}
 	if s == nil {
-		s = entity.NewSetting("Asia/Jakarta", "", "", nil, []string{})
+		s = entity.NewSetting("Asia/Jakarta", "", "", nil, []string{}, []string{})
 	}
 
 	uc.cached = s
@@ -72,6 +74,15 @@ func (uc *SettingUsecase) Update(ctx context.Context, input models.UpdateSetting
 		}
 	}
 
+	for _, employeeID := range input.WhitelistIPBypassEmployeeIDs {
+		if employeeID == "" {
+			return nil, errors.NewInvalidInput("bypass employee ID must not be empty")
+		}
+		if _, err := uuid.Parse(employeeID); err != nil {
+			return nil, errors.NewInvalidInput("invalid bypass employee ID: " + employeeID)
+		}
+	}
+
 	s, err := uc.repo.Find(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("find existing settings for update: %w", err)
@@ -84,6 +95,7 @@ func (uc *SettingUsecase) Update(ctx context.Context, input models.UpdateSetting
 			input.CompanyAddress,
 			input.CompanyLogoID,
 			input.WhitelistIPCIDRs,
+			input.WhitelistIPBypassEmployeeIDs,
 		)
 	} else {
 		s.Update(
@@ -92,6 +104,7 @@ func (uc *SettingUsecase) Update(ctx context.Context, input models.UpdateSetting
 			input.CompanyAddress,
 			input.CompanyLogoID,
 			input.WhitelistIPCIDRs,
+			input.WhitelistIPBypassEmployeeIDs,
 		)
 	}
 
@@ -113,7 +126,9 @@ func (uc *SettingUsecase) ApplyTimezone(setting *entity.Setting) {
 	}
 }
 
-// ApplyWhitelist sets the global IP allow-list checked by the punch middleware.
+// ApplyWhitelist sets the global IP allow-list checked by the punch middleware
+// along with the per-employee bypass list.
 func (uc *SettingUsecase) ApplyWhitelist(setting *entity.Setting) {
 	iputil.SetAllowedCIDRs(setting.WhitelistIPCIDRs)
+	iputil.SetBypassEmployeeIDs(setting.WhitelistIPBypassEmployeeIDs)
 }

@@ -195,7 +195,9 @@ func Run(cfgPath string) {
 		}
 		if err == nil && s != nil {
 			iputil.SetAllowedCIDRs(s.WhitelistIPCIDRs)
+			iputil.SetBypassEmployeeIDs(s.WhitelistIPBypassEmployeeIDs)
 			log.Printf("ip whitelist set from settings: %v", s.WhitelistIPCIDRs)
+			log.Printf("ip whitelist bypass employees set from settings: %v", s.WhitelistIPBypassEmployeeIDs)
 		}
 	}
 	settingHandler := settingDelivery.NewSettingHandler(settingUC)
@@ -247,7 +249,7 @@ func Run(cfgPath string) {
 	designationHandler.RegisterRoutes(api, authmw)
 
 	attendanceHandler := attendanceDelivery.NewAttendanceHandler(punchUc, dailyUc, correctionUc, attendanceMeUc, attendanceEmpFetcher, punchHub, auditUC, photoResolver, attendanceAuditLog, notifAdapter)
-	punchIPMw := middleware.NewIPWhitelistMiddleware()
+	punchIPMw := middleware.NewIPWhitelistMiddleware(attendanceEmpFetcher)
 	attendanceHandler.RegisterRoutes(api, authmw, adminmw, punchIPMw)
 
 	// Leave
